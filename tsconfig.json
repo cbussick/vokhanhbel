@@ -1,4 +1,15 @@
 {
+  // Vercel compiles API functions from this root config and does not follow project references.
+  // Keep these Vercel-facing options aligned with tsconfig.node.json.
+  "compilerOptions": {
+    "target": "ES2023",
+    "lib": ["ES2023", "DOM"],
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "strict": true,
+    "skipLibCheck": true,
+    "types": ["node"]
+  },
   "files": [],
   "references": [{ "path": "./tsconfig.app.json" }, { "path": "./tsconfig.node.json" }]
 }
