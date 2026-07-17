@@ -17,7 +17,6 @@ documentation:
 
 - [V1 specification](.scratch/vokhanhbel-v1/spec.md) — current product and implementation
   requirements maintained in the local issue tracker.
-- [Design prototype](docs/design/README.md) — a temporary visual reference for the V1 interface.
 
 ## Project guides
 
