@@ -1,0 +1,48 @@
+name: Encrypted database backup
+
+on:
+  schedule:
+    - cron: "23 3 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      BACKUP_DATABASE_URL: ${{ secrets.BACKUP_DATABASE_URL }}
+      AGE_RECIPIENT: ${{ vars.BACKUP_AGE_RECIPIENT }}
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+      - name: Create and validate PostgreSQL 17 dump
+        run: |
+          mkdir -p "$RUNNER_TEMP/backup"
+          docker run --rm \
+            -e BACKUP_DATABASE_URL \
+            -v "$RUNNER_TEMP/backup:/backup" \
+            postgres:17 \
+            pg_dump --format=custom --no-owner --file=/backup/vokhanhbel.dump "$BACKUP_DATABASE_URL"
+          docker run --rm \
+            -v "$RUNNER_TEMP/backup:/backup:ro" \
+            postgres:17 \
+            pg_restore --list /backup/vokhanhbel.dump >/dev/null
+      - name: Install pinned age and encrypt
+        working-directory: ${{ runner.temp }}/backup
+        run: |
+          curl --fail --location --silent --show-error \
+            --output age.tar.gz \
+            https://github.com/FiloSottile/age/releases/download/v1.3.1/age-v1.3.1-linux-amd64.tar.gz
+          echo 'bdc69c09cbdd6cf8b1f333d372a1f58247b3a33146406333e30c0f26e8f51377  age.tar.gz' | sha256sum --check --strict
+          tar --extract --gzip --file age.tar.gz
+          ./age/age --recipient "$AGE_RECIPIENT" --output vokhanhbel.dump.age vokhanhbel.dump
+          rm --force vokhanhbel.dump age.tar.gz
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: database-backup-${{ github.run_id }}
+          path: ${{ runner.temp }}/backup/vokhanhbel.dump.age
+          if-no-files-found: error
+          retention-days: 28
+          compression-level: 0

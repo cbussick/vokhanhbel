@@ -1,0 +1,146 @@
+@layer reset, theme, base;
+
+@layer reset {
+  html {
+    box-sizing: border-box;
+  }
+
+  *,
+  *::before,
+  *::after {
+    box-sizing: inherit;
+  }
+
+  body,
+  h1,
+  h2,
+  h3,
+  p,
+  ul,
+  ol {
+    margin: 0;
+  }
+
+  ul,
+  ol {
+    padding: 0;
+  }
+
+  button,
+  input,
+  textarea {
+    font: inherit;
+  }
+
+  button {
+    cursor: pointer;
+  }
+
+  img,
+  svg {
+    display: block;
+    max-inline-size: 100%;
+  }
+}
+
+@layer theme {
+  :root {
+    color-scheme: light;
+
+    --color-primary: #add8e6;
+    --color-primary-text: #1d3a4a;
+    --color-success: #2fbf71;
+    --color-warning: #ffb020;
+    --color-warning-text: #4a3200;
+    --color-danger: #d53250;
+    --color-bg: #f4fafd;
+    --color-surface: #fff;
+    --color-text: #243642;
+    --color-text-secondary: #586b76;
+    --color-border: #d6e6ee;
+    --color-divider: #eef5f8;
+    --space-1: 0.25rem;
+    --space-2: 0.5rem;
+    --space-3: 0.75rem;
+    --space-4: 1rem;
+    --space-6: 1.5rem;
+    --space-8: 2rem;
+    --space-12: 3rem;
+    --radius-small: 0.25rem;
+    --radius-medium: 1rem;
+    --radius-large: 1.5rem;
+    --radius-full: 999px;
+    --shadow-small: 0 1px 4px rgb(36 54 66 / 6%);
+    --shadow-medium: 0 8px 24px rgb(36 54 66 / 10%);
+    --shadow-sheet: 0 -8px 32px rgb(36 54 66 / 16%);
+    --font-ui: "Be Vietnam Pro", system-ui, -apple-system, sans-serif;
+    --font-display: "Baloo 2", "Be Vietnam Pro", system-ui, sans-serif;
+    --font-xs: 0.75rem;
+    --font-sm: 0.875rem;
+    --font-md: 1rem;
+    --font-lg: 1.125rem;
+    --font-xl: 1.375rem;
+    --font-2xl: 1.625rem;
+    --font-3xl: 2rem;
+    --font-4xl: 3rem;
+    --duration-fast: 120ms;
+    --duration-normal: 250ms;
+    --duration-celebration: 800ms;
+    --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+    --ease-enter: cubic-bezier(0.2, 0.8, 0.2, 1);
+    --ease-exit: cubic-bezier(0.4, 0, 1, 1);
+    --layer-nav: 10;
+    --layer-feedback: 40;
+  }
+}
+
+@layer base {
+  body {
+    min-inline-size: 20rem;
+    min-block-size: 100vh;
+    background: var(--color-bg);
+    color: var(--color-text);
+    font-family: var(--font-ui);
+    font-size: var(--font-md);
+    line-height: 1.5;
+    text-rendering: optimizelegibility;
+  }
+
+  button,
+  input,
+  textarea {
+    color: inherit;
+  }
+
+  button:disabled {
+    cursor: not-allowed;
+    opacity: 0.58;
+  }
+
+  :where(a, button, input, textarea):focus-visible {
+    outline: 3px solid var(--color-primary-text);
+    outline-offset: 2px;
+  }
+
+  ::selection {
+    background: var(--color-primary);
+    color: var(--color-primary-text);
+  }
+
+  .mascot {
+    inline-size: 4.75rem;
+    block-size: 4.75rem;
+  }
+}
+
+@media (forced-colors: active) {
+  :where(a, button, input, textarea):focus-visible {
+    outline-color: Highlight;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html:focus-within {
+    scroll-behavior: auto;
+  }
+}

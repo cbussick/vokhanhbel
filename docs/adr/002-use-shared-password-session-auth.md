@@ -18,7 +18,7 @@ Use a single shared household password verified on the server. On successful log
 
 The password is stored only as an encoded scrypt hash in `APP_PASSWORD_HASH`; there is no plaintext password environment variable or password-change screen. Use Node's built-in asynchronous `crypto.scrypt` implementation with OWASP's baseline parameters (`N=2^17`, `r=8`, `p=1`), a random 16-byte salt, a 32-byte derived key, and a sufficient explicit `maxmem` setting. Store the algorithm, parameters, salt, and derived key in a versioned encoded string, and compare derived keys with `crypto.timingSafeEqual`. This avoids a password-hashing dependency while retaining a modern memory-hard algorithm.
 
-The configured shared password must be 16–128 characters. Accept spaces and Unicode, preserve the submitted value exactly without trimming, normalization, or truncation, and allow paste and password-manager autofill. Reject inputs outside the length bound before invoking scrypt, and never include submitted passwords in logs or error details. V1 needs no composition rules or client-side strength meter because the password is configured by the operator rather than chosen through a public signup flow.
+The configured shared password must be 6–128 characters. Accept spaces and Unicode, preserve the submitted value exactly without trimming, normalization, or truncation, and allow paste and password-manager autofill. Reject inputs outside the length bound before invoking scrypt, and never include submitted passwords in logs or error details. The Login UI uses the same generic wrong-password response for out-of-range input and does not disclose the numeric requirement. V1 needs no composition rules or client-side strength meter because the password is configured by the operator rather than chosen through a public signup flow.
 
 Generate each Session identifier from 32 cryptographically random bytes, put only the raw identifier in the cookie, and store only its SHA-256 hash in the database. The Session record contains the identifier hash, creation time, and expiry time.
 
@@ -77,5 +77,6 @@ Throttle failed login attempts in shared database-backed storage: allow at most 
 - Emergency password rotation includes a manual database operation to revoke
   all existing Sessions.
 - The shared password must never be stored in plaintext or sent back to the client.
+- The six-character minimum provides less brute-force resistance than the original 16-character minimum, so the existing database-backed Login throttling remains a required control.
 - Supporting multiple Learners or simultaneous independent Review Sessions later requires real accounts, a new ADR, and a migration plan that assigns existing data to Khanh.
 - Login throttling adds a small database table and cleanup path; raw IP values must not be stored or appear in application logs.

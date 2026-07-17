@@ -25,8 +25,8 @@ through translation keys from the start; only a `de` locale file ships in V1. Lo
 setup and translation files live under `src/i18n/`.
 
 A shared, allowlisted `appLocale` is fixed to `de` in V1. The frontend uses it to
-initialize `react-i18next`, and the backend maps it to German as Khunpap's explanation
-language. Khunpap may infer the language being studied from Card content, but it does
+initialize `react-i18next`, and the backend maps it to German as Khunhphap's explanation
+language. Khunhphap may infer the language being studied from Card content, but it does
 not independently infer the language in which it teaches.
 
 ## Alternatives Considered
@@ -55,5 +55,5 @@ not independently infer the language in which it teaches.
 - Adding a second locale later is a new locale file plus a locale switch, not a
   component-by-component rewrite.
 - Any future client-selected locale must be checked against the server's supported
-  locale allowlist before it can influence the tutor prompt.
+  locale allowlist before it can influence the Khunhphap prompt.
 - Slightly more setup/boilerplate for V1 than hardcoding strings would have been.

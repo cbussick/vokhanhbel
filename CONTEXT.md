@@ -28,6 +28,10 @@ _Avoid_: Pending, ready
 A single append-only log entry recording one grading event for a card, including the grade, points awarded, and box before/after.
 _Avoid_: Attempt, grading event
 
+**Review Submission**:
+A client request to record a Grade as a Review. It may be pending, retried, or rejected; only an accepted Review Submission creates a Review.
+_Avoid_: Pending Review, rejected Review, rejected Grade
+
 **Session**:
 A server-side authentication record created after the shared password is accepted, identified in the browser by an opaque cookie and valid for at most 30 days.
 _Avoid_: JWT, access token, signed session
@@ -40,6 +44,6 @@ _Avoid_: Session (reserved for the auth session), study session
 The household's total score, always derived as the sum of points awarded across all Reviews, never stored as its own counter.
 _Avoid_: Score, total
 
-**Khunpap**:
+**Khunhphap**:
 The named AI tutor persona surfaced in UI copy when a user asks about a card.
 _Avoid_: AI tutor, assistant

@@ -15,9 +15,8 @@ migration in this order:
 1. Open the pull request containing the application change and its committed
    Drizzle migration.
 2. Wait for all CI checks to pass.
-3. From the feature branch, run `npm run db:migrate:production` locally. The
-   command verifies the production target, creates and validates an encrypted
-   backup, and aborts without migrating if the backup fails.
+3. From the feature branch, follow the
+   [production migration and encrypted backup runbook](operations.md#production-migration-and-encrypted-backup).
 4. Confirm that the migration succeeded.
 5. Merge the pull request into `main`.
 6. Confirm that the Vercel production deployment succeeds.

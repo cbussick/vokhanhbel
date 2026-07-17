@@ -1,0 +1,115 @@
+.screen {
+  min-block-size: 100vh;
+  min-block-size: 100dvh;
+  display: grid;
+  place-items: center;
+  padding: max(var(--space-6), env(safe-area-inset-top))
+    max(var(--space-4), env(safe-area-inset-right)) max(var(--space-6), env(safe-area-inset-bottom))
+    max(var(--space-4), env(safe-area-inset-left));
+}
+
+.card {
+  inline-size: min(100%, 26rem);
+  display: grid;
+  justify-items: center;
+  gap: var(--space-6);
+  padding: var(--space-8) var(--space-6);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-large);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-medium);
+}
+
+.card h1 {
+  text-align: center;
+  font-family: var(--font-display);
+  font-size: var(--font-2xl);
+}
+
+.card > div > p {
+  margin-block-start: var(--space-2);
+  color: var(--color-text-secondary);
+  text-align: center;
+}
+
+.card form {
+  inline-size: 100%;
+  display: grid;
+  gap: var(--space-2);
+}
+
+.card label {
+  font-weight: 700;
+}
+
+.card input {
+  min-block-size: 56px;
+  inline-size: 100%;
+  padding-inline: var(--space-4);
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-medium);
+  background: white;
+}
+
+.card input[aria-invalid="true"] {
+  border-color: var(--color-danger);
+  animation: shake var(--duration-normal) var(--ease-standard);
+}
+
+.card button {
+  min-block-size: 56px;
+  margin-block-start: var(--space-3);
+  border: 0;
+  border-radius: var(--radius-medium);
+  background: var(--color-primary);
+  color: var(--color-primary-text);
+  font-weight: 800;
+  transition: scale var(--duration-fast) var(--ease-standard);
+}
+
+.card button:active:not(:disabled) {
+  scale: 0.98;
+}
+
+.error {
+  margin-block-start: var(--space-2);
+  color: var(--color-danger);
+  font-size: var(--font-sm);
+  font-weight: 600;
+}
+
+.notice {
+  inline-size: 100%;
+  padding: var(--space-3);
+  border-radius: var(--radius-medium);
+  background: color-mix(in srgb, var(--color-warning) 28%, white);
+  color: var(--color-warning-text);
+}
+
+@keyframes shake {
+  25% {
+    translate: -0.3rem 0;
+  }
+
+  50% {
+    translate: 0.3rem 0;
+  }
+
+  75% {
+    translate: -0.15rem 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card input[aria-invalid="true"] {
+    animation: none;
+  }
+
+  .card button {
+    transition: background-color var(--duration-fast);
+  }
+
+  .card button:active:not(:disabled) {
+    scale: 1;
+  }
+}

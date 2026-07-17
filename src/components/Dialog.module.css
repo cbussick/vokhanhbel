@@ -1,0 +1,186 @@
+.dialog {
+  inline-size: 100%;
+  max-inline-size: 30rem;
+  block-size: auto;
+  max-block-size: calc(100dvh - var(--space-6));
+  margin: auto auto 0;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-large) var(--radius-large) 0 0;
+  background: transparent;
+  color: var(--color-text);
+  opacity: 0;
+  translate: 0 1rem;
+  transition-property: opacity, translate, display, overlay;
+  transition-duration: var(--duration-fast);
+  transition-timing-function: var(--ease-exit);
+  transition-behavior: allow-discrete;
+}
+
+.dialog[open] {
+  opacity: 1;
+  translate: 0;
+  transition-duration: var(--duration-normal);
+  transition-timing-function: var(--ease-enter);
+}
+
+@starting-style {
+  .dialog[open] {
+    opacity: 0;
+    translate: 0 1rem;
+  }
+}
+
+.dialog::backdrop {
+  background: rgb(36 54 66 / 0%);
+  transition:
+    display var(--duration-fast) allow-discrete,
+    overlay var(--duration-fast) allow-discrete,
+    background-color var(--duration-fast);
+}
+
+.dialog[open]::backdrop {
+  background: rgb(36 54 66 / 45%);
+}
+
+@starting-style {
+  .dialog[open]::backdrop {
+    background: rgb(36 54 66 / 0%);
+  }
+}
+
+.sheet {
+  max-block-size: calc(100dvh - var(--space-6));
+  overflow: auto;
+  padding: var(--space-6) var(--space-4) max(var(--space-6), env(safe-area-inset-bottom));
+  border-radius: var(--radius-large) var(--radius-large) 0 0;
+  background: var(--color-surface);
+  box-shadow: var(--shadow-sheet);
+}
+
+.sheet header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  margin-block-end: var(--space-6);
+}
+
+.sheet h2 {
+  font-family: var(--font-display);
+  font-size: var(--font-xl);
+}
+
+.iconButton {
+  min-inline-size: 44px;
+  min-block-size: 44px;
+  border: 0;
+  border-radius: var(--radius-full);
+  background: var(--color-divider);
+  font-size: var(--font-xl);
+}
+
+.sheet form {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.sheet label {
+  margin-block-start: var(--space-3);
+  font-weight: 700;
+}
+
+.hint {
+  color: var(--color-text-secondary);
+  font-size: var(--font-xs);
+}
+
+.sheet textarea {
+  inline-size: 100%;
+  min-block-size: 7rem;
+  resize: vertical;
+  padding: var(--space-3);
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-medium);
+  background: white;
+  line-height: 1.65;
+}
+
+.sheet textarea:first-of-type {
+  min-block-size: 5rem;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--space-2);
+  margin-block-start: var(--space-4);
+}
+
+.actions button {
+  min-block-size: 44px;
+  padding-inline: var(--space-4);
+  border-radius: var(--radius-medium);
+  font-weight: 700;
+}
+
+.primary {
+  border: 0;
+  background: var(--color-primary);
+  color: var(--color-primary-text);
+}
+
+.secondary {
+  border: 1px solid var(--color-border);
+  background: white;
+}
+
+.danger {
+  border: 0;
+  background: var(--color-danger);
+  color: white;
+}
+
+.deleteLink {
+  margin-inline-end: auto;
+  border: 0;
+  background: transparent;
+  color: var(--color-danger);
+  text-decoration: underline;
+}
+
+.error {
+  color: var(--color-danger);
+  font-weight: 600;
+}
+
+.confirm {
+  display: grid;
+  gap: var(--space-6);
+}
+
+@media (width >= 48rem) {
+  .dialog {
+    margin: auto;
+    border-radius: var(--radius-large);
+  }
+
+  .sheet {
+    border-radius: var(--radius-large);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dialog,
+  .dialog[open] {
+    translate: 0;
+    transition-duration: var(--duration-fast);
+  }
+
+  @starting-style {
+    .dialog[open] {
+      translate: 0;
+    }
+  }
+}

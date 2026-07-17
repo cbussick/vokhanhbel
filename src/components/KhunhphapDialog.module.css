@@ -1,0 +1,156 @@
+.dialog {
+  inline-size: 100%;
+  max-inline-size: 30rem;
+  block-size: min(90dvh, 48rem);
+  margin: auto auto 0;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-large) var(--radius-large) 0 0;
+  background: transparent;
+  color: var(--color-text);
+}
+
+.dialog::backdrop {
+  background: rgb(36 54 66 / 45%);
+}
+
+.sheet {
+  block-size: 100%;
+  display: grid;
+  grid-template-rows: auto auto 1fr auto auto;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-4) max(var(--space-4), env(safe-area-inset-bottom));
+  border-radius: inherit;
+  background: var(--color-surface);
+  box-shadow: var(--shadow-sheet);
+}
+
+.sheet header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.sheet h2 {
+  font-family: var(--font-display);
+}
+
+.sheet header button {
+  min-inline-size: 44px;
+  min-block-size: 44px;
+  border: 0;
+  border-radius: var(--radius-full);
+  background: var(--color-divider);
+  font-size: var(--font-xl);
+}
+
+.disclosure {
+  color: var(--color-text-secondary);
+  font-size: var(--font-xs);
+}
+
+.messages {
+  min-block-size: 0;
+  overflow-y: auto;
+  display: grid;
+  align-content: start;
+  gap: var(--space-3);
+  padding: var(--space-2);
+  scroll-behavior: auto;
+}
+
+.messages article {
+  max-inline-size: 88%;
+  padding: var(--space-3);
+  border-radius: var(--radius-medium);
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+
+.messages article strong {
+  font-size: var(--font-xs);
+}
+
+.messages article p {
+  margin-block-start: var(--space-1);
+}
+
+.user {
+  justify-self: end;
+  background: var(--color-primary);
+}
+
+.assistant {
+  justify-self: start;
+  background: var(--color-divider);
+}
+
+.thinking,
+.notice {
+  color: var(--color-text-secondary);
+  font-size: var(--font-sm);
+}
+
+.error {
+  color: var(--color-danger);
+}
+
+.latest {
+  justify-self: center;
+  min-block-size: 44px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-full);
+  background: white;
+}
+
+.prompts {
+  display: flex;
+  gap: var(--space-2);
+  overflow-x: auto;
+}
+
+.prompts button {
+  flex: 0 0 auto;
+  min-block-size: 44px;
+  padding-inline: var(--space-3);
+  border: 1px solid var(--color-primary);
+  border-radius: var(--radius-full);
+  background: white;
+}
+
+.sheet form {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: var(--space-2);
+}
+
+.sheet form label,
+.sheet form p {
+  grid-column: 1 / -1;
+  font-size: var(--font-sm);
+}
+
+.sheet textarea {
+  min-block-size: 52px;
+  max-block-size: 8rem;
+  resize: vertical;
+  padding: var(--space-2);
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-medium);
+}
+
+.sheet form button {
+  min-block-size: 52px;
+  padding-inline: var(--space-4);
+  border: 0;
+  border-radius: var(--radius-medium);
+  background: var(--color-primary);
+  font-weight: 800;
+}
+
+@media (width >= 48rem) {
+  .dialog {
+    margin: auto;
+    border-radius: var(--radius-large);
+  }
+}

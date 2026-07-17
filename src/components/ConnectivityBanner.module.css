@@ -1,0 +1,38 @@
+.banner {
+  position: sticky;
+  inset-block-start: 0;
+  z-index: var(--layer-feedback);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  min-block-size: 44px;
+  padding: var(--space-2) var(--space-4);
+  background: var(--color-warning);
+  color: var(--color-warning-text);
+  font-size: var(--font-sm);
+  font-weight: 600;
+  animation: banner-in var(--duration-normal) var(--ease-enter);
+}
+
+.banner button {
+  min-block-size: 36px;
+  padding-inline: var(--space-3);
+  border: 1px solid currentcolor;
+  border-radius: var(--radius-full);
+  background: transparent;
+  color: inherit;
+}
+
+@keyframes banner-in {
+  from {
+    translate: 0 -100%;
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .banner {
+    animation: none;
+  }
+}

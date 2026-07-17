@@ -1,0 +1,35 @@
+.landing {
+  min-block-size: 24rem;
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  gap: var(--space-6);
+  text-align: center;
+}
+
+.landing > button {
+  min-block-size: 56px;
+  min-inline-size: min(100%, 18rem);
+  padding-inline: var(--space-4);
+  border: 0;
+  border-radius: var(--radius-medium);
+  background: var(--color-primary);
+  color: var(--color-primary-text);
+  font-weight: 800;
+}
+
+.dueCount {
+  display: grid;
+  justify-items: center;
+}
+
+.dueCount strong {
+  font-family: var(--font-display);
+  font-size: var(--font-4xl);
+  line-height: 1.2;
+  color: var(--color-primary-text);
+}
+
+.dueCount span {
+  color: var(--color-text-secondary);
+}

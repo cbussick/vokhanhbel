@@ -13,3 +13,9 @@ The skills speak in terms of five canonical triage roles. This file maps those r
 When a skill mentions a role (e.g. "apply the AFK-ready triage label"), use the corresponding label string from this table.
 
 Edit the right-hand column to match whatever vocabulary you actually use.
+
+## Completion status
+
+Local issues use `done` after every acceptance criterion has evidence and the implementation has
+passed review. This is a lifecycle status rather than a triage role. Criteria that require a person,
+device, hosted CI, or production environment remain `ready-for-human` until that evidence is recorded.
