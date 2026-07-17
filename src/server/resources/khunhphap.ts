@@ -1,11 +1,11 @@
 import { z } from "zod";
-import type { KhunhphapInput } from "../../contracts/khunhphap";
-import { problemTypes } from "../../contracts/problem";
-import { berlinTimeZone } from "../../domain/time";
-import type { AiProvider } from "../ai/aiProvider";
-import { getPool } from "../database/client";
-import { AppProblem } from "../http/problem";
-import { getCard } from "./cards";
+import type { KhunhphapInput } from "../../contracts/khunhphap.js";
+import { problemTypes } from "../../contracts/problem.js";
+import { berlinTimeZone } from "../../domain/time.js";
+import type { AiProvider } from "../ai/aiProvider.js";
+import { getPool } from "../database/client.js";
+import { AppProblem } from "../http/problem.js";
+import { getCard } from "./cards.js";
 
 const allowanceCountSchema = z.object({
   session_count: z.string().regex(/^\d+$/u),

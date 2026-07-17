@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { cardSchema, createCardInputSchema } from "./card";
-import { khunhphapStreamEventSchema } from "./khunhphap";
-import { problemSchema } from "./problem";
-import { reviewSubmissionInputSchema } from "./review";
-import { loginInputSchema } from "./session";
-import { statsSchema } from "./stats";
+import { cardSchema, createCardInputSchema } from "./card.js";
+import { khunhphapStreamEventSchema } from "./khunhphap.js";
+import { problemSchema } from "./problem.js";
+import { reviewSubmissionInputSchema } from "./review.js";
+import { loginInputSchema } from "./session.js";
+import { statsSchema } from "./stats.js";
 
 describe("public contracts", () => {
   it("normalizes valid Card input at the boundary", () => {

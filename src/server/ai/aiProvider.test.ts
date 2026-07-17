@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { Card } from "../../contracts/card";
-import { resetServerEnvironmentForTests } from "../config/environment";
-import { createOpenAiProvider } from "./aiProvider";
+import type { Card } from "../../contracts/card.js";
+import { resetServerEnvironmentForTests } from "../config/environment.js";
+import { createOpenAiProvider } from "./aiProvider.js";
 
 const { createResponse } = vi.hoisted(() => ({ createResponse: vi.fn() }));
 

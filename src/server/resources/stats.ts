@@ -1,7 +1,7 @@
 import { z } from "zod";
-import { statsSchema, type Stats } from "../../contracts/stats";
-import { berlinTimeZone } from "../../domain/time";
-import { getPool } from "../database/client";
+import { statsSchema, type Stats } from "../../contracts/stats.js";
+import { berlinTimeZone } from "../../domain/time.js";
+import { getPool } from "../database/client.js";
 
 const databaseNumberSchema = z.union([z.number(), z.string().regex(/^\d+$/u)]);
 

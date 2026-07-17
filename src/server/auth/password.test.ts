@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { encodePassword, verifyPassword } from "./password";
+import { encodePassword, verifyPassword } from "./password.js";
 
 describe("shared password hashing", () => {
   it("round-trips the exact submitted Unicode password", async () => {

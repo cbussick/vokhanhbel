@@ -1,10 +1,10 @@
 import { and, desc, eq, isNull } from "drizzle-orm";
-import type { CreateCardInput, UpdateCardInput } from "../../contracts/card";
-import { problemTypes } from "../../contracts/problem";
-import { getDatabase } from "../database/client";
-import { cards } from "../database/schema";
-import { AppProblem } from "../http/problem";
-import { mapCard } from "./cardMapper";
+import type { CreateCardInput, UpdateCardInput } from "../../contracts/card.js";
+import { problemTypes } from "../../contracts/problem.js";
+import { getDatabase } from "../database/client.js";
+import { cards } from "../database/schema.js";
+import { AppProblem } from "../http/problem.js";
+import { mapCard } from "./cardMapper.js";
 
 function isUniqueViolation(error: unknown): boolean {
   if (typeof error !== "object" || error === null) return false;

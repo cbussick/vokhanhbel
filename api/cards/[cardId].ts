@@ -1,9 +1,9 @@
 import { z } from "zod";
-import { updateCardInputSchema } from "../../src/contracts/card";
-import { problemTypes } from "../../src/contracts/problem";
-import { handleRequest } from "../../src/server/http/handler";
-import { AppProblem } from "../../src/server/http/problem";
-import { deleteCard, getCard, updateCard } from "../../src/server/resources/cards";
+import { updateCardInputSchema } from "../../src/contracts/card.js";
+import { problemTypes } from "../../src/contracts/problem.js";
+import { handleRequest } from "../../src/server/http/handler.js";
+import { AppProblem } from "../../src/server/http/problem.js";
+import { deleteCard, getCard, updateCard } from "../../src/server/resources/cards.js";
 
 function getCardId(request: Request): string {
   const value = new URL(request.url).pathname.split("/").filter(Boolean).at(-1);

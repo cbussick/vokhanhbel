@@ -1,7 +1,7 @@
 import OpenAI from "openai";
-import type { Card } from "../../contracts/card";
-import type { KhunhphapInput } from "../../contracts/khunhphap";
-import { getServerEnvironment } from "../config/environment";
+import type { Card } from "../../contracts/card.js";
+import type { KhunhphapInput } from "../../contracts/khunhphap.js";
+import { getServerEnvironment } from "../config/environment.js";
 
 export interface KhunhphapProviderRequest {
   card: Card;

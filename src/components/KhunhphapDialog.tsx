@@ -64,9 +64,7 @@ export function KhunhphapDialog({ card, onClose }: { card: Card; onClose: () => 
     if (request.status !== "submitting") return;
 
     const timer = window.setTimeout(() => {
-      setRequest((state) =>
-        state.status === "submitting" ? { status: "thinking" } : state,
-      );
+      setRequest((state) => (state.status === "submitting" ? { status: "thinking" } : state));
     }, 300);
 
     return () => window.clearTimeout(timer);
@@ -171,9 +169,7 @@ export function KhunhphapDialog({ card, onClose }: { card: Card; onClose: () => 
           const streamEvent = khunhphapStreamEventSchema.parse({ event, data });
 
           if (streamEvent.event === "delta") {
-            setRequest((state) =>
-              state.status === "streaming" ? state : { status: "streaming" },
-            );
+            setRequest((state) => (state.status === "streaming" ? state : { status: "streaming" }));
             setMessages((items) =>
               items.map((message, index) =>
                 index === items.length - 1
@@ -201,10 +197,10 @@ export function KhunhphapDialog({ card, onClose }: { card: Card; onClose: () => 
         status: "error",
         message:
           code === "session-limit"
-          ? t("khunhphap.sessionLimit")
-          : code === "daily-limit"
-            ? t("khunhphap.dailyLimit")
-            : t("khunhphap.error"),
+            ? t("khunhphap.sessionLimit")
+            : code === "daily-limit"
+              ? t("khunhphap.dailyLimit")
+              : t("khunhphap.error"),
         retryAfter:
           value instanceof KhunhphapRequestError && value.retryAfter
             ? Math.ceil(value.retryAfter)

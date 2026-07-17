@@ -1,6 +1,6 @@
 import { migrate } from "drizzle-orm/node-postgres/migrator";
 import { beforeAll, beforeEach } from "vitest";
-import { getDatabase, getPool } from "../../src/server/database/client";
+import { getDatabase, getPool } from "../../src/server/database/client.js";
 
 beforeAll(async () => {
   await migrate(getDatabase(), { migrationsFolder: "./drizzle" });

@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { POST as createCard } from "../../api/cards/index";
-import { POST as createReview } from "../../api/reviews";
-import { POST as createSession } from "../../api/session";
-import { GET as readStats } from "../../api/stats";
-import { encodePassword } from "../../src/server/auth/password";
-import { resetServerEnvironmentForTests } from "../../src/server/config/environment";
+import { POST as createCard } from "../../api/cards/index.js";
+import { POST as createReview } from "../../api/reviews.js";
+import { POST as createSession } from "../../api/session.js";
+import { GET as readStats } from "../../api/stats.js";
+import { encodePassword } from "../../src/server/auth/password.js";
+import { resetServerEnvironmentForTests } from "../../src/server/config/environment.js";
 
 const origin = "http://localhost:4173";
 
