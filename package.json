@@ -9,7 +9,7 @@
   "scripts": {
     "dev": "vite",
     "dev:full": "docker compose up -d --wait postgres && npm run db:migrate && node --env-file=.env.local node_modules/.bin/vercel dev --local --listen 3000",
-    "dev:e2e": "node --env-file=.env.local node_modules/.bin/vercel dev --local --listen 4173",
+    "dev:e2e": "node --env-file-if-exists=.env.local node_modules/.bin/vercel dev --local --listen 4173",
     "build": "tsc -b && vite build",
     "typecheck": "tsc -b --pretty false",
     "test": "vitest run",
