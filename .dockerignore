@@ -1,0 +1,11 @@
+.git
+.env
+.env.*
+.secrets
+node_modules
+dist
+coverage
+playwright-report
+test-results
+*.dump
+*.dump.age

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { createSessionIdentifier, hashSessionIdentifier } from "./sessionIdentifier";
+import { createSessionIdentifier, hashSessionIdentifier } from "./sessionIdentifier.js";
 
 describe("opaque Session identifiers", () => {
   it("creates random browser identifiers and stable database hashes", () => {

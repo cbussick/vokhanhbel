@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isAllowedUnsafeRequest } from "./origin";
+import { isAllowedUnsafeRequest } from "./origin.js";
 
 describe("unsafe same-origin requests", () => {
   it("accepts the exact target origin", () => {

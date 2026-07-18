@@ -1,8 +1,8 @@
 import type { ZodType } from "zod";
-import { problemTypes } from "../../contracts/problem";
-import { getAuthenticatedSessionHash } from "../auth/session";
-import { isAllowedUnsafeRequest } from "./origin";
-import { AppProblem, problemResponse } from "./problem";
+import { problemTypes } from "../../contracts/problem.js";
+import { getAuthenticatedSessionHash } from "../auth/session.js";
+import { isAllowedUnsafeRequest } from "./origin.js";
+import { AppProblem, problemResponse } from "./problem.js";
 
 const maximumJsonBodyBytes = 32 * 1024;
 

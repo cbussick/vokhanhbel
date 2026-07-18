@@ -9,7 +9,7 @@
   "scripts": {
     "dev": "vite",
     "dev:full": "docker compose up -d --wait postgres && npm run db:migrate && node --env-file=.env.local node_modules/.bin/vercel dev --local --listen 3000",
-    "dev:e2e": "node --env-file=.env.local node_modules/.bin/vercel dev --local --listen 4173",
+    "dev:e2e": "node --env-file-if-exists=.env.local node_modules/.bin/vercel dev --local --listen 4173",
     "build": "tsc -b && vite build",
     "typecheck": "tsc -b --pretty false",
     "test": "vitest run",
@@ -24,8 +24,12 @@
     "licenses": "node --experimental-strip-types scripts/checkLicenses.ts",
     "db:generate": "node --env-file-if-exists=.env.local node_modules/drizzle-kit/bin.cjs generate",
     "db:migrate": "node --env-file-if-exists=.env.local node_modules/drizzle-kit/bin.cjs migrate",
-    "db:migrate:production": "node --experimental-strip-types scripts/migrateProduction.ts",
-    "db:restore:verify": "node --experimental-strip-types scripts/verifyRestore.ts"
+    "backup:identity:generate": "node --experimental-strip-types scripts/runMigrationContainer.ts keygen",
+    "backup:identity:recipient": "node --experimental-strip-types scripts/runMigrationContainer.ts recipient",
+    "db:migrate:production": "node --env-file=.env.production-migration.local --experimental-strip-types scripts/runMigrationContainer.ts migrate",
+    "db:migrate:production:container": "node --experimental-strip-types scripts/migrateProduction.ts",
+    "db:restore:verify": "node --env-file-if-exists=.env.production-migration.local --experimental-strip-types scripts/runMigrationContainer.ts restore",
+    "db:restore:verify:container": "node --experimental-strip-types scripts/verifyRestore.ts"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.101.2",

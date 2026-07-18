@@ -1,12 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { createCard, deleteCard, listCards } from "../../src/server/resources/cards";
-import { getPool } from "../../src/server/database/client";
-import { encodePassword } from "../../src/server/auth/password";
-import { resetServerEnvironmentForTests } from "../../src/server/config/environment";
-import { recordReview } from "../../src/server/resources/reviews";
-import { login } from "../../src/server/resources/sessions";
-import { getStats } from "../../src/server/resources/stats";
-import { consumeKhunhphapAllowance } from "../../src/server/resources/khunhphap";
+import { createCard, deleteCard, listCards } from "../../src/server/resources/cards.js";
+import { getPool } from "../../src/server/database/client.js";
+import { encodePassword } from "../../src/server/auth/password.js";
+import { resetServerEnvironmentForTests } from "../../src/server/config/environment.js";
+import { recordReview } from "../../src/server/resources/reviews.js";
+import { login } from "../../src/server/resources/sessions.js";
+import { getStats } from "../../src/server/resources/stats.js";
+import { consumeKhunhphapAllowance } from "../../src/server/resources/khunhphap.js";
 
 describe("PostgreSQL application behavior", () => {
   it("enforces active normalized-front uniqueness and releases it after soft deletion", async () => {

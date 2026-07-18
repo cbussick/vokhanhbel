@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { getBoxAfterGrade, getIntervalDays, getPointsForGrade } from "./review";
+import { getBoxAfterGrade, getIntervalDays, getPointsForGrade } from "./review.js";
 
 describe("Review grading", () => {
   it.each([

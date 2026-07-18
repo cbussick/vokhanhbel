@@ -1,12 +1,12 @@
 import { createHmac } from "node:crypto";
 import { z } from "zod";
-import { problemTypes } from "../../contracts/problem";
-import type { loginInputSchema } from "../../contracts/session";
-import { verifyPassword } from "../auth/password";
-import { createSessionIdentifier, hashSessionIdentifier } from "../auth/sessionIdentifier";
-import { getServerEnvironment } from "../config/environment";
-import { getPool } from "../database/client";
-import { AppProblem } from "../http/problem";
+import { problemTypes } from "../../contracts/problem.js";
+import type { loginInputSchema } from "../../contracts/session.js";
+import { verifyPassword } from "../auth/password.js";
+import { createSessionIdentifier, hashSessionIdentifier } from "../auth/sessionIdentifier.js";
+import { getServerEnvironment } from "../config/environment.js";
+import { getPool } from "../database/client.js";
+import { AppProblem } from "../http/problem.js";
 
 type LoginInput = z.infer<typeof loginInputSchema>;
 const loginWindowMilliseconds = 15 * 60 * 1_000;

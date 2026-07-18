@@ -28,7 +28,7 @@ The frontend is deployed on Vercel, API routes live under `/api`, and database a
 Use Neon's Free plan with its restore window set to the maximum currently available. Add two complementary logical-backup paths:
 
 - A scheduled weekly GitHub Actions workflow uses a dedicated read-only Neon credential to create a PostgreSQL 17 custom-format dump, validates the archive, encrypts it with `age` before upload, and retains roughly four weekly encrypted artifacts. The workflow downloads a pinned official `age` release, verifies its published checksum, and pins GitHub-owned actions by commit SHA. The public encryption recipient is a repository variable; the decryption identity never enters GitHub.
-- The operator runs `npm run db:migrate:production` locally for production schema changes. The command verifies its production target, creates and validates a timestamped custom-format dump outside the repository, encrypts it with the same `age` recipient, aborts if any backup step fails, and only then applies committed Drizzle migrations through the direct production connection. Ordinary Vercel deployments never migrate the database automatically.
+- The operator runs `npm run db:migrate:production` in a repository-owned Docker image for production schema changes. The image pins Node 24 and PostgreSQL 17 client tools and installs checksum-verified `age` 1.3.1 binaries. The command requires a direct PostgreSQL URL, creates and validates a timestamped custom-format dump outside the repository, encrypts it with the recipient derived from the local identity, aborts if any backup step fails, and only then applies committed Drizzle migrations through that connection. Ordinary Vercel deployments never migrate the database automatically.
 
 Document and successfully exercise a restore into a disposable PostgreSQL 17 database before launch and whenever the backup format or workflow changes.
 
@@ -72,6 +72,6 @@ Document and successfully exercise a restore into a disposable PostgreSQL 17 dat
 - API routes must not rely on in-memory state.
 - Database migrations and schema remain standard Postgres via Drizzle.
 - GitHub receives only a read-only production backup credential; the production migration credential remains outside the workflow.
-- The `age` decryption identity is kept only on the operator's machine and in the password manager; losing it makes all backups unusable.
+- The `age` decryption identity is kept in the ignored `.secrets/` directory on the operator's machine and in the password manager; losing it makes all backups unusable. It is bind-mounted read-only for migration and restore operations and never copied into the Docker image.
 - Unencrypted backup archives, decryption identities, and database credentials must never be committed, uploaded as artifacts, or written to logs.
 - Weekly backups consume GitHub Actions minutes and artifact storage, expected to remain well within GitHub Free allowances at V1 scale.

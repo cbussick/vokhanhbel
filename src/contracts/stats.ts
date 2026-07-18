@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { berlinDateSchema } from "./common";
+import { berlinDateSchema } from "./common.js";
 
 export const statsSchema = z.object({
   totalPoints: z.number().int().nonnegative(),

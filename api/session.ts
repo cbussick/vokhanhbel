@@ -1,8 +1,8 @@
-import { loginInputSchema } from "../src/contracts/session";
-import { getAuthenticatedSessionHash, revokeCurrentSession } from "../src/server/auth/session";
-import { clearSessionCookie, createSessionCookie } from "../src/server/http/cookies";
-import { handleRequest } from "../src/server/http/handler";
-import { login } from "../src/server/resources/sessions";
+import { loginInputSchema } from "../src/contracts/session.js";
+import { getAuthenticatedSessionHash, revokeCurrentSession } from "../src/server/auth/session.js";
+import { clearSessionCookie, createSessionCookie } from "../src/server/http/cookies.js";
+import { handleRequest } from "../src/server/http/handler.js";
+import { login } from "../src/server/resources/sessions.js";
 
 export async function GET(request: Request): Promise<Response> {
   return handleRequest(request, { cacheControl: "no-store" }, async () =>

@@ -1,0 +1,32 @@
+FROM node:24-bookworm-slim AS node-runtime
+
+FROM postgres:17-bookworm
+
+ARG AGE_VERSION=1.3.1
+ARG AGE_ARCHIVE_SHA256=bdc69c09cbdd6cf8b1f333d372a1f58247b3a33146406333e30c0f26e8f51377
+
+COPY --from=node-runtime /usr/local/ /usr/local/
+
+RUN set -eux; \
+    apt-get update; \
+    apt-get install --yes --no-install-recommends ca-certificates curl; \
+    curl --fail --location --silent --show-error \
+      --output /tmp/age.tar.gz \
+      "https://github.com/FiloSottile/age/releases/download/v${AGE_VERSION}/age-v${AGE_VERSION}-linux-amd64.tar.gz"; \
+    echo "${AGE_ARCHIVE_SHA256}  /tmp/age.tar.gz" | sha256sum --check --strict; \
+    tar --extract --gzip --file /tmp/age.tar.gz --directory /tmp; \
+    install --mode 0755 /tmp/age/age /usr/local/bin/age; \
+    install --mode 0755 /tmp/age/age-keygen /usr/local/bin/age-keygen; \
+    rm --recursive --force /tmp/age /tmp/age.tar.gz /var/lib/apt/lists/*
+
+WORKDIR /app
+
+COPY package.json package-lock.json ./
+RUN npm ci
+
+COPY drizzle.config.ts ./
+COPY drizzle ./drizzle
+COPY scripts ./scripts
+COPY src ./src
+
+CMD ["npm", "run", "db:migrate:production:container"]

@@ -1,7 +1,7 @@
 import { z } from "zod";
-import { boxSchema, gradeSchema } from "../domain/review";
-import { cardSchema } from "./card";
-import { utcTimestampSchema, uuidSchema } from "./common";
+import { boxSchema, gradeSchema } from "../domain/review.js";
+import { cardSchema } from "./card.js";
+import { utcTimestampSchema, uuidSchema } from "./common.js";
 
 export const reviewSubmissionInputSchema = z.object({
   id: uuidSchema,

@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { problemTypes } from "./problem";
+import { problemTypes } from "./problem.js";
 
 export const khunhphapLimits = {
   messageCharacters: 500,

@@ -1,13 +1,13 @@
 import { z } from "zod";
-import { cardSchema } from "../../contracts/card";
-import { problemTypes } from "../../contracts/problem";
+import { cardSchema } from "../../contracts/card.js";
+import { problemTypes } from "../../contracts/problem.js";
 import {
   reviewResultSchema,
   reviewSchema,
   type ReviewResult,
   type ReviewSubmissionInput,
-} from "../../contracts/review";
-import { berlinTimeZone } from "../../domain/time";
+} from "../../contracts/review.js";
+import { berlinTimeZone } from "../../domain/time.js";
 import {
   boxSchema,
   getBoxAfterGrade,
@@ -15,10 +15,10 @@ import {
   getPointsForGrade,
   gradeSchema,
   type Box,
-} from "../../domain/review";
-import { getPool } from "../database/client";
-import { AppProblem } from "../http/problem";
-import { mapCard } from "./cardMapper";
+} from "../../domain/review.js";
+import { getPool } from "../database/client.js";
+import { AppProblem } from "../http/problem.js";
+import { mapCard } from "./cardMapper.js";
 
 const reviewRowSchema = z.object({
   id: z.uuid(),

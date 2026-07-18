@@ -1,6 +1,6 @@
-import { reviewSubmissionInputSchema } from "../src/contracts/review";
-import { handleRequest } from "../src/server/http/handler";
-import { recordReview } from "../src/server/resources/reviews";
+import { reviewSubmissionInputSchema } from "../src/contracts/review.js";
+import { handleRequest } from "../src/server/http/handler.js";
+import { recordReview } from "../src/server/resources/reviews.js";
 
 export async function POST(request: Request): Promise<Response> {
   return handleRequest(

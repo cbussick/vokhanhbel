@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { normalizeCardText } from "./cardText";
+import { normalizeCardText } from "./cardText.js";
 
 describe("Card text normalization", () => {
   it("normalizes Unicode and line endings while preserving intentional line breaks", () => {

@@ -24,7 +24,7 @@ jobs:
             -e BACKUP_DATABASE_URL \
             -v "$RUNNER_TEMP/backup:/backup" \
             postgres:17 \
-            pg_dump --format=custom --no-owner --file=/backup/vokhanhbel.dump "$BACKUP_DATABASE_URL"
+            pg_dump --format=custom --no-acl --no-owner --file=/backup/vokhanhbel.dump "$BACKUP_DATABASE_URL"
           docker run --rm \
             -v "$RUNNER_TEMP/backup:/backup:ro" \
             postgres:17 \

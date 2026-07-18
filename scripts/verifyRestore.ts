@@ -24,6 +24,7 @@ try {
   await run("pg_restore", [
     "--clean",
     "--if-exists",
+    "--no-acl",
     "--no-owner",
     "--exit-on-error",
     "--dbname",

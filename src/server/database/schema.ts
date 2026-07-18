@@ -11,7 +11,7 @@ import {
   uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
-import type { Card } from "../../contracts/card";
+import type { Card } from "../../contracts/card.js";
 
 export const cards = pgTable(
   "cards",

@@ -1,8 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
-import type { Card } from "../../contracts/card";
-import type { KhunhphapInput } from "../../contracts/khunhphap";
-import type { AiProvider, KhunhphapProviderRequest } from "../ai/aiProvider";
-import { createKhunhphapResponse } from "./khunhphap";
+import type { Card } from "../../contracts/card.js";
+import type { KhunhphapInput } from "../../contracts/khunhphap.js";
+import type { AiProvider, KhunhphapProviderRequest } from "../ai/aiProvider.js";
+import { createKhunhphapResponse } from "./khunhphap.js";
 
 const card: Card = {
   id: "019c52a9-50e8-7000-8000-000000000001",

@@ -1,7 +1,7 @@
 import { z } from "zod";
-import { containsRejectedControlCharacter, normalizeCardText } from "../domain/cardText";
-import { boxSchema } from "../domain/review";
-import { utcTimestampSchema, uuidSchema } from "./common";
+import { containsRejectedControlCharacter, normalizeCardText } from "../domain/cardText.js";
+import { boxSchema } from "../domain/review.js";
+import { utcTimestampSchema, uuidSchema } from "./common.js";
 
 function createCardTextSchema(maximumLength: number) {
   return z

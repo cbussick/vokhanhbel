@@ -1,6 +1,6 @@
 import { z } from "zod";
-import { cardSchema, type Card } from "../../contracts/card";
-import { boxSchema } from "../../domain/review";
+import { cardSchema, type Card } from "../../contracts/card.js";
+import { boxSchema } from "../../domain/review.js";
 
 const cardRowSchema = z.object({
   id: z.uuid(),

@@ -1,9 +1,9 @@
 import { and, eq, gt, lt } from "drizzle-orm";
 import { z } from "zod";
-import { getDatabase } from "../database/client";
-import { sessions } from "../database/schema";
-import { readCookie, sessionCookieName } from "../http/cookies";
-import { hashSessionIdentifier } from "./sessionIdentifier";
+import { getDatabase } from "../database/client.js";
+import { sessions } from "../database/schema.js";
+import { readCookie, sessionCookieName } from "../http/cookies.js";
+import { hashSessionIdentifier } from "./sessionIdentifier.js";
 
 const authenticatedSessionSchema = z.object({ identifierHash: z.string().min(1) });
 
