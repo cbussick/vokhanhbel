@@ -98,6 +98,7 @@
   body {
     min-inline-size: 20rem;
     min-block-size: 100vh;
+    min-block-size: 100dvh;
     background: var(--color-bg);
     color: var(--color-text);
     font-family: var(--font-ui);
