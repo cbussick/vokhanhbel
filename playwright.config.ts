@@ -1,7 +1,12 @@
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { defineConfig, devices } from "@playwright/test";
+
+const ciOutputDir = join(tmpdir(), "vokhanhbel-playwright-results");
 
 export default defineConfig({
   testDir: "./tests/e2e",
+  outputDir: process.env.CI ? ciOutputDir : "test-results",
   fullyParallel: false,
   forbidOnly: Boolean(process.env.CI),
   retries: process.env.CI ? 2 : 0,
