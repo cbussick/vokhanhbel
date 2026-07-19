@@ -25,6 +25,7 @@ function LoginRoute() {
 
   const [password, setPassword] = useState("");
   const [errorKey, setErrorKey] = useState<string>();
+  const [errorRequestId, setErrorRequestId] = useState<string>();
   const [seconds, setSeconds] = useState(0);
 
   const mutation = useMutation({
@@ -36,6 +37,8 @@ function LoginRoute() {
       await navigate({ to: "/review" });
     },
     onError: (error) => {
+      setErrorRequestId(undefined);
+
       if (error instanceof ApiError && error.problem.type === problemTypes.wrongPassword) {
         setPassword("");
         setErrorKey("login.wrong");
@@ -43,6 +46,9 @@ function LoginRoute() {
       } else if (error instanceof ApiError && error.problem.status === 429) {
         setSeconds(error.retryAfter ?? loginRateLimitFallbackSeconds);
         setErrorKey("login.throttled");
+      } else if (error instanceof ApiError) {
+        setErrorKey("login.failed");
+        setErrorRequestId(error.requestId);
       } else setErrorKey("login.network");
     },
   });
@@ -63,9 +69,12 @@ function LoginRoute() {
   if (auth.status === "error") return <SessionErrorScreen />;
   if (auth.status === "authenticated") return <Navigate to="/review" />;
 
+  const visibleErrorKey = errorKey === "login.throttled" && seconds === 0 ? undefined : errorKey;
+
   const submit = (event: React.FormEvent) => {
     event.preventDefault();
     setErrorKey(undefined);
+    setErrorRequestId(undefined);
 
     const passwordLength = Array.from(password).length;
 
@@ -110,18 +119,19 @@ function LoginRoute() {
             required
             value={password}
             onChange={(event) => setPassword(event.target.value)}
-            aria-invalid={errorKey ? true : undefined}
-            aria-describedby={errorKey ? "login-error" : undefined}
+            aria-invalid={visibleErrorKey ? true : undefined}
+            aria-describedby={visibleErrorKey ? "login-error" : undefined}
           />
           <button
             type="submit"
             disabled={mutation.isPending || seconds > 0 || password.length === 0}
           >
-            {seconds > 0 ? t("login.throttled", { seconds }) : t("login.submit")}
+            {seconds > 0 ? t("login.throttled", { count: seconds }) : t("login.submit")}
           </button>
-          {errorKey && (
+          {visibleErrorKey && (
             <p id="login-error" className={styles.error} role="alert">
-              {t(errorKey, { seconds })}
+              {t(visibleErrorKey, { count: seconds })}
+              {errorRequestId && <> {t("errors.reference", { requestId: errorRequestId })}</>}
             </p>
           )}
         </form>

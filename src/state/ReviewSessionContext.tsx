@@ -60,7 +60,7 @@ function getReviewSubmissionIssue(error: unknown): ReviewSubmissionIssue {
 }
 
 function getRequestId(error: unknown): string | undefined {
-  return error instanceof ApiError ? error.problem.instance.replace(/^urn:uuid:/u, "") : undefined;
+  return error instanceof ApiError ? error.requestId : undefined;
 }
 
 function toReviewSessionView(state: ReviewSessionState): ReviewSessionView {
