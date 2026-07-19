@@ -27,6 +27,7 @@ export function CardsScreen({ selectedId }: { selectedId?: string }) {
           card.back.toLocaleLowerCase("de").includes(normalizedQuery),
       )
     : (cards.data ?? []);
+  const hasCards = (cards.data?.length ?? 0) > 0;
   const selected = cards.data?.find((card) => card.id === selectedId);
 
   if (cards.isPending) return <DelayedSkeleton />;
@@ -51,9 +52,11 @@ export function CardsScreen({ selectedId }: { selectedId?: string }) {
           value={query}
           onChange={(event) => setQuery(event.target.value)}
         />
-        <button type="button" onClick={() => setCreating(true)} disabled={!online}>
-          {t("cards.add")}
-        </button>
+        {hasCards ? (
+          <button type="button" onClick={() => setCreating(true)} disabled={!online}>
+            {t("cards.add")}
+          </button>
+        ) : null}
         {!online && <p>{t("cards.offline")}</p>}
       </div>
       {cards.isError && cards.data && (
@@ -61,10 +64,10 @@ export function CardsScreen({ selectedId }: { selectedId?: string }) {
           {t("errors.stale")}
         </p>
       )}
-      {(cards.data?.length ?? 0) === 0 ? (
+      {!hasCards ? (
         <div className={styles.center}>
           <p>{t("cards.empty")}</p>
-          <button type="button" onClick={() => setCreating(true)}>
+          <button type="button" onClick={() => setCreating(true)} disabled={!online}>
             {t("cards.add")}
           </button>
         </div>
