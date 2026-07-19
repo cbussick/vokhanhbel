@@ -109,6 +109,15 @@ describe("rendered V1 journeys", () => {
     expect(screen.getByText(/Keine Karte passt/)).toBeVisible();
   });
 
+  it("shows one add Card action when there are no saved Cards", async () => {
+    mockServer.use(http.get("/api/cards", () => HttpResponse.json([])));
+
+    renderApp("/cards");
+
+    await screen.findByText("Noch keine Karten. Füge deine erste Karte hinzu.");
+    expect(screen.getAllByRole("button", { name: "Karte hinzufügen" })).toHaveLength(1);
+  });
+
   it("completes a reveal-and-Grade Review journey", async () => {
     const user = userEvent.setup();
     const firstCard = testCards[0]!;
