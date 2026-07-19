@@ -1,5 +1,6 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { createContext, type ReactNode, useContext, useState } from "react";
+import { ApiError } from "../lib/apiClient";
 import { sessionQuery } from "../lib/queries";
 import { queryKeys } from "../lib/queryKeys";
 
@@ -8,6 +9,7 @@ export type AuthStatus = "checking" | "authenticated" | "unauthenticated" | "err
 interface AuthState {
   status: AuthStatus;
   sessionExpired: boolean;
+  errorRequestId: string | undefined;
   markAuthenticated: () => void;
   discardSession: (expired: boolean) => Promise<void>;
   retrySession: () => Promise<void>;
@@ -38,6 +40,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const value: AuthState = {
     status,
     sessionExpired,
+    errorRequestId: session.error instanceof ApiError ? session.error.requestId : undefined,
     markAuthenticated: () => {
       setSessionExpired(false);
       queryClient.setQueryData(queryKeys.session, { authenticated: true });

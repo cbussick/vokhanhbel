@@ -25,6 +25,46 @@ describe("rendered V1 journeys", () => {
     expect(submitted).toBe("  genau sechzehn+  ");
   });
 
+  it("shows a traceable Fehler-ID when Login receives a backend error", async () => {
+    const user = userEvent.setup();
+    mockServer.use(
+      http.get("/api/session", () => HttpResponse.json({ authenticated: false })),
+      http.post("/api/session", () =>
+        HttpResponse.json(
+          {
+            type: "/problems/unexpected",
+            title: "Da ist etwas schiefgegangen",
+            status: 500,
+            instance: "urn:uuid:eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee",
+          },
+          { status: 500 },
+        ),
+      ),
+    );
+    renderApp("/login");
+    await user.type(await screen.findByLabelText("Passwort"), "richtiges Passwort");
+    await user.click(screen.getByRole("button", { name: "App öffnen" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Die Anmeldung hat nicht funktioniert. Versuch es gleich noch einmal. (Fehler-ID: eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee)",
+    );
+  });
+
+  it("shows connection copy without a Fehler-ID when Login receives no response", async () => {
+    const user = userEvent.setup();
+    mockServer.use(
+      http.get("/api/session", () => HttpResponse.json({ authenticated: false })),
+      http.post("/api/session", () => HttpResponse.error()),
+    );
+    renderApp("/login");
+    await user.type(await screen.findByLabelText("Passwort"), "richtiges Passwort");
+    await user.click(screen.getByRole("button", { name: "App öffnen" }));
+
+    const alert = await screen.findByRole("alert");
+    expect(alert).toHaveTextContent("Keine Verbindung zur App. Versuch es gleich noch einmal.");
+    expect(alert).not.toHaveTextContent("Fehler-ID");
+  });
+
   it("retries a failed Session check instead of treating it as logged out", async () => {
     const user = userEvent.setup();
     let sessionAvailable = false;
@@ -45,8 +85,11 @@ describe("rendered V1 journeys", () => {
     );
 
     renderApp("/");
-    expect(await screen.findByRole("alert")).toHaveTextContent(
-      "Deine Sitzung konnte nicht überprüft werden",
+    expect(await screen.findByRole("heading")).toHaveTextContent(
+      "Die App konnte nicht geladen werden",
+    );
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "Versuch es gleich noch einmal. (Fehler-ID: 11111111-1111-4111-8111-111111111111)",
     );
 
     sessionAvailable = true;
@@ -139,7 +182,7 @@ describe("rendered V1 journeys", () => {
     await user.click(await screen.findByRole("button", { name: /Gewusst/ }));
 
     expect(await screen.findByRole("alert")).toHaveTextContent(
-      "Bitte bewerte die Karte noch einmal",
+      "Die Bewertung war zu alt und wurde nicht gespeichert",
     );
     expect(screen.getByText("Take care")).toBeVisible();
     expect(screen.queryByRole("heading", { name: "Gut gemacht!" })).not.toBeInTheDocument();
@@ -168,7 +211,7 @@ describe("rendered V1 journeys", () => {
     await user.click(await screen.findByRole("button", { name: /Gewusst/ }));
 
     const alert = await screen.findByRole("alert");
-    expect(alert).toHaveTextContent("44444444-4444-4444-8444-444444444444");
+    expect(alert).toHaveTextContent("Fehler-ID: 44444444-4444-4444-8444-444444444444");
     expect(screen.queryByRole("button", { name: /Gewusst/ })).not.toBeInTheDocument();
   });
 
@@ -198,7 +241,7 @@ describe("rendered V1 journeys", () => {
     await user.click(screen.getByRole("button", { name: "Antwort zeigen" }));
     await user.click(await screen.findByRole("button", { name: /Gewusst/ }));
 
-    expect(await screen.findByRole("alert")).toHaveTextContent("anderen Gerät gelöscht");
+    expect(await screen.findByRole("alert")).toHaveTextContent("aus der Wiederholung entfernt");
     expect(screen.getByText("Second due Card")).toBeVisible();
     await user.click(screen.getByRole("button", { name: "Review beenden" }));
     expect(await screen.findByLabelText("0 Punkte")).toBeVisible();
@@ -336,7 +379,9 @@ describe("rendered V1 journeys", () => {
     await user.click(screen.getByRole("button", { name: "Antwort zeigen" }));
     await user.click(await screen.findByRole("button", { name: /Gewusst/ }));
 
-    expect(await screen.findByRole("alert")).toHaveTextContent("Gerätezeit");
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Datum oder Uhrzeit auf deinem Gerät",
+    );
     expect(screen.getByRole("region", { name: "Kartenrückseite" })).toHaveTextContent("Pass auf");
     expect(screen.queryByRole("button", { name: /Gewusst/ })).not.toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Review beenden" }));
@@ -416,7 +461,9 @@ describe("rendered V1 journeys", () => {
 
     expect(await screen.findByRole("heading", { name: "Willkommen zurück" })).toBeVisible();
     await waitFor(() => expect(requestAborted).toBe(true));
-    expect(confirm).toHaveBeenCalledWith(expect.stringContaining("1"));
+    expect(confirm).toHaveBeenCalledWith(
+      "1 Bewertung ist noch nicht gespeichert. Trotzdem abmelden?",
+    );
     confirm.mockRestore();
   });
 
@@ -440,7 +487,7 @@ describe("rendered V1 journeys", () => {
     await user.click(screen.getByRole("button", { name: "Antwort zeigen" }));
     await user.click(await screen.findByRole("button", { name: /Gewusst/ }));
 
-    expect(await screen.findByText(/Deine Sitzung ist abgelaufen/)).toBeVisible();
+    expect(await screen.findByText(/Du wurdest abgemeldet/)).toBeVisible();
     expect(screen.queryByText("dddddddd-dddd-4ddd-8ddd-dddddddddddd")).not.toBeInTheDocument();
   });
 
@@ -492,7 +539,7 @@ describe("rendered V1 journeys", () => {
     await user.type(await screen.findByLabelText("Deine Frage"), "Warum?");
     await user.click(screen.getByRole("button", { name: "Fragen" }));
 
-    expect(await screen.findByText(/Deine Sitzung ist abgelaufen/)).toBeVisible();
+    expect(await screen.findByText(/Du wurdest abgemeldet/)).toBeVisible();
     expect(screen.queryByRole("dialog", { name: "Khunhphap" })).not.toBeInTheDocument();
   });
 

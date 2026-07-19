@@ -5,11 +5,14 @@ import { ErrorScreen } from "./ErrorScreen";
 export function SessionErrorScreen() {
   const { t } = useTranslation();
   const auth = useAuth();
+  const message = auth.errorRequestId
+    ? `${t("errors.session")} ${t("errors.reference", { requestId: auth.errorRequestId })}`
+    : t("errors.session");
 
   return (
     <ErrorScreen
       actionLabel={t("common.retry")}
-      message={t("errors.session")}
+      message={message}
       onAction={() => void auth.retrySession()}
       title={t("errors.sessionTitle")}
     />

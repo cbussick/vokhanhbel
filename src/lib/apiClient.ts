@@ -6,6 +6,7 @@ export class ApiError extends Error {
   constructor(
     public readonly problem: Problem,
     public readonly retryAfter: number | undefined,
+    public readonly requestId: string | undefined,
   ) {
     super(problem.title);
   }
@@ -29,8 +30,11 @@ export async function apiRequest<T>(path: string, init?: RequestInit): Promise<T
           instance: `urn:uuid:${crypto.randomUUID()}`,
         };
     const retryHeader = response.headers.get("retry-after");
+    const requestId =
+      response.headers.get("x-request-id") ??
+      (parsed.success ? parsed.data.instance.replace(/^urn:uuid:/u, "") : undefined);
 
-    throw new ApiError(problem, retryHeader ? Number(retryHeader) : undefined);
+    throw new ApiError(problem, retryHeader ? Number(retryHeader) : undefined, requestId);
   }
   if (response.status === 204) return undefined as T;
 

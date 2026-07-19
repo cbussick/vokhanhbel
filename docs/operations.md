@@ -49,6 +49,18 @@ backup, and restore operations instead require `DATABASE_URL_UNPOOLED` so they b
 connection pool. `OPENAI_MODEL` is an optional deployment override: omit it to use the application
 default.
 
+## Troubleshooting application errors
+
+When the UI shows a `Fehler-ID`, that value is the backend request ID for the failed request. It
+matches the `X-Request-ID` response header, the UUID portion of the problem response's `instance`,
+and the structured log field `requestId`. Search the runtime logs for the complete UUID to find the
+corresponding route, status, duration, and safe error category.
+
+An HTTP status such as `500` describes a broad class of failures and is not the `Fehler-ID`. If the
+UI shows no `Fehler-ID`, the browser did not receive a usable correlation ID from the backend. Check
+backend availability and the browser's network request instead of searching for a client-generated
+identifier.
+
 ## Production migration and encrypted backup
 
 The production migration and restore tools run in a repository-owned Docker image containing Node
