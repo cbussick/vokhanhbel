@@ -230,9 +230,95 @@ test("aligns the Review close action with the progress header", async ({ page })
   expect(await progress.screenshot()).toEqual(restingProgress);
 });
 
+test("adapts the app shell between tablet and desktop widths", async ({ page }) => {
+  await installMockApi(page);
+
+  await page.setViewportSize({ width: 768, height: 900 });
+  await page.goto("/cards");
+
+  const appName = page.getByText("Vokhanhbel", { exact: true });
+  const reviewLink = page.getByRole("link", { name: /Wiederholen/ });
+  const cardsLink = page.getByRole("link", { name: /Karten/ });
+  const tabletReviewBox = await reviewLink.boundingBox();
+  const tabletCardsBox = await cardsLink.boundingBox();
+  const tabletMainBox = await page.locator("main").boundingBox();
+
+  await expect(appName).toBeHidden();
+  expect(tabletReviewBox).not.toBeNull();
+  expect(tabletCardsBox).not.toBeNull();
+  expect(tabletMainBox).not.toBeNull();
+  expect(Math.abs(tabletReviewBox!.y - tabletCardsBox!.y)).toBeLessThanOrEqual(1);
+  expect(tabletCardsBox!.x).toBeGreaterThan(tabletReviewBox!.x);
+  expect(tabletMainBox!.width).toBeGreaterThan(480);
+
+  await page.setViewportSize({ width: 1024, height: 900 });
+  const desktopReviewBox = await reviewLink.boundingBox();
+  const desktopCardsBox = await cardsLink.boundingBox();
+  const desktopMainBox = await page.locator("main").boundingBox();
+
+  await expect(appName).toBeVisible();
+  expect(desktopReviewBox).not.toBeNull();
+  expect(desktopCardsBox).not.toBeNull();
+  expect(desktopMainBox).not.toBeNull();
+  expect(Math.abs(desktopReviewBox!.x - desktopCardsBox!.x)).toBeLessThanOrEqual(1);
+  expect(desktopCardsBox!.y).toBeGreaterThan(desktopReviewBox!.y);
+  expect(desktopMainBox!.x).toBeGreaterThan(desktopCardsBox!.x + desktopCardsBox!.width);
+});
+
+test("uses desktop space for route content without overstretching focused work", async ({
+  page,
+}) => {
+  const state = await installMockApi(page);
+  state.cards.push(createCard("die Birne", "the pear"), createCard("die Pflaume", "the plum"));
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.goto("/cards");
+
+  const cardItems = page.getByRole("listitem");
+  const firstCardBox = await cardItems.nth(0).boundingBox();
+  const secondCardBox = await cardItems.nth(1).boundingBox();
+
+  expect(firstCardBox).not.toBeNull();
+  expect(secondCardBox).not.toBeNull();
+  expect(Math.abs(firstCardBox!.y - secondCardBox!.y)).toBeLessThanOrEqual(1);
+  expect(secondCardBox!.x).toBeGreaterThan(firstCardBox!.x);
+
+  await page.getByRole("button", { name: "Karte hinzufügen" }).click();
+  const editorBox = await page.getByRole("dialog").boundingBox();
+
+  expect(editorBox).not.toBeNull();
+  expect(editorBox!.width).toBeGreaterThan(560);
+  expect(editorBox!.width).toBeLessThanOrEqual(640);
+  await page.getByRole("button", { name: "Schließen" }).click();
+
+  await page.getByRole("link", { name: /Ich/ }).click();
+  const pointsBox = await page.getByText("Punkte insgesamt").locator("..").boundingBox();
+  const activeCardsBox = await page.getByText("Aktive Karten").locator("..").boundingBox();
+  const weeklyReviewsBox = await page.getByText("Reviews diese Woche").locator("..").boundingBox();
+  const bestDayBox = await page.getByText("Bester Tag").locator("..").boundingBox();
+
+  expect(pointsBox).not.toBeNull();
+  expect(activeCardsBox).not.toBeNull();
+  expect(weeklyReviewsBox).not.toBeNull();
+  expect(bestDayBox).not.toBeNull();
+  expect(pointsBox!.width).toBeGreaterThan(activeCardsBox!.width * 2);
+  expect(activeCardsBox!.y).toBeGreaterThan(pointsBox!.y);
+  expect(Math.abs(activeCardsBox!.y - weeklyReviewsBox!.y)).toBeLessThanOrEqual(1);
+  expect(Math.abs(weeklyReviewsBox!.y - bestDayBox!.y)).toBeLessThanOrEqual(1);
+
+  await page.getByRole("link", { name: /Wiederholen/ }).click();
+  await page.getByRole("button", { name: "Review starten" }).click();
+  const focusedMainBox = await page.locator("main").boundingBox();
+
+  expect(focusedMainBox).not.toBeNull();
+  expect(focusedMainBox!.width).toBeGreaterThan(700);
+  expect(focusedMainBox!.width).toBeLessThanOrEqual(768);
+  expect(Math.abs(focusedMainBox!.x - (1440 - focusedMainBox!.width) / 2)).toBeLessThanOrEqual(1);
+});
+
 for (const viewport of [
   { name: "mobile", width: 390, height: 844 },
   { name: "tablet", width: 768, height: 900 },
+  { name: "desktop", width: 1440, height: 1000 },
 ] as const) {
   test(`stable visual states at ${viewport.name} width`, async ({ page, browserName }) => {
     test.skip(browserName !== "chromium", "One browser owns the cross-platform visual baselines.");

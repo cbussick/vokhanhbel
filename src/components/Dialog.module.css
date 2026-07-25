@@ -171,6 +171,12 @@
   }
 }
 
+@media (width >= 64rem) {
+  .dialog {
+    max-inline-size: 38rem;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .dialog,
   .dialog[open] {
