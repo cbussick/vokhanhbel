@@ -65,6 +65,19 @@ function PrimaryNavigation({ className }: { className: string | undefined }) {
   );
 }
 
+function PointsBadge({ points }: { points: number }) {
+  const { t } = useTranslation();
+
+  return (
+    <span className={styles.points} role="img" aria-label={t("shell.points", { count: points })}>
+      <svg aria-hidden="true" viewBox="0 0 24 24">
+        <path d="m12 2.8 2.8 5.6 6.2.9-4.5 4.4 1.1 6.2L12 17l-5.6 2.9 1.1-6.2L3 9.3l6.2-.9Z" />
+      </svg>
+      <span aria-hidden="true">{points}</span>
+    </span>
+  );
+}
+
 export function AppShell({ children, title, variant = "standard" }: AppShellProps) {
   const { t } = useTranslation();
   const desktopLayout = useDesktopLayout();
@@ -87,20 +100,12 @@ export function AppShell({ children, title, variant = "standard" }: AppShellProp
               <aside className={styles.desktopSidebar}>
                 <div className={styles.brand}>{t("appName")}</div>
                 <PrimaryNavigation className={styles.desktopNav} />
+                <PointsBadge points={points} />
               </aside>
             )}
             <header className={styles.header}>
               <h1>{title}</h1>
-              <span
-                className={styles.points}
-                role="img"
-                aria-label={t("shell.points", { count: points })}
-              >
-                <svg aria-hidden="true" viewBox="0 0 24 24">
-                  <path d="m12 2.8 2.8 5.6 6.2.9-4.5 4.4 1.1 6.2L12 17l-5.6 2.9 1.1-6.2L3 9.3l6.2-.9Z" />
-                </svg>
-                <span aria-hidden="true">{points}</span>
-              </span>
+              {!desktopLayout && <PointsBadge points={points} />}
             </header>
           </>
         )}

@@ -199,7 +199,7 @@
     block-size: 100vh;
     block-size: 100dvh;
     display: grid;
-    grid-template-rows: auto 1fr;
+    grid-template-rows: auto 1fr auto;
     gap: var(--space-8);
     padding: var(--space-8) var(--space-4) var(--space-4);
     border-inline-end: 1px solid var(--color-border);
@@ -235,6 +235,11 @@
     background: var(--color-primary);
   }
 
+  .desktopSidebar .points {
+    justify-self: start;
+    margin-inline: var(--space-2);
+  }
+
   .header,
   .main {
     inline-size: min(100%, 72rem);
@@ -243,12 +248,6 @@
 
   .header {
     padding: var(--space-8) var(--space-8) var(--space-1);
-  }
-
-  .header .points {
-    position: fixed;
-    z-index: calc(var(--layer-nav) + 1);
-    inset: auto auto max(var(--space-4), env(safe-area-inset-bottom)) var(--space-6);
   }
 
   .main {

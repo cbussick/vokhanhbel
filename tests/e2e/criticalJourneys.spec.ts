@@ -141,6 +141,17 @@ test("login form remains usable at the narrowest supported width", async ({ page
   await password.fill("123456");
   await submit.click();
   await expect(page.getByRole("heading", { name: "Wiederholen" })).toBeVisible();
+
+  const reviewLinkBox = await page.getByRole("link", { name: /Wiederholen/ }).boundingBox();
+  const cardsLinkBox = await page.getByRole("link", { name: /Karten/ }).boundingBox();
+  const mainBox = await page.locator("main").boundingBox();
+
+  expect(reviewLinkBox).not.toBeNull();
+  expect(cardsLinkBox).not.toBeNull();
+  expect(mainBox).not.toBeNull();
+  expect(Math.abs(reviewLinkBox!.y - cardsLinkBox!.y)).toBeLessThanOrEqual(1);
+  expect(cardsLinkBox!.x).toBeGreaterThan(reviewLinkBox!.x);
+  expect(mainBox!.width).toBeLessThanOrEqual(320);
 });
 
 test("creates, searches, and opens a Card accessibly", async ({ page }) => {
