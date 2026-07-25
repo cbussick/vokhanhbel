@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import { type ReactNode, useSyncExternalStore } from "react";
+import { type ReactNode, useRef, useSyncExternalStore } from "react";
 import { useTranslation } from "react-i18next";
 import { statsQuery } from "../lib/queries";
 import { useReviewSubmissions } from "../state/ReviewSubmissionContext";
@@ -83,11 +83,22 @@ export function AppShell({ children, title, variant = "standard" }: AppShellProp
   const desktopLayout = useDesktopLayout();
   const { submissionSync } = useReviewSubmissions();
   const stats = useQuery(statsQuery);
+  const mainRef = useRef<HTMLElement>(null);
   const points = (stats.data?.totalPoints ?? 0) + submissionSync.optimisticPoints;
+
+  const focusMainContent = () => {
+    const main = mainRef.current;
+
+    if (!main) return;
+
+    main.tabIndex = -1;
+    main.focus();
+    main.addEventListener("blur", () => main.removeAttribute("tabindex"), { once: true });
+  };
 
   return (
     <div className={styles.viewport}>
-      <a className={styles.skip} href="#main-content">
+      <a className={styles.skip} href="#main-content" onClick={focusMainContent}>
         {t("accessibility.skip")}
       </a>
       <div className={`${styles.app} ${variant === "focused" ? styles.focused : ""}`}>
@@ -109,7 +120,7 @@ export function AppShell({ children, title, variant = "standard" }: AppShellProp
             </header>
           </>
         )}
-        <main id="main-content" tabIndex={-1} className={styles.main}>
+        <main ref={mainRef} id="main-content" className={styles.main}>
           {variant === "focused" && <h1>{title}</h1>}
           {children}
         </main>

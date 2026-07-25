@@ -241,6 +241,40 @@ test("aligns the Review close action with the progress header", async ({ page })
   expect(await progress.screenshot()).toEqual(restingProgress);
 });
 
+test("does not outline the main landmark after modifier-only keyboard input", async ({ page }) => {
+  await installMockApi(page);
+  await page.goto("/review");
+  await expect(page.getByRole("button", { name: "Review starten" })).toBeVisible();
+
+  await page.locator("main").click({ position: { x: 12, y: 12 } });
+  await page.keyboard.press("Shift");
+
+  const mainFocus = await page.evaluate<{
+    active: boolean;
+    outlineStyle: string;
+    outlineWidth: string;
+  }>(`(() => {
+    const element = document.querySelector("main");
+    if (!element) throw new Error("Main landmark not found");
+    const style = getComputedStyle(element);
+    return {
+      active: document.activeElement === element,
+      outlineStyle: style.outlineStyle,
+      outlineWidth: style.outlineWidth,
+    };
+  })()`);
+
+  expect(mainFocus.active).toBe(false);
+  expect(mainFocus.outlineStyle === "none" || mainFocus.outlineWidth === "0px").toBe(true);
+
+  await page.reload();
+  await expect(page.getByRole("button", { name: "Review starten" })).toBeVisible();
+  await page.keyboard.press("Tab");
+  await expect(page.getByRole("link", { name: "Zum Inhalt springen" })).toBeFocused();
+  await page.keyboard.press("Enter");
+  await expect(page.locator("main")).toBeFocused();
+});
+
 test("adapts the app shell between tablet and desktop widths", async ({ page }) => {
   await installMockApi(page);
 
