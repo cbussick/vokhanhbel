@@ -296,6 +296,18 @@ test("adapts the app shell between tablet and desktop widths", async ({ page }) 
   expect(tabletCardsBox!.x).toBeGreaterThan(tabletReviewBox!.x);
   expect(tabletMainBox!.width).toBeGreaterThan(480);
 
+  await page.setViewportSize({ width: 900, height: 900 });
+  const mediumNavBox = await page
+    .getByRole("navigation", { name: "Hauptnavigation" })
+    .boundingBox();
+  const mediumMainBox = await page.locator("main").boundingBox();
+
+  expect(mediumNavBox).not.toBeNull();
+  expect(mediumMainBox).not.toBeNull();
+  expect(mediumNavBox!.x).toBe(0);
+  expect(mediumNavBox!.width).toBe(900);
+  expect(mediumMainBox!.width).toBeLessThanOrEqual(768);
+
   await page.setViewportSize({ width: 1024, height: 900 });
   const desktopReviewBox = await reviewLink.boundingBox();
   const desktopCardsBox = await cardsLink.boundingBox();

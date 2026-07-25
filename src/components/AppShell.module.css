@@ -172,7 +172,17 @@
 }
 
 @media (width >= 48rem) {
-  .app {
+  .app:not(.focused) {
+    --shell-content-max: 48rem;
+  }
+
+  .app:not(.focused) .header,
+  .app:not(.focused) .main {
+    inline-size: min(100%, var(--shell-content-max));
+    justify-self: center;
+  }
+
+  .focused {
     inline-size: min(100%, 48rem);
     margin-inline: auto;
   }
@@ -180,6 +190,8 @@
 
 @media (width >= 64rem) {
   .app:not(.focused) {
+    --shell-content-max: 72rem;
+
     inline-size: 100%;
     grid-template:
       "sidebar connectivity" auto
@@ -238,12 +250,6 @@
   .desktopSidebar .points {
     justify-self: start;
     margin-inline: var(--space-2);
-  }
-
-  .header,
-  .main {
-    inline-size: min(100%, 72rem);
-    justify-self: center;
   }
 
   .header {
