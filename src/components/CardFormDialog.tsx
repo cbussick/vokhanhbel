@@ -32,7 +32,7 @@ export function CardFormDialog({
   const [collectionId, setCollectionId] = useState(card?.collectionId ?? defaultCollectionId ?? "");
   const [front, setFront] = useState(card?.front ?? "");
   const [back, setBack] = useState(card?.back ?? "");
-  const [confirmation, setConfirmation] = useState<"delete">();
+  const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
   const [error, setError] = useState<string>();
 
   useEffect(() => {
@@ -115,8 +115,8 @@ export function CardFormDialog({
       onCancel={(event) => {
         event.preventDefault();
 
-        if (confirmation) {
-          setConfirmation(undefined);
+        if (isConfirmingDelete) {
+          setIsConfirmingDelete(false);
 
           return;
         }
@@ -128,7 +128,7 @@ export function CardFormDialog({
       <section className={styles.sheet}>
         <header>
           <h2 id="card-dialog-title">{t(card ? "cards.edit" : "cards.create")}</h2>
-          {!confirmation && (
+          {!isConfirmingDelete && (
             <button
               type="button"
               className={styles.iconButton}
@@ -139,14 +139,14 @@ export function CardFormDialog({
             </button>
           )}
         </header>
-        {confirmation === "delete" ? (
+        {isConfirmingDelete ? (
           <div className={styles.confirm}>
             <p>{t("cards.deleteConfirm")}</p>
             <div className={styles.actions}>
               <button
                 type="button"
                 className={styles.secondary}
-                onClick={() => setConfirmation(undefined)}
+                onClick={() => setIsConfirmingDelete(false)}
               >
                 {t("common.cancel")}
               </button>
@@ -210,7 +210,7 @@ export function CardFormDialog({
                 <button
                   type="button"
                   className={styles.deleteLink}
-                  onClick={() => setConfirmation("delete")}
+                  onClick={() => setIsConfirmingDelete(true)}
                 >
                   {t("cards.delete")}
                 </button>

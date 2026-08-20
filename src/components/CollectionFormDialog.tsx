@@ -35,7 +35,7 @@ export function CollectionFormDialog({
 
   const [name, setName] = useState(collection?.name ?? "");
   const [icon, setIcon] = useState<CollectionIconKey>(collection?.icon ?? defaultCollectionIcon);
-  const [confirmation, setConfirmation] = useState<"delete">();
+  const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
   const [error, setError] = useState<string>();
 
   useEffect(() => {
@@ -97,7 +97,7 @@ export function CollectionFormDialog({
       onClose();
     },
     onError: (value) => {
-      setConfirmation(undefined);
+      setIsConfirmingDelete(false);
       setError(describeError(value, t("collections.deleteFailed")));
     },
   });
@@ -122,8 +122,8 @@ export function CollectionFormDialog({
       onCancel={(event) => {
         event.preventDefault();
 
-        if (confirmation) {
-          setConfirmation(undefined);
+        if (isConfirmingDelete) {
+          setIsConfirmingDelete(false);
 
           return;
         }
@@ -137,7 +137,7 @@ export function CollectionFormDialog({
           <h2 id="collection-dialog-title">
             {t(collection ? "collections.renameTitle" : "collections.create")}
           </h2>
-          {!confirmation && (
+          {!isConfirmingDelete && (
             <button
               type="button"
               className={styles.iconButton}
@@ -148,14 +148,14 @@ export function CollectionFormDialog({
             </button>
           )}
         </header>
-        {confirmation === "delete" ? (
+        {isConfirmingDelete ? (
           <div className={styles.confirm}>
             <p>{t("collections.deleteConfirm", { name: collection?.name ?? "" })}</p>
             <div className={styles.actions}>
               <button
                 type="button"
                 className={styles.secondary}
-                onClick={() => setConfirmation(undefined)}
+                onClick={() => setIsConfirmingDelete(false)}
               >
                 {t("common.cancel")}
               </button>
@@ -215,7 +215,7 @@ export function CollectionFormDialog({
                   className={styles.deleteLink}
                   onClick={() => {
                     setError(undefined);
-                    setConfirmation("delete");
+                    setIsConfirmingDelete(true);
                   }}
                 >
                   {t("collections.delete")}

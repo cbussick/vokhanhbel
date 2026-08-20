@@ -187,7 +187,7 @@ describe("rendered app journeys", () => {
     expect(screen.queryByRole("button", { name: "Schließen" })).not.toBeInTheDocument();
 
     // jsdom does not turn Escape into a dialog cancel, so raise the event the browser would.
-    fireEvent(document.querySelector("dialog")!, new Event("cancel", { cancelable: true }));
+    fireEvent(screen.getByRole("dialog"), new Event("cancel", { cancelable: true }));
     expect(await screen.findByLabelText("Name der Sammlung")).toHaveValue("Englisch");
   });
 
