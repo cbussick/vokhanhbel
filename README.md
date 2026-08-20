@@ -10,14 +10,6 @@ This README is the entry point to the project's canonical documentation.
 - [Local development and operations](docs/operations.md) — environment setup, database migrations,
   backups, and restore rehearsals.
 
-## Current V1 implementation references
-
-These working references are useful while V1 is being built but are not durable project
-documentation:
-
-- [V1 specification](.scratch/vokhanhbel-v1/spec.md) — current product and implementation
-  requirements maintained in the local issue tracker.
-
 ## Project guides
 
 - [Architecture decisions](docs/adr/README.md) — accepted technical and product decisions.

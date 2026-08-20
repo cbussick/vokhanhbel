@@ -1,6 +1,6 @@
 # Deployment strategy
 
-V1 uses a lightweight, human-enforced deployment process:
+This project uses a lightweight, human-enforced deployment process:
 
 1. Open a pull request from your feature branch and wait for the GitHub Actions CI workflow to pass.
 2. Merge the pull request into `main` only when CI is green.
@@ -48,8 +48,8 @@ application versions, so rolling back the application should be sufficient.
 Any database reversal requires its own reviewed migration and a fresh backup.
 
 GitHub branch protection and Vercel Deployment Checks are intentionally not
-required for V1. The repository is private and uses a free GitHub account, so
-the workflow is a documented convention rather than a platform-enforced rule.
+required. The repository is private and uses a free GitHub account, so the
+workflow is a documented convention rather than a platform-enforced rule.
 
 An accidental direct push or a merge with failing checks can therefore reach
 production. The maintainer accepts this risk and will correct or roll back the

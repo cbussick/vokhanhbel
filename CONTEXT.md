@@ -5,7 +5,7 @@ A private flashcard web app for spaced-repetition vocabulary study, used by a si
 ## Language
 
 **Learner**:
-The single person whose Cards, Reviews, schedule, and Points the app represents. In V1, the Learner is Khanh even if another household member can access the app.
+The single person whose Cards, Reviews, schedule, and Points the app represents. The Learner is Khanh even if another household member can access the app.
 _Avoid_: User, account, profile
 
 **Card**:

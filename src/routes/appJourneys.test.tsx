@@ -5,7 +5,7 @@ import { describe, expect, it, vi } from "vitest";
 import { renderApp } from "../test/renderApp";
 import { mockServer, testCards } from "../test/server";
 
-describe("rendered V1 journeys", () => {
+describe("rendered app journeys", () => {
   it("logs in without trimming the shared password", async () => {
     const user = userEvent.setup();
     let submitted = "";
