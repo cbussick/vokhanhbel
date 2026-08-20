@@ -147,7 +147,6 @@
   outline-offset: 2px;
 }
 
-.sheet select,
 .sheet input {
   inline-size: 100%;
   min-block-size: 48px;

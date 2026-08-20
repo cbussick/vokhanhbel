@@ -50,11 +50,20 @@ const iconsByKey = {
   "flag-gb": UnitedKingdomFlagIcon,
 } as const satisfies Record<CollectionIconKey, () => React.ReactElement>;
 
-export function CollectionIcon({ icon }: { icon: CollectionIconKey }) {
+export function CollectionIcon({
+  icon,
+  size = "default",
+}: {
+  icon: CollectionIconKey;
+  size?: "default" | "compact";
+}) {
   const Icon = iconsByKey[icon];
 
   return (
-    <span className={styles.frame} aria-hidden="true">
+    <span
+      className={`${styles.frame} ${size === "compact" ? styles.compact : ""}`}
+      aria-hidden="true"
+    >
       <Icon />
     </span>
   );
