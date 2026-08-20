@@ -10,8 +10,12 @@ import styles from "./AppShell.module.css";
 interface AppShellProps {
   children: ReactNode;
   title: string;
+  /** Optional navigation or context rendered above the standard title. */
+  titleContext?: ReactNode;
   /** Rendered before the title in the standard header, for example a Collection's icon. */
   titleIcon?: ReactNode;
+  /** An optional page-level action rendered alongside the standard title. */
+  titleAction?: ReactNode;
   variant?: "standard" | "focused";
 }
 
@@ -80,13 +84,21 @@ function PointsBadge({ points }: { points: number }) {
   );
 }
 
-export function AppShell({ children, title, titleIcon, variant = "standard" }: AppShellProps) {
+export function AppShell({
+  children,
+  title,
+  titleContext,
+  titleIcon,
+  titleAction,
+  variant = "standard",
+}: AppShellProps) {
   const { t } = useTranslation();
   const desktopLayout = useDesktopLayout();
   const { submissionSync } = useReviewSubmissions();
   const stats = useQuery(statsQuery);
   const mainRef = useRef<HTMLElement>(null);
   const points = (stats.data?.totalPoints ?? 0) + submissionSync.optimisticPoints;
+  const hasExtendedTitle = Boolean(titleContext ?? titleAction);
 
   const focusMainContent = () => {
     const main = mainRef.current;
@@ -116,11 +128,26 @@ export function AppShell({ children, title, titleIcon, variant = "standard" }: A
                 <PointsBadge points={points} />
               </aside>
             )}
-            <header className={styles.header}>
-              <h1 className={styles.title}>
-                {titleIcon}
-                {title}
-              </h1>
+            <header
+              className={`${styles.header} ${hasExtendedTitle ? styles.headerWithContext : ""}`}
+            >
+              {hasExtendedTitle ? (
+                <div className={styles.titleGroup}>
+                  {titleContext}
+                  <div className={styles.titleRow}>
+                    <h1 className={styles.title}>
+                      {titleIcon}
+                      {title}
+                    </h1>
+                    {titleAction}
+                  </div>
+                </div>
+              ) : (
+                <h1 className={styles.title}>
+                  {titleIcon}
+                  {title}
+                </h1>
+              )}
               {!desktopLayout && <PointsBadge points={points} />}
             </header>
           </>

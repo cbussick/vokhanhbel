@@ -7,11 +7,28 @@ import { CardFormDialog } from "../components/CardFormDialog";
 import { CollectionFormDialog } from "../components/CollectionFormDialog";
 import { CollectionIcon } from "../components/CollectionIcon";
 import { DelayedSkeleton } from "../components/DelayedSkeleton";
+import { IconButton } from "../components/IconButton";
 import { useOnlineStatus } from "../lib/browserState";
 import { cardsQuery, collectionsQuery } from "../lib/queries";
 import styles from "./cards.module.css";
 
 export const Route = createFileRoute("/cards/$collectionId")({ component: CollectionCardsRoute });
+
+function AddIcon() {
+  return (
+    <svg viewBox="0 0 24 24" focusable="false">
+      <path d="M12 5v14M5 12h14" />
+    </svg>
+  );
+}
+
+function EditIcon() {
+  return (
+    <svg viewBox="0 0 24 24" focusable="false">
+      <path d="m14.5 5.5 4 4M4 20l3.7-.8L19 7.9a2.1 2.1 0 0 0-3-3L4.8 16.2Z" />
+    </svg>
+  );
+}
 
 function CollectionCardsRoute() {
   const { t } = useTranslation();
@@ -64,6 +81,14 @@ function CollectionCardsRoute() {
     content = (
       <>
         <div className={styles.toolbar}>
+          <div className={styles.sectionHeader}>
+            <h2>{t("cards.title")}</h2>
+            {hasCards ? (
+              <IconButton icon={<AddIcon />} onClick={() => setCreating(true)} disabled={!online}>
+                {t("cards.add")}
+              </IconButton>
+            ) : null}
+          </div>
           <label htmlFor="card-search">{t("cards.search")}</label>
           <input
             id="card-search"
@@ -72,20 +97,6 @@ function CollectionCardsRoute() {
             value={query}
             onChange={(event) => setQuery(event.target.value)}
           />
-          <div className={styles.actions}>
-            {hasCards ? (
-              <button type="button" onClick={() => setCreating(true)} disabled={!online}>
-                {t("cards.add")}
-              </button>
-            ) : null}
-            <button
-              type="button"
-              className={styles.manage}
-              onClick={() => setEditingCollection(true)}
-            >
-              {t("collections.edit")}
-            </button>
-          </div>
           {!online && <p>{t("cards.offline")}</p>}
         </div>
         {cards.isError && cards.data && (
@@ -96,9 +107,9 @@ function CollectionCardsRoute() {
         {!hasCards ? (
           <div className={styles.center}>
             <p>{t("cards.empty")}</p>
-            <button type="button" onClick={() => setCreating(true)} disabled={!online}>
+            <IconButton icon={<AddIcon />} onClick={() => setCreating(true)} disabled={!online}>
               {t("cards.add")}
-            </button>
+            </IconButton>
           </div>
         ) : visible.length === 0 ? (
           <div className={styles.center}>
@@ -138,11 +149,25 @@ function CollectionCardsRoute() {
   return (
     <AppShell
       title={collection?.name ?? t("cards.title")}
+      titleContext={
+        <Link to="/cards" className={styles.back}>
+          <span aria-hidden="true">←</span> {t("collections.backToAll")}
+        </Link>
+      }
       titleIcon={collection && <CollectionIcon icon={collection.icon} />}
+      titleAction={
+        collection && (
+          <IconButton
+            icon={<EditIcon />}
+            size="compact"
+            variant="secondary"
+            onClick={() => setEditingCollection(true)}
+          >
+            {t("collections.edit")}
+          </IconButton>
+        )
+      }
     >
-      <Link to="/cards" className={styles.back}>
-        <span aria-hidden="true">←</span> {t("collections.backToAll")}
-      </Link>
       {content}
     </AppShell>
   );
