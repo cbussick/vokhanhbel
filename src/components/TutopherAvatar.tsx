@@ -1,4 +1,4 @@
-export function KhunhphapAvatar() {
+export function TutopherAvatar() {
   return (
     <svg className="mascot" viewBox="0 0 64 64" aria-hidden="true">
       <path

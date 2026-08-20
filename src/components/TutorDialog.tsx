@@ -2,15 +2,11 @@ import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { Card } from "../contracts/card";
 import { apiPaths } from "../contracts/apiPaths";
-import {
-  khunhphapLimits,
-  khunhphapStreamEventSchema,
-  type KhunhphapInput,
-} from "../contracts/khunhphap";
+import { tutorLimits, tutorStreamEventSchema, type TutorInput } from "../contracts/tutor";
 import { problemSchema, problemTypes } from "../contracts/problem";
 import { useOnlineStatus } from "../lib/browserState";
 import { publishSessionExpired } from "../lib/sessionEvents";
-import styles from "./KhunhphapDialog.module.css";
+import styles from "./TutorDialog.module.css";
 
 interface Message {
   role: "user" | "assistant";
@@ -24,7 +20,7 @@ type RequestState =
   | { status: "streaming" }
   | { status: "error"; message: string; retryAfter: number };
 
-class KhunhphapRequestError extends Error {
+class TutorRequestError extends Error {
   constructor(
     message: string,
     public readonly retryAfter?: number,
@@ -33,7 +29,7 @@ class KhunhphapRequestError extends Error {
   }
 }
 
-export function KhunhphapDialog({ card, onClose }: { card: Card; onClose: () => void }) {
+export function TutorDialog({ card, onClose }: { card: Card; onClose: () => void }) {
   const { t } = useTranslation();
 
   const dialogRef = useRef<HTMLDialogElement>(null);
@@ -103,9 +99,9 @@ export function KhunhphapDialog({ card, onClose }: { card: Card; onClose: () => 
 
     if (!trimmed || pending || !online || retryAfter > 0) return;
 
-    const history = messages.slice(-khunhphapLimits.conversationMessages);
+    const history = messages.slice(-tutorLimits.conversationMessages);
     const historyLength = messages.length;
-    const input: KhunhphapInput = { message: trimmed, messages: history };
+    const input: TutorInput = { message: trimmed, messages: history };
     const controller = new AbortController();
 
     abortRef.current = controller;
@@ -119,7 +115,7 @@ export function KhunhphapDialog({ card, onClose }: { card: Card; onClose: () => 
     ]);
 
     try {
-      const response = await fetch(apiPaths.khunhphapReplies(card.id), {
+      const response = await fetch(apiPaths.tutorReplies(card.id), {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify(input),
@@ -132,16 +128,16 @@ export function KhunhphapDialog({ card, onClose }: { card: Card; onClose: () => 
 
         if (response.status === 401) {
           publishSessionExpired();
-          throw new KhunhphapRequestError("expired");
+          throw new TutorRequestError("expired");
         }
 
         const retryHeader = response.headers.get("retry-after");
         const retrySeconds = retryHeader && /^\d+$/u.test(retryHeader) ? Number(retryHeader) : 0;
 
-        if (problem.success && problem.data.type === problemTypes.khunhphapSessionLimit)
-          throw new KhunhphapRequestError("session-limit", Math.max(1, retrySeconds));
-        if (problem.success && problem.data.type === problemTypes.khunhphapDailyLimit)
-          throw new KhunhphapRequestError("daily-limit", Math.max(1, retrySeconds));
+        if (problem.success && problem.data.type === problemTypes.tutorSessionLimit)
+          throw new TutorRequestError("session-limit", Math.max(1, retrySeconds));
+        if (problem.success && problem.data.type === problemTypes.tutorDailyLimit)
+          throw new TutorRequestError("daily-limit", Math.max(1, retrySeconds));
 
         throw new Error("failed");
       }
@@ -166,7 +162,7 @@ export function KhunhphapDialog({ card, onClose }: { card: Card; onClose: () => 
 
           if (!event || !dataText) throw new Error("failed");
           const data: unknown = JSON.parse(dataText);
-          const streamEvent = khunhphapStreamEventSchema.parse({ event, data });
+          const streamEvent = tutorStreamEventSchema.parse({ event, data });
 
           if (streamEvent.event === "delta") {
             setRequest((state) => (state.status === "streaming" ? state : { status: "streaming" }));
@@ -197,14 +193,12 @@ export function KhunhphapDialog({ card, onClose }: { card: Card; onClose: () => 
         status: "error",
         message:
           code === "session-limit"
-            ? t("khunhphap.sessionLimit")
+            ? t("tutor.sessionLimit")
             : code === "daily-limit"
-              ? t("khunhphap.dailyLimit")
-              : t("khunhphap.error"),
+              ? t("tutor.dailyLimit")
+              : t("tutor.error"),
         retryAfter:
-          value instanceof KhunhphapRequestError && value.retryAfter
-            ? Math.ceil(value.retryAfter)
-            : 0,
+          value instanceof TutorRequestError && value.retryAfter ? Math.ceil(value.retryAfter) : 0,
       });
     }
   };
@@ -229,28 +223,28 @@ export function KhunhphapDialog({ card, onClose }: { card: Card; onClose: () => 
         event.preventDefault();
         close();
       }}
-      aria-labelledby="khunhphap-title"
+      aria-labelledby="tutor-title"
     >
       <section className={styles.sheet}>
         <header>
-          <h2 id="khunhphap-title">{t("khunhphap.title")}</h2>
+          <h2 id="tutor-title">{t("tutor.title")}</h2>
           <button type="button" onClick={close} aria-label={t("common.close")}>
             ×
           </button>
         </header>
-        <p className={styles.disclosure}>{t("khunhphap.disclosure")}</p>
+        <p className={styles.disclosure}>{t("tutor.disclosure")}</p>
         <div ref={scrollerRef} className={styles.messages} onScroll={onScroll} aria-live="polite">
           {messages.map((message, index) => (
             <article
               key={`${message.role}-${index}`}
               className={message.role === "user" ? styles.user : styles.assistant}
             >
-              <strong>{message.role === "user" ? "Khanh" : t("khunhphap.title")}</strong>
+              <strong>{message.role === "user" ? "Khanh" : t("tutor.title")}</strong>
               {message.content && <p>{message.content}</p>}
             </article>
           ))}
-          {thinking && <p className={styles.thinking}>{t("khunhphap.thinking")}</p>}
-          {truncated && <p className={styles.notice}>{t("khunhphap.truncated")}</p>}
+          {thinking && <p className={styles.thinking}>{t("tutor.thinking")}</p>}
+          {truncated && <p className={styles.notice}>{t("tutor.truncated")}</p>}
           {error && (
             <div className={styles.error} role="alert">
               <p>
@@ -270,7 +264,7 @@ export function KhunhphapDialog({ card, onClose }: { card: Card; onClose: () => 
         </div>
         {!following && (
           <button type="button" className={styles.latest} onClick={latest}>
-            {t("khunhphap.latest")}
+            {t("tutor.latest")}
           </button>
         )}
         <div className={styles.prompts}>
@@ -279,9 +273,9 @@ export function KhunhphapDialog({ card, onClose }: { card: Card; onClose: () => 
               key={key}
               type="button"
               disabled={pending}
-              onClick={() => void send(t(`khunhphap.${key}`))}
+              onClick={() => void send(t(`tutor.${key}`))}
             >
-              {t(`khunhphap.${key}`)}
+              {t(`tutor.${key}`)}
             </button>
           ))}
         </div>
@@ -291,19 +285,19 @@ export function KhunhphapDialog({ card, onClose }: { card: Card; onClose: () => 
             void send();
           }}
         >
-          <label htmlFor="khunhphap-question">{t("khunhphap.question")}</label>
+          <label htmlFor="tutor-question">{t("tutor.question")}</label>
           <textarea
-            id="khunhphap-question"
+            id="tutor-question"
             minLength={1}
-            maxLength={khunhphapLimits.messageCharacters}
+            maxLength={tutorLimits.messageCharacters}
             value={question}
             onChange={(event) => setQuestion(event.target.value)}
             disabled={pending || !online || retryAfter > 0}
           />
           <button type="submit" disabled={pending || !question.trim() || !online || retryAfter > 0}>
-            {t("khunhphap.send")}
+            {t("tutor.send")}
           </button>
-          {!online && <p>{t("khunhphap.offline")}</p>}
+          {!online && <p>{t("tutor.offline")}</p>}
         </form>
       </section>
     </dialog>

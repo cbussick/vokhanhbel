@@ -4,5 +4,5 @@ export const apiPaths = {
   reviews: "/api/reviews",
   stats: "/api/stats",
   card: (cardId: string) => `/api/cards/${cardId}`,
-  khunhphapReplies: (cardId: string) => `/api/cards/${cardId}/khunhphap-replies`,
+  tutorReplies: (cardId: string) => `/api/cards/${cardId}/tutor-replies`,
 } as const;

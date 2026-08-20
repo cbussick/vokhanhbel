@@ -1,5 +1,5 @@
 import { z } from "zod";
-import type { KhunhphapInput } from "../../contracts/khunhphap.js";
+import type { TutorInput } from "../../contracts/tutor.js";
 import { problemTypes } from "../../contracts/problem.js";
 import { berlinTimeZone } from "../../domain/time.js";
 import type { AiProvider } from "../ai/aiProvider.js";
@@ -20,12 +20,12 @@ const sessionRequestLimit = 30;
 const dailyRequestLimit = 200;
 const requestTimeoutMilliseconds = 60_000;
 
-export async function consumeKhunhphapAllowance(sessionHash: string): Promise<void> {
+export async function consumeTutorAllowance(sessionHash: string): Promise<void> {
   const client = await getPool().connect();
 
   try {
     await client.query("BEGIN");
-    await client.query(`SELECT pg_advisory_xact_lock(hashtextextended('khunhphap-global', 0))`);
+    await client.query(`SELECT pg_advisory_xact_lock(hashtextextended('tutor-global', 0))`);
     await client.query("SELECT pg_advisory_xact_lock(hashtextextended($1, 0))", [sessionHash]);
     await client.query("DELETE FROM ai_usage WHERE used_at < now() - $1::interval", [
       usageRetentionInterval,
@@ -46,8 +46,8 @@ export async function consumeKhunhphapAllowance(sessionHash: string): Promise<vo
     if (Number(count.session_count) >= sessionRequestLimit)
       throw new AppProblem(
         429,
-        problemTypes.khunhphapSessionLimit,
-        "Khunhphap braucht eine Pause",
+        problemTypes.tutorSessionLimit,
+        "Tutopher braucht eine Pause",
         undefined,
         undefined,
         Number(count.session_retry),
@@ -55,8 +55,8 @@ export async function consumeKhunhphapAllowance(sessionHash: string): Promise<vo
     if (Number(count.daily_count) >= dailyRequestLimit)
       throw new AppProblem(
         429,
-        problemTypes.khunhphapDailyLimit,
-        "Khunhphap hat für heute Feierabend",
+        problemTypes.tutorDailyLimit,
+        "Tutopher hat für heute Feierabend",
         undefined,
         undefined,
         Number(count.daily_retry),
@@ -71,22 +71,22 @@ export async function consumeKhunhphapAllowance(sessionHash: string): Promise<vo
   }
 }
 
-export async function createKhunhphapStream(
+export async function createTutorStream(
   cardId: string,
-  input: KhunhphapInput,
+  input: TutorInput,
   sessionHash: string,
   provider: AiProvider,
   requestSignal: AbortSignal,
 ): Promise<Response> {
   const card = await getCard(cardId);
-  await consumeKhunhphapAllowance(sessionHash);
+  await consumeTutorAllowance(sessionHash);
 
-  return createKhunhphapResponse(card, input, provider, requestSignal);
+  return createTutorResponse(card, input, provider, requestSignal);
 }
 
-export function createKhunhphapResponse(
+export function createTutorResponse(
   card: Awaited<ReturnType<typeof getCard>>,
-  input: KhunhphapInput,
+  input: TutorInput,
   provider: AiProvider,
   requestSignal: AbortSignal,
 ): Response {
@@ -98,12 +98,12 @@ export function createKhunhphapResponse(
         controller.enqueue(encoder.encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`));
 
       try {
-        for await (const event of provider.streamKhunhphapReply({ card, input, signal })) {
+        for await (const event of provider.streamTutorReply({ card, input, signal })) {
           if (event.type === "delta") send("delta", { text: event.text });
           else send("done", { truncated: event.truncated });
         }
       } catch {
-        send("error", { type: problemTypes.khunhphapFailed });
+        send("error", { type: problemTypes.tutorFailed });
       } finally {
         controller.close();
       }

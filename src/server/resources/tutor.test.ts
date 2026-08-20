@@ -1,8 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
 import type { Card } from "../../contracts/card.js";
-import type { KhunhphapInput } from "../../contracts/khunhphap.js";
-import type { AiProvider, KhunhphapProviderRequest } from "../ai/aiProvider.js";
-import { createKhunhphapResponse } from "./khunhphap.js";
+import type { TutorInput } from "../../contracts/tutor.js";
+import type { AiProvider, TutorProviderRequest } from "../ai/aiProvider.js";
+import { createTutorResponse } from "./tutor.js";
 
 const card: Card = {
   id: "019c52a9-50e8-7000-8000-000000000001",
@@ -16,22 +16,22 @@ const card: Card = {
   deletedAt: null,
 };
 
-describe("Khunhphap provider boundary", () => {
+describe("Tutor provider boundary", () => {
   it("passes only the current Card, bounded conversation, question, and signal", async () => {
-    const input: KhunhphapInput = {
+    const input: TutorInput = {
       message: "Bitte erklären",
       messages: [{ role: "user", content: "Ein Beispiel?" }],
     };
-    let received: KhunhphapProviderRequest | undefined;
+    let received: TutorProviderRequest | undefined;
     const provider: AiProvider = {
-      async *streamKhunhphapReply(request) {
+      async *streamTutorReply(request) {
         received = request;
         yield { type: "delta", text: "Ein Apfel ist eine Frucht." };
         yield { type: "done", truncated: false };
       },
     };
 
-    const response = createKhunhphapResponse(card, input, provider, new AbortController().signal);
+    const response = createTutorResponse(card, input, provider, new AbortController().signal);
     const body = await response.text();
 
     expect(received).toEqual({ card, input, signal: expect.any(AbortSignal) });
@@ -44,22 +44,20 @@ describe("Khunhphap provider boundary", () => {
 
   it("turns provider failures into a safe stream error without leaking details", async () => {
     const provider: AiProvider = {
-      async *streamKhunhphapReply() {
+      async *streamTutorReply() {
         throw new Error("secret provider diagnostics");
       },
     };
     const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
 
-    const response = createKhunhphapResponse(
+    const response = createTutorResponse(
       card,
       { message: "Warum?", messages: [] },
       provider,
       new AbortController().signal,
     );
 
-    expect(await response.text()).toBe(
-      'event: error\ndata: {"type":"/problems/khunhphap-failed"}\n\n',
-    );
+    expect(await response.text()).toBe('event: error\ndata: {"type":"/problems/tutor-failed"}\n\n');
     expect(consoleSpy).not.toHaveBeenCalled();
   });
 });
