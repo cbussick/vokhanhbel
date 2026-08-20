@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next";
 import { AppShell } from "../components/AppShell";
 import { CardFormDialog } from "../components/CardFormDialog";
 import { CollectionFormDialog } from "../components/CollectionFormDialog";
+import { CollectionIcon } from "../components/CollectionIcon";
 import { DelayedSkeleton } from "../components/DelayedSkeleton";
 import { useOnlineStatus } from "../lib/browserState";
 import { cardsQuery, collectionsQuery } from "../lib/queries";
@@ -111,8 +112,10 @@ function CollectionCardsRoute() {
             {visible.map((card) => (
               <li key={card.id}>
                 <Link to="/cards/$collectionId/$cardId" params={{ collectionId, cardId: card.id }}>
-                  <strong>{card.front}</strong>
-                  <span>{card.back}</span>
+                  <span className={styles.rowText}>
+                    <strong>{card.front}</strong>
+                    <span className={styles.rowDetail}>{card.back}</span>
+                  </span>
                 </Link>
               </li>
             ))}
@@ -133,7 +136,10 @@ function CollectionCardsRoute() {
     );
 
   return (
-    <AppShell title={collection?.name ?? t("cards.title")}>
+    <AppShell
+      title={collection?.name ?? t("cards.title")}
+      titleIcon={collection && <CollectionIcon icon={collection.icon} />}
+    >
       <Link to="/cards" className={styles.back}>
         <span aria-hidden="true">←</span> {t("collections.backToAll")}
       </Link>

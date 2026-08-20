@@ -67,7 +67,7 @@ function CollectionsRoute() {
                     <CollectionIcon icon={collection.icon} />
                     <span className={styles.rowText}>
                       <strong>{collection.name}</strong>
-                      <span>
+                      <span className={styles.rowDetail}>
                         {t("collections.cardCount", { count: cardCounts.get(collection.id) ?? 0 })}
                       </span>
                     </span>

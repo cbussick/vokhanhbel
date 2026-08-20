@@ -119,7 +119,7 @@ function ReviewRoute() {
                       >
                         <CollectionIcon icon={collection.icon} />
                         <strong>{collection.name}</strong>
-                        <span>
+                        <span className={styles.rowDetail}>
                           {ownDueCount > 0
                             ? t("review.due", { count: ownDueCount })
                             : t("review.collectionNoneDue")}

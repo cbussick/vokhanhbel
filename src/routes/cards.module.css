@@ -100,12 +100,12 @@
 }
 
 .list strong,
-.list span {
+.list .rowDetail {
   overflow-wrap: anywhere;
   white-space: pre-line;
 }
 
-.list span {
+.list .rowDetail {
   color: var(--color-text-secondary);
   display: -webkit-box;
   overflow: hidden;

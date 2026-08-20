@@ -48,7 +48,7 @@
   overflow-wrap: anywhere;
 }
 
-.collections span {
+.collections .rowDetail {
   color: var(--color-text-secondary);
   font-size: var(--font-sm);
 }
