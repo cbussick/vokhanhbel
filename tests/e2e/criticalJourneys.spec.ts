@@ -171,6 +171,11 @@ test("creates, searches, and opens a Card accessibly", async ({ page }) => {
   await page.goto("/cards");
   await page.getByRole("link", { name: /Vietnamesisch/ }).click();
   await page.getByRole("button", { name: "Karte hinzufügen" }).first().click();
+  const collection = page.getByRole("combobox", { name: "Sammlung" });
+  await collection.click();
+  await expect(page.getByRole("listbox")).toBeVisible();
+  await expectNoSeriousAxeViolations(page);
+  await collection.press("Escape");
   await page.getByLabel("Vorderseite").fill("xin chào");
   await page.getByLabel("Rückseite").fill("hallo");
   await page.getByRole("button", { name: "Speichern" }).click();
@@ -444,6 +449,12 @@ for (const viewport of [
     await expect(page).toHaveScreenshot(`card-editor-${viewport.name}.png`, {
       animations: "disabled",
     });
+    await page.getByRole("combobox", { name: "Sammlung" }).click();
+    await expect(page.getByRole("listbox")).toBeVisible();
+    await expect(page).toHaveScreenshot(`card-editor-collection-open-${viewport.name}.png`, {
+      animations: "disabled",
+    });
+    await page.getByRole("combobox", { name: "Sammlung" }).press("Escape");
     await page.getByRole("button", { name: "Schließen" }).click();
     await page.getByRole("link", { name: /Ich/ }).click();
     await expect(page.getByRole("heading", { name: "Khanhs Fortschritt" })).toBeVisible();
