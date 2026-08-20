@@ -2,10 +2,9 @@
 
 V1 uses a lightweight, human-enforced deployment process:
 
-1. Create a feature branch. Do not intentionally work directly on `main`.
-2. Open a pull request and wait for the GitHub Actions CI workflow to pass.
-3. Merge the pull request into `main` only when CI is green.
-4. Vercel automatically builds and deploys the commit on `main` to production.
+1. Open a pull request from your feature branch and wait for the GitHub Actions CI workflow to pass.
+2. Merge the pull request into `main` only when CI is green.
+3. Vercel automatically builds and deploys the commit on `main` to production.
 
 ## Releasing a database migration
 
