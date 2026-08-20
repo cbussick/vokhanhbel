@@ -31,6 +31,14 @@ docker compose up -d postgres
 npm run db:migrate
 ```
 
+Inspect the local database with Drizzle Studio. It starts Docker Postgres if needed, waits until
+it is healthy, then loads `DATABASE_URL` from `.env.local` the same way local generate and migrate
+do. It does not target production:
+
+```sh
+npm run db:studio
+```
+
 Start the complete local application (frontend + backend)
 
 ```sh
