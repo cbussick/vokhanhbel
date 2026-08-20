@@ -129,6 +129,13 @@ export function CardFormDialog({
       className={styles.dialog}
       onCancel={(event) => {
         event.preventDefault();
+
+        if (confirmation) {
+          setConfirmation(undefined);
+
+          return;
+        }
+
         requestClose();
       }}
       aria-labelledby="card-dialog-title"
@@ -136,14 +143,16 @@ export function CardFormDialog({
       <section className={styles.sheet}>
         <header>
           <h2 id="card-dialog-title">{t(card ? "cards.edit" : "cards.create")}</h2>
-          <button
-            type="button"
-            className={styles.iconButton}
-            onClick={requestClose}
-            aria-label={t("common.close")}
-          >
-            ×
-          </button>
+          {!confirmation && (
+            <button
+              type="button"
+              className={styles.iconButton}
+              onClick={requestClose}
+              aria-label={t("common.close")}
+            >
+              ×
+            </button>
+          )}
         </header>
         {confirmation === "delete" ? (
           <div className={styles.confirm}>

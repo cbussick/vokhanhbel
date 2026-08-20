@@ -1,4 +1,4 @@
-import { act, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
 import { describe, expect, it, vi } from "vitest";
@@ -166,6 +166,22 @@ describe("rendered app journeys", () => {
     await user.click(screen.getByRole("button", { name: "Speichern" }));
 
     await waitFor(() => expect(created).toEqual({ name: "Französisch", icon: "flag-vn" }));
+  });
+
+  it("offers only the two answers while confirming a discarded Collection edit", async () => {
+    const user = userEvent.setup();
+    renderApp(`/cards/${testCollections[1]!.id}`);
+
+    await user.click(await screen.findByRole("button", { name: "Sammlung bearbeiten" }));
+    await user.type(await screen.findByLabelText("Name der Sammlung"), " B1");
+    await user.click(screen.getByRole("button", { name: "Schließen" }));
+
+    expect(await screen.findByText("Änderungen verwerfen?")).toBeVisible();
+    expect(screen.queryByRole("button", { name: "Schließen" })).not.toBeInTheDocument();
+
+    // jsdom does not turn Escape into a dialog cancel, so raise the event the browser would.
+    fireEvent(document.querySelector("dialog")!, new Event("cancel", { cancelable: true }));
+    expect(await screen.findByLabelText("Name der Sammlung")).toHaveValue("Englisch B1");
   });
 
   it("renames a Collection from inside it", async () => {

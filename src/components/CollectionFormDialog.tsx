@@ -134,6 +134,13 @@ export function CollectionFormDialog({
       className={styles.dialog}
       onCancel={(event) => {
         event.preventDefault();
+
+        if (confirmation) {
+          setConfirmation(undefined);
+
+          return;
+        }
+
         requestClose();
       }}
       aria-labelledby="collection-dialog-title"
@@ -143,14 +150,16 @@ export function CollectionFormDialog({
           <h2 id="collection-dialog-title">
             {t(collection ? "collections.renameTitle" : "collections.create")}
           </h2>
-          <button
-            type="button"
-            className={styles.iconButton}
-            onClick={requestClose}
-            aria-label={t("common.close")}
-          >
-            ×
-          </button>
+          {!confirmation && (
+            <button
+              type="button"
+              className={styles.iconButton}
+              onClick={requestClose}
+              aria-label={t("common.close")}
+            >
+              ×
+            </button>
+          )}
         </header>
         {confirmation === "delete" ? (
           <div className={styles.confirm}>
