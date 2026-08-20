@@ -8,5 +8,4 @@ This file is a map of contents (MoC). Read the relevant linked documents before 
 - [Domain docs](docs/agents/domain.md): before exploring the codebase, and when recording a decision
 - [Operations runbook](docs/operations.md): when setting up local development, tracing a `Fehler-ID`, or running a production migration, backup, or restore
 - [Deployment strategy](docs/deployment-strategy.md): when releasing, ordering a database migration against a deploy, or rolling back production
-- [Accessibility verification](docs/accessibility-verification.md): before a release, when recording the manual accessibility checks
 - [Bundled font licenses](docs/licenses/README.md): when adding or replacing a bundled font

@@ -13,8 +13,6 @@ This README is the entry point to the project's canonical documentation.
 ## Project guides
 
 - [Architecture decisions](docs/adr/README.md) — accepted technical and product decisions.
-- [Accessibility verification](docs/accessibility-verification.md) — required checks and recorded
-  accessibility evidence.
 - [Deployment strategy](docs/deployment-strategy.md) — environment separation, release order, and
   rollback strategy.
 - [Bundled font licenses](docs/licenses/README.md) — font sources, copyright notices, and licenses.
