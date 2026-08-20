@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
 import { describe, expect, it, vi } from "vitest";
 import { renderApp } from "../test/renderApp";
-import { mockServer, testCards } from "../test/server";
+import { mockServer, testCards, testCollections } from "../test/server";
 
 describe("rendered app journeys", () => {
   it("logs in without trimming the shared password", async () => {
@@ -107,6 +107,54 @@ describe("rendered app journeys", () => {
     await user.clear(search);
     await user.type(search, "Cafe");
     expect(screen.getByText(/Keine Karte passt/)).toBeVisible();
+  });
+
+  it("filters the Card list down to one Collection", async () => {
+    const user = userEvent.setup();
+    renderApp("/cards");
+
+    expect(await screen.findByText("Take care")).toBeVisible();
+    expect(screen.getByText("Café")).toBeVisible();
+
+    await user.click(screen.getByRole("button", { name: "Englisch" }));
+
+    await waitFor(() => expect(screen.queryByText("Take care")).not.toBeInTheDocument());
+    expect(screen.getByText("Café")).toBeVisible();
+
+    await user.click(screen.getByRole("button", { name: "Alle Sammlungen" }));
+    expect(await screen.findByText("Take care")).toBeVisible();
+  });
+
+  it("creates a Card in the filtered Collection", async () => {
+    const user = userEvent.setup();
+    let created: { collectionId?: string } = {};
+    mockServer.use(
+      http.post("/api/cards", async ({ request }) => {
+        created = (await request.json()) as { collectionId?: string };
+
+        return HttpResponse.json({ ...testCards[1]!, front: "Schnee" }, { status: 201 });
+      }),
+    );
+    renderApp("/cards");
+
+    await user.click(await screen.findByRole("button", { name: "Englisch" }));
+    await user.click(screen.getByRole("button", { name: "Karte hinzufügen" }));
+    await user.type(await screen.findByLabelText("Vorderseite"), "Schnee");
+    await user.type(screen.getByLabelText("Rückseite"), "snow");
+    await user.click(screen.getByRole("button", { name: "Speichern" }));
+
+    await waitFor(() => expect(created.collectionId).toBe(testCollections[1]!.id));
+  });
+
+  it("reviews only the Cards of the started Collection", async () => {
+    const user = userEvent.setup();
+    renderApp("/review");
+
+    expect(await screen.findByRole("button", { name: /Englisch/ })).toBeVisible();
+    await user.click(screen.getByRole("button", { name: /Vietnamesisch/ }));
+
+    expect(await screen.findByText("Take care")).toBeVisible();
+    expect(screen.getByText("1 / 1")).toBeVisible();
   });
 
   it("shows one add Card action when there are no saved Cards", async () => {

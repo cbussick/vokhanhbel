@@ -3,9 +3,13 @@ import { z } from "zod";
 export const problemTypes = {
   cardFrontConflict: "/problems/card-front-conflict",
   cardNotFound: "/problems/card-not-found",
+  collectionNameConflict: "/problems/collection-name-conflict",
+  collectionNotEmpty: "/problems/collection-not-empty",
+  collectionNotFound: "/problems/collection-not-found",
   deviceClockAhead: "/problems/device-clock-ahead",
   invalidOrigin: "/problems/invalid-origin",
   invalidRequest: "/problems/invalid-request",
+  lastCollection: "/problems/last-collection",
   loginRateLimit: "/problems/login-rate-limit",
   requestTooLarge: "/problems/request-too-large",
   reviewReplayConflict: "/problems/review-replay-conflict",

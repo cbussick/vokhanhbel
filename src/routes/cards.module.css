@@ -16,7 +16,34 @@
   background: white;
 }
 
-.toolbar > button,
+.filter {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.filter button {
+  min-block-size: 40px;
+  padding-inline: var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-full);
+  background: var(--color-surface);
+  font-weight: 700;
+}
+
+.filter button[aria-pressed="true"] {
+  border-color: transparent;
+  background: var(--color-primary);
+  color: var(--color-primary-text);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.actions button,
 .center button {
   min-block-size: 56px;
   border: 0;
@@ -24,6 +51,19 @@
   background: var(--color-primary);
   color: var(--color-primary-text);
   font-weight: 800;
+}
+
+.actions button {
+  flex: 1 1 12rem;
+  padding-inline: var(--space-4);
+}
+
+.actions .manage {
+  flex: 0 1 auto;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-weight: 700;
 }
 
 .toolbar p {
@@ -89,11 +129,12 @@
   }
 
   .toolbar label,
-  .toolbar p {
+  .toolbar p,
+  .filter {
     grid-column: 1 / -1;
   }
 
-  .toolbar > button {
+  .actions button {
     padding-inline: var(--space-6);
   }
 

@@ -8,6 +8,13 @@
       "when": 1784017827125,
       "tag": "0000_red_annihilus",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1787221668702,
+      "tag": "0001_fast_apocalypse",
+      "breakpoints": true
     }
   ]
 }

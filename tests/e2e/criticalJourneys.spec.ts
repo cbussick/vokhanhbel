@@ -3,6 +3,7 @@ import { expect, test, type Page, type Route } from "@playwright/test";
 
 interface MockCard {
   id: string;
+  collectionId: string;
   front: string;
   back: string;
   box: number;
@@ -14,10 +15,18 @@ interface MockCard {
 }
 
 const fixedNow = "2026-07-14T08:00:00.000Z";
+const mockCollection = {
+  id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+  name: "Vietnamesisch",
+  createdAt: fixedNow,
+  updatedAt: fixedNow,
+  deletedAt: null,
+};
 
 function createCard(front = "der Apfel", back = "the apple"): MockCard {
   return {
     id: crypto.randomUUID(),
+    collectionId: mockCollection.id,
     front,
     back,
     box: 0,
@@ -51,6 +60,8 @@ async function installMockApi(page: Page, authenticated = true) {
 
       return route.fulfill({ status: 204 });
     }
+    if (pathname === "/api/collections" && request.method() === "GET")
+      return json(route, [mockCollection]);
     if (pathname === "/api/cards" && request.method() === "GET") return json(route, state.cards);
     if (pathname === "/api/cards" && request.method() === "POST") {
       const input = request.postDataJSON() as { front: string; back: string };

@@ -13,10 +13,40 @@ import {
 } from "drizzle-orm/pg-core";
 import type { Card } from "../../contracts/card.js";
 
+/**
+ * Every Card created before Collections existed belongs here, and the column default keeps the
+ * previously deployed app writable while the migration runs ahead of the deploy.
+ */
+export const defaultCollectionId = "00000000-0000-4000-8000-000000000001";
+
+export const collections = pgTable(
+  "collections",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    name: text("name").notNull(),
+    normalizedName: text("normalized_name").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
+    deletedAt: timestamp("deleted_at", { withTimezone: true, mode: "date" }),
+  },
+  (table) => [
+    check("collections_name_length", sql`char_length(${table.name}) between 1 and 60`),
+    check("collections_name_normalized", sql`${table.name} = normalize_card_text(${table.name})`),
+    check("collections_normalized_name_matches", sql`${table.normalizedName} = ${table.name}`),
+    uniqueIndex("collections_active_name_unique")
+      .on(sql`lower(${table.normalizedName})`)
+      .where(sql`${table.deletedAt} is null`),
+  ],
+);
+
 export const cards = pgTable(
   "cards",
   {
     id: uuid("id").primaryKey().defaultRandom(),
+    collectionId: uuid("collection_id")
+      .notNull()
+      .default(defaultCollectionId)
+      .references(() => collections.id, { onDelete: "restrict", onUpdate: "restrict" }),
     front: text("front").notNull(),
     normalizedFront: text("normalized_front").notNull(),
     back: text("back").notNull(),
@@ -35,10 +65,10 @@ export const cards = pgTable(
     check("cards_back_normalized", sql`${table.back} = normalize_card_text(${table.back})`),
     check("cards_normalized_front_matches", sql`${table.normalizedFront} = ${table.front}`),
     uniqueIndex("cards_active_front_unique")
-      .on(sql`lower(${table.normalizedFront})`)
+      .on(table.collectionId, sql`lower(${table.normalizedFront})`)
       .where(sql`${table.deletedAt} is null`),
-    index("cards_due_active_idx")
-      .on(table.dueAt)
+    index("cards_collection_due_active_idx")
+      .on(table.collectionId, table.dueAt)
       .where(sql`${table.deletedAt} is null`),
   ],
 );
