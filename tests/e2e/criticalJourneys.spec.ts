@@ -168,6 +168,7 @@ test("login form remains usable at the narrowest supported width", async ({ page
 test("creates, searches, and opens a Card accessibly", async ({ page }) => {
   await installMockApi(page);
   await page.goto("/cards");
+  await page.getByRole("link", { name: /Vietnamesisch/ }).click();
   await page.getByRole("button", { name: "Karte hinzufügen" }).first().click();
   await page.getByLabel("Vorderseite").fill("xin chào");
   await page.getByLabel("Rückseite").fill("hallo");
@@ -339,7 +340,7 @@ test("uses desktop space for route content without overstretching focused work",
   const state = await installMockApi(page);
   state.cards.push(createCard("die Birne", "the pear"), createCard("die Pflaume", "the plum"));
   await page.setViewportSize({ width: 1440, height: 1000 });
-  await page.goto("/cards");
+  await page.goto(`/cards/${mockCollection.id}`);
 
   const cardItems = page.getByRole("listitem");
   const firstCardBox = await cardItems.nth(0).boundingBox();
@@ -426,6 +427,11 @@ for (const viewport of [
     await page.getByRole("link", { name: /Karten/ }).click();
     await expect(page.getByRole("heading", { name: "Karten" })).toBeVisible();
     await expect(page).toHaveScreenshot(`cards-${viewport.name}.png`, { animations: "disabled" });
+    await page.getByRole("link", { name: /Vietnamesisch/ }).click();
+    await expect(page.getByRole("heading", { name: "Vietnamesisch" })).toBeVisible();
+    await expect(page).toHaveScreenshot(`collection-cards-${viewport.name}.png`, {
+      animations: "disabled",
+    });
     await page.getByRole("button", { name: "Karte hinzufügen" }).first().click();
     await expect(page.getByRole("heading", { name: "Karte erstellen" })).toBeVisible();
     await expect(page).toHaveScreenshot(`card-editor-${viewport.name}.png`, {

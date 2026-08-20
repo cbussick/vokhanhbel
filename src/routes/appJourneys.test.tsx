@@ -99,33 +99,34 @@ describe("rendered app journeys", () => {
 
   it("finds Cards by either side while preserving diacritics", async () => {
     const user = userEvent.setup();
-    renderApp("/cards");
+    renderApp(`/cards/${testCollections[1]!.id}`);
     const search = await screen.findByLabelText("Karten durchsuchen");
-    expect(screen.getByText("Take care")).toBeVisible();
+    expect(screen.getByText("Café")).toBeVisible();
     await user.type(search, "kaffee");
     expect(screen.getByText("Café")).toBeVisible();
+    await user.clear(search);
+    await user.type(search, "café");
+    expect(screen.getByText("Kaffeehaus")).toBeVisible();
     await user.clear(search);
     await user.type(search, "Cafe");
     expect(screen.getByText(/Keine Karte passt/)).toBeVisible();
   });
 
-  it("filters the Card list down to one Collection", async () => {
+  it("opens a Collection from the overview and shows only its Cards", async () => {
     const user = userEvent.setup();
     renderApp("/cards");
 
-    expect(await screen.findByText("Take care")).toBeVisible();
-    expect(screen.getByText("Café")).toBeVisible();
+    expect(await screen.findByRole("link", { name: /Vietnamesisch/ })).toBeVisible();
+    await user.click(screen.getByRole("link", { name: /Englisch/ }));
 
-    await user.click(screen.getByRole("button", { name: "Englisch" }));
+    expect(await screen.findByText("Café")).toBeVisible();
+    expect(screen.queryByText("Take care")).not.toBeInTheDocument();
 
-    await waitFor(() => expect(screen.queryByText("Take care")).not.toBeInTheDocument());
-    expect(screen.getByText("Café")).toBeVisible();
-
-    await user.click(screen.getByRole("button", { name: "Alle Sammlungen" }));
-    expect(await screen.findByText("Take care")).toBeVisible();
+    await user.click(screen.getByRole("link", { name: /Alle Sammlungen/ }));
+    expect(await screen.findByRole("link", { name: /Vietnamesisch/ })).toBeVisible();
   });
 
-  it("creates a Card in the filtered Collection", async () => {
+  it("creates a Card in the open Collection", async () => {
     const user = userEvent.setup();
     let created: { collectionId?: string } = {};
     mockServer.use(
@@ -135,15 +136,35 @@ describe("rendered app journeys", () => {
         return HttpResponse.json({ ...testCards[1]!, front: "Schnee" }, { status: 201 });
       }),
     );
-    renderApp("/cards");
+    renderApp(`/cards/${testCollections[1]!.id}`);
 
-    await user.click(await screen.findByRole("button", { name: "Englisch" }));
-    await user.click(screen.getByRole("button", { name: "Karte hinzufügen" }));
+    await user.click(await screen.findByRole("button", { name: "Karte hinzufügen" }));
     await user.type(await screen.findByLabelText("Vorderseite"), "Schnee");
     await user.type(screen.getByLabelText("Rückseite"), "snow");
     await user.click(screen.getByRole("button", { name: "Speichern" }));
 
     await waitFor(() => expect(created.collectionId).toBe(testCollections[1]!.id));
+  });
+
+  it("renames a Collection from inside it", async () => {
+    const user = userEvent.setup();
+    let renamed = "";
+    mockServer.use(
+      http.patch(`/api/collections/${testCollections[1]!.id}`, async ({ request }) => {
+        renamed = ((await request.json()) as { name: string }).name;
+
+        return HttpResponse.json({ ...testCollections[1]!, name: renamed });
+      }),
+    );
+    renderApp(`/cards/${testCollections[1]!.id}`);
+
+    await user.click(await screen.findByRole("button", { name: "Sammlung bearbeiten" }));
+    const name = await screen.findByLabelText("Name der Sammlung");
+    await user.clear(name);
+    await user.type(name, "Englisch B1");
+    await user.click(screen.getByRole("button", { name: "Speichern" }));
+
+    await waitFor(() => expect(renamed).toBe("Englisch B1"));
   });
 
   it("reviews only the Cards of the started Collection", async () => {
@@ -157,10 +178,10 @@ describe("rendered app journeys", () => {
     expect(screen.getByText("1 / 1")).toBeVisible();
   });
 
-  it("shows one add Card action when there are no saved Cards", async () => {
+  it("shows one add Card action when a Collection has no saved Cards", async () => {
     mockServer.use(http.get("/api/cards", () => HttpResponse.json([])));
 
-    renderApp("/cards");
+    renderApp(`/cards/${testCollections[0]!.id}`);
 
     await screen.findByText("Noch keine Karten. Füge deine erste Karte hinzu.");
     expect(screen.getAllByRole("button", { name: "Karte hinzufügen" })).toHaveLength(1);
@@ -209,7 +230,7 @@ describe("rendered app journeys", () => {
     await act(async () => {
       await router.navigate({ to: "/cards" });
     });
-    expect(await screen.findByLabelText("Karten durchsuchen")).toBeVisible();
+    expect(await screen.findByRole("link", { name: /Vietnamesisch/ })).toBeVisible();
 
     await act(async () => {
       await router.navigate({ to: "/review/session" });
