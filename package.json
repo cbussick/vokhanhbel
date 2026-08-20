@@ -24,6 +24,7 @@
     "licenses": "node --experimental-strip-types scripts/checkLicenses.ts",
     "db:generate": "node --env-file-if-exists=.env.local node_modules/drizzle-kit/bin.cjs generate",
     "db:migrate": "node --env-file-if-exists=.env.local node_modules/drizzle-kit/bin.cjs migrate",
+    "db:studio": "docker compose up -d --wait postgres && node --env-file-if-exists=.env.local node_modules/drizzle-kit/bin.cjs studio",
     "backup:identity:generate": "node --experimental-strip-types scripts/runMigrationContainer.ts keygen",
     "backup:identity:recipient": "node --experimental-strip-types scripts/runMigrationContainer.ts recipient",
     "db:migrate:production": "node --env-file=.env.production-migration.local --experimental-strip-types scripts/runMigrationContainer.ts migrate",
