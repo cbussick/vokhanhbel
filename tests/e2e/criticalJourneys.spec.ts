@@ -364,6 +364,8 @@ test("uses desktop space for route content without overstretching focused work",
 
   await page.getByRole("link", { name: /Wiederholen/ }).click();
   await page.getByRole("button", { name: "Review starten" }).click();
+  await expect(page.getByRole("button", { name: "Antwort zeigen" })).toBeVisible();
+
   const focusedMainBox = await page.locator("main").boundingBox();
 
   expect(focusedMainBox).not.toBeNull();
