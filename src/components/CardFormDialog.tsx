@@ -32,13 +32,8 @@ export function CardFormDialog({
   const [collectionId, setCollectionId] = useState(card?.collectionId ?? defaultCollectionId ?? "");
   const [front, setFront] = useState(card?.front ?? "");
   const [back, setBack] = useState(card?.back ?? "");
-  const [confirmation, setConfirmation] = useState<"delete" | "discard">();
+  const [confirmation, setConfirmation] = useState<"delete">();
   const [error, setError] = useState<string>();
-
-  const dirty =
-    front !== (card?.front ?? "") ||
-    back !== (card?.back ?? "") ||
-    (card !== undefined && collectionId !== card.collectionId);
 
   useEffect(() => {
     const dialog = dialogRef.current;
@@ -51,16 +46,6 @@ export function CardFormDialog({
   const close = () => {
     dialogRef.current?.close();
     onClose();
-  };
-
-  const requestClose = () => {
-    if (dirty) {
-      setConfirmation("discard");
-
-      return;
-    }
-
-    close();
   };
 
   const save = useMutation({
@@ -136,7 +121,7 @@ export function CardFormDialog({
           return;
         }
 
-        requestClose();
+        close();
       }}
       aria-labelledby="card-dialog-title"
     >
@@ -147,7 +132,7 @@ export function CardFormDialog({
             <button
               type="button"
               className={styles.iconButton}
-              onClick={requestClose}
+              onClick={close}
               aria-label={t("common.close")}
             >
               ×
@@ -172,22 +157,6 @@ export function CardFormDialog({
                 onClick={() => remove.mutate()}
               >
                 {t("cards.delete")}
-              </button>
-            </div>
-          </div>
-        ) : confirmation === "discard" ? (
-          <div className={styles.confirm}>
-            <p>{t("cards.unsaved")}</p>
-            <div className={styles.actions}>
-              <button
-                type="button"
-                className={styles.secondary}
-                onClick={() => setConfirmation(undefined)}
-              >
-                {t("common.keepEditing")}
-              </button>
-              <button type="button" className={styles.danger} onClick={close}>
-                {t("common.discard")}
               </button>
             </div>
           </div>
@@ -246,7 +215,7 @@ export function CardFormDialog({
                   {t("cards.delete")}
                 </button>
               )}
-              <button type="button" className={styles.secondary} onClick={requestClose}>
+              <button type="button" className={styles.secondary} onClick={close}>
                 {t("common.cancel")}
               </button>
               <button

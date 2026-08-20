@@ -22,8 +22,6 @@ export const de = {
       save: "Speichern",
       retry: "Erneut versuchen",
       finish: "Fertig",
-      discard: "Verwerfen",
-      keepEditing: "Weiter bearbeiten",
     },
     shell: {
       points: "{{count}} Punkte",
@@ -51,7 +49,6 @@ export const de = {
       deleteConfirm: "Die Karte verschwindet. Frühere Reviews und Punkte bleiben erhalten.",
       conflict: "Diese Vorderseite gibt es in dieser Sammlung schon.",
       offline: "Karten können offline gelesen, aber nicht geändert werden.",
-      unsaved: "Änderungen verwerfen?",
       saveFailed: "Die Karte konnte nicht gespeichert werden.",
     },
     collections: {

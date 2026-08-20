@@ -59,6 +59,8 @@
 }
 
 .sheet header {
+  /* Matches the close button, so the heading keeps its place once a confirmation hides it. */
+  min-block-size: 44px;
   display: flex;
   align-items: center;
   justify-content: space-between;

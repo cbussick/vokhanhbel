@@ -168,7 +168,7 @@ describe("rendered app journeys", () => {
     await waitFor(() => expect(created).toEqual({ name: "Französisch", icon: "flag-vn" }));
   });
 
-  it("offers only the two answers while confirming a discarded Collection edit", async () => {
+  it("closes an edited Collection without asking, and only confirms deletion", async () => {
     const user = userEvent.setup();
     renderApp(`/cards/${testCollections[1]!.id}`);
 
@@ -176,12 +176,19 @@ describe("rendered app journeys", () => {
     await user.type(await screen.findByLabelText("Name der Sammlung"), " B1");
     await user.click(screen.getByRole("button", { name: "Schließen" }));
 
-    expect(await screen.findByText("Änderungen verwerfen?")).toBeVisible();
+    await waitFor(() =>
+      expect(screen.queryByLabelText("Name der Sammlung")).not.toBeInTheDocument(),
+    );
+
+    await user.click(screen.getByRole("button", { name: "Sammlung bearbeiten" }));
+    await user.click(await screen.findByRole("button", { name: "Sammlung löschen" }));
+
+    expect(await screen.findByText(/Sammlung „Englisch“ löschen/)).toBeVisible();
     expect(screen.queryByRole("button", { name: "Schließen" })).not.toBeInTheDocument();
 
     // jsdom does not turn Escape into a dialog cancel, so raise the event the browser would.
     fireEvent(document.querySelector("dialog")!, new Event("cancel", { cancelable: true }));
-    expect(await screen.findByLabelText("Name der Sammlung")).toHaveValue("Englisch B1");
+    expect(await screen.findByLabelText("Name der Sammlung")).toHaveValue("Englisch");
   });
 
   it("renames a Collection from inside it", async () => {
