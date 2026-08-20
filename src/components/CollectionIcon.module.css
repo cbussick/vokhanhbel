@@ -11,6 +11,17 @@
   background: var(--color-surface);
 }
 
+.compact {
+  inline-size: 1.75rem;
+  block-size: 1.75rem;
+  border-radius: var(--radius-small);
+}
+
+.compact .glyph {
+  inline-size: 1rem;
+  block-size: 1rem;
+}
+
 .glyph {
   inline-size: 1.5rem;
   block-size: 1.5rem;

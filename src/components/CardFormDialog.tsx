@@ -8,6 +8,7 @@ import { apiRequest, ApiError } from "../lib/apiClient";
 import { useOnlineStatus } from "../lib/browserState";
 import { collectionsQuery } from "../lib/queries";
 import { queryKeys } from "../lib/queryKeys";
+import { CollectionSelect } from "./CollectionSelect";
 import styles from "./Dialog.module.css";
 
 export function CardFormDialog({
@@ -163,18 +164,13 @@ export function CardFormDialog({
         ) : (
           <form onSubmit={submit} noValidate>
             <label htmlFor="card-collection">{t("cards.collection")}</label>
-            <select
+            <CollectionSelect
               id="card-collection"
-              required
+              collections={collections.data ?? []}
               value={collectionId}
-              onChange={(event) => setCollectionId(event.target.value)}
-            >
-              {(collections.data ?? []).map((collection) => (
-                <option key={collection.id} value={collection.id}>
-                  {collection.name}
-                </option>
-              ))}
-            </select>
+              onChange={setCollectionId}
+              required
+            />
             <label htmlFor="card-front">{t("cards.front")}</label>
             <span id="front-hint" className={styles.hint}>
               {t("cards.frontHint")}
