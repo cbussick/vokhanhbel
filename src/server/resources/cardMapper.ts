@@ -4,6 +4,7 @@ import { boxSchema } from "../../domain/review.js";
 
 const cardRowSchema = z.object({
   id: z.uuid(),
+  collectionId: z.uuid(),
   front: z.string(),
   back: z.string(),
   box: boxSchema,
@@ -19,6 +20,7 @@ export function mapCard(value: unknown): Card {
 
   return cardSchema.parse({
     id: row.id,
+    collectionId: row.collectionId,
     front: row.front,
     back: row.back,
     box: row.box,

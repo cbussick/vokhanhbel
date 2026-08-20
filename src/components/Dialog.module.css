@@ -59,6 +59,8 @@
 }
 
 .sheet header {
+  /* Matches the close button, so the heading keeps its place once a confirmation hides it. */
+  min-block-size: 44px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -93,6 +95,66 @@
 .hint {
   color: var(--color-text-secondary);
   font-size: var(--font-xs);
+}
+
+.fieldLabel {
+  padding: 0;
+  margin-block-end: var(--space-2);
+  font-weight: 700;
+}
+
+.iconChoices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-block-start: var(--space-3);
+  padding: 0;
+  border: 0;
+}
+
+/* The radio stays focusable but invisible: its label is the whole visible control. */
+.iconChoices input {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.iconChoices label {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-block-size: 48px;
+  margin: 0;
+  padding-inline: var(--space-3);
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-medium);
+  background: white;
+  font-weight: 600;
+}
+
+.iconChoices input:checked + label {
+  border-color: var(--color-primary-text);
+  background: color-mix(in srgb, var(--color-primary) 22%, white);
+}
+
+.iconChoices input:focus-visible + label {
+  outline: 3px solid var(--color-primary-text);
+  outline-offset: 2px;
+}
+
+.sheet select,
+.sheet input {
+  inline-size: 100%;
+  min-block-size: 48px;
+  padding: var(--space-2) var(--space-3);
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-medium);
+  background: white;
 }
 
 .sheet textarea {

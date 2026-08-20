@@ -1,4 +1,4 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { cardSchema, createCardInputSchema, type Card } from "../contracts/card";
@@ -6,31 +6,34 @@ import { apiPaths } from "../contracts/apiPaths";
 import { problemTypes } from "../contracts/problem";
 import { apiRequest, ApiError } from "../lib/apiClient";
 import { useOnlineStatus } from "../lib/browserState";
+import { collectionsQuery } from "../lib/queries";
 import { queryKeys } from "../lib/queryKeys";
 import styles from "./Dialog.module.css";
 
 export function CardFormDialog({
   card,
+  defaultCollectionId,
   onClose,
   onDeleted,
 }: {
   card?: Card;
+  defaultCollectionId?: string | undefined;
   onClose: () => void;
   onDeleted?: () => void;
 }) {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
   const online = useOnlineStatus();
+  const collections = useQuery(collectionsQuery);
 
   const dialogRef = useRef<HTMLDialogElement>(null);
   const frontRef = useRef<HTMLTextAreaElement>(null);
 
+  const [collectionId, setCollectionId] = useState(card?.collectionId ?? defaultCollectionId ?? "");
   const [front, setFront] = useState(card?.front ?? "");
   const [back, setBack] = useState(card?.back ?? "");
-  const [confirmation, setConfirmation] = useState<"delete" | "discard">();
+  const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
   const [error, setError] = useState<string>();
-
-  const dirty = front !== (card?.front ?? "") || back !== (card?.back ?? "");
 
   useEffect(() => {
     const dialog = dialogRef.current;
@@ -45,19 +48,13 @@ export function CardFormDialog({
     onClose();
   };
 
-  const requestClose = () => {
-    if (dirty) {
-      setConfirmation("discard");
-
-      return;
-    }
-
-    close();
-  };
-
   const save = useMutation({
     mutationFn: async () => {
-      const input = createCardInputSchema.parse({ front, back });
+      const input = createCardInputSchema.parse({
+        collectionId,
+        front,
+        back,
+      });
 
       return card
         ? cardSchema.parse(
@@ -117,30 +114,39 @@ export function CardFormDialog({
       className={styles.dialog}
       onCancel={(event) => {
         event.preventDefault();
-        requestClose();
+
+        if (isConfirmingDelete) {
+          setIsConfirmingDelete(false);
+
+          return;
+        }
+
+        close();
       }}
       aria-labelledby="card-dialog-title"
     >
       <section className={styles.sheet}>
         <header>
           <h2 id="card-dialog-title">{t(card ? "cards.edit" : "cards.create")}</h2>
-          <button
-            type="button"
-            className={styles.iconButton}
-            onClick={requestClose}
-            aria-label={t("common.close")}
-          >
-            ×
-          </button>
+          {!isConfirmingDelete && (
+            <button
+              type="button"
+              className={styles.iconButton}
+              onClick={close}
+              aria-label={t("common.close")}
+            >
+              ×
+            </button>
+          )}
         </header>
-        {confirmation === "delete" ? (
+        {isConfirmingDelete ? (
           <div className={styles.confirm}>
             <p>{t("cards.deleteConfirm")}</p>
             <div className={styles.actions}>
               <button
                 type="button"
                 className={styles.secondary}
-                onClick={() => setConfirmation(undefined)}
+                onClick={() => setIsConfirmingDelete(false)}
               >
                 {t("common.cancel")}
               </button>
@@ -154,24 +160,21 @@ export function CardFormDialog({
               </button>
             </div>
           </div>
-        ) : confirmation === "discard" ? (
-          <div className={styles.confirm}>
-            <p>{t("cards.unsaved")}</p>
-            <div className={styles.actions}>
-              <button
-                type="button"
-                className={styles.secondary}
-                onClick={() => setConfirmation(undefined)}
-              >
-                {t("common.keepEditing")}
-              </button>
-              <button type="button" className={styles.danger} onClick={close}>
-                {t("common.discard")}
-              </button>
-            </div>
-          </div>
         ) : (
           <form onSubmit={submit} noValidate>
+            <label htmlFor="card-collection">{t("cards.collection")}</label>
+            <select
+              id="card-collection"
+              required
+              value={collectionId}
+              onChange={(event) => setCollectionId(event.target.value)}
+            >
+              {(collections.data ?? []).map((collection) => (
+                <option key={collection.id} value={collection.id}>
+                  {collection.name}
+                </option>
+              ))}
+            </select>
             <label htmlFor="card-front">{t("cards.front")}</label>
             <span id="front-hint" className={styles.hint}>
               {t("cards.frontHint")}
@@ -207,18 +210,18 @@ export function CardFormDialog({
                 <button
                   type="button"
                   className={styles.deleteLink}
-                  onClick={() => setConfirmation("delete")}
+                  onClick={() => setIsConfirmingDelete(true)}
                 >
                   {t("cards.delete")}
                 </button>
               )}
-              <button type="button" className={styles.secondary} onClick={requestClose}>
+              <button type="button" className={styles.secondary} onClick={close}>
                 {t("common.cancel")}
               </button>
               <button
                 type="submit"
                 className={styles.primary}
-                disabled={save.isPending || !front.trim() || !back.trim()}
+                disabled={save.isPending || !collectionId || !front.trim() || !back.trim()}
               >
                 {t("common.save")}
               </button>

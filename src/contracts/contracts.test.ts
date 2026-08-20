@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { cardSchema, createCardInputSchema } from "./card.js";
+import { cardSchema, createCardInputSchema, updateCardInputSchema } from "./card.js";
+import { collectionInputSchema, collectionSchema, defaultCollectionIcon } from "./collection.js";
 import { tutorStreamEventSchema } from "./tutor.js";
 import { problemSchema } from "./problem.js";
 import { reviewSubmissionInputSchema } from "./review.js";
@@ -8,14 +9,65 @@ import { statsSchema } from "./stats.js";
 
 describe("public contracts", () => {
   it("normalizes valid Card input at the boundary", () => {
-    expect(createCardInputSchema.parse({ front: "  Take   care ", back: " Pass auf! " })).toEqual({
-      front: "Take care",
-      back: "Pass auf!",
+    const collectionId = crypto.randomUUID();
+
+    expect(
+      createCardInputSchema.parse({
+        collectionId,
+        front: "  Take   care ",
+        back: " Pass auf! ",
+      }),
+    ).toEqual({ collectionId, front: "Take care", back: "Pass auf!" });
+  });
+
+  it("normalizes a Collection name and keeps it within 60 characters", () => {
+    expect(collectionInputSchema.parse({ name: "  Viet   namesisch ", icon: "flag-vn" })).toEqual({
+      name: "Viet namesisch",
+      icon: "flag-vn",
     });
+    expect(collectionInputSchema.safeParse({ name: "  ", icon: "book" }).success).toBe(false);
+    expect(collectionInputSchema.safeParse({ name: "x".repeat(61), icon: "book" }).success).toBe(
+      false,
+    );
+  });
+
+  it("rejects an unknown Collection icon on write but degrades it on read", () => {
+    expect(collectionInputSchema.safeParse({ name: "Englisch", icon: "flag-xx" }).success).toBe(
+      false,
+    );
+
+    const now = new Date().toISOString();
+    // A Collection written by a newer deploy must still render on an older client.
+    expect(
+      collectionSchema.parse({
+        id: crypto.randomUUID(),
+        name: "Englisch",
+        icon: "flag-xx",
+        createdAt: now,
+        updatedAt: now,
+        deletedAt: null,
+      }).icon,
+    ).toBe(defaultCollectionIcon);
+  });
+
+  it("moves a Card between Collections without other fields", () => {
+    expect(updateCardInputSchema.safeParse({ collectionId: crypto.randomUUID() }).success).toBe(
+      true,
+    );
+    expect(updateCardInputSchema.safeParse({}).success).toBe(false);
   });
 
   it("rejects invalid Card and Review shapes", () => {
-    expect(createCardInputSchema.safeParse({ front: "", back: "Meaning" }).success).toBe(false);
+    expect(
+      createCardInputSchema.safeParse({
+        collectionId: crypto.randomUUID(),
+        front: "",
+        back: "Meaning",
+      }).success,
+    ).toBe(false);
+    expect(createCardInputSchema.safeParse({ front: "Take care", back: "Pass auf" }).success).toBe(
+      false,
+    );
     expect(
       reviewSubmissionInputSchema.safeParse({
         id: "not-a-uuid",
@@ -37,6 +89,7 @@ describe("public contracts", () => {
     expect(
       cardSchema.safeParse({
         id: crypto.randomUUID(),
+        collectionId: crypto.randomUUID(),
         front: "front",
         back: "back",
         box: 0,

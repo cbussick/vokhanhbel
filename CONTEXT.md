@@ -12,6 +12,11 @@ _Avoid_: User, account, profile
 A front/back text pair to be learned, created manually.
 _Avoid_: Flashcard, word
 
+**Collection**:
+A named group of Cards. Every Card belongs to exactly one Collection, which scopes the Card list and
+a Review Session. Usually one Collection per learned language, but any grouping the Learner wants.
+_Avoid_: Deck, set, category, folder
+
 **Box**:
 A card's current position (0–5) in the Leitner scheduling ladder, determining how soon it becomes due again.
 _Avoid_: Level, stage, interval
@@ -37,7 +42,7 @@ A server-side authentication record created after the shared password is accepte
 _Avoid_: JWT, access token, signed session
 
 **Review Session**:
-The client-side, non-persisted queue of due cards being studied in one sitting, ending at a session summary.
+The client-side, non-persisted queue of due cards being studied in one sitting, ending at a session summary. Covers either one Collection or all of them.
 _Avoid_: Session (reserved for the auth session), study session
 
 **Points**:

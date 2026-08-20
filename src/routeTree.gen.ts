@@ -14,8 +14,10 @@ import { Route as MeRouteImport } from './routes/me'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as CardsRouteImport } from './routes/cards'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as CardsIndexRouteImport } from './routes/cards.index'
 import { Route as ReviewSessionRouteImport } from './routes/review.session'
-import { Route as CardsCardIdRouteImport } from './routes/cards.$cardId'
+import { Route as CardsCollectionIdRouteImport } from './routes/cards.$collectionId'
+import { Route as CardsCollectionIdCardIdRouteImport } from './routes/cards.$collectionId.$cardId'
 
 const ReviewRoute = ReviewRouteImport.update({
   id: '/review',
@@ -42,15 +44,25 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const CardsIndexRoute = CardsIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => CardsRoute,
+} as any)
 const ReviewSessionRoute = ReviewSessionRouteImport.update({
   id: '/session',
   path: '/session',
   getParentRoute: () => ReviewRoute,
 } as any)
-const CardsCardIdRoute = CardsCardIdRouteImport.update({
+const CardsCollectionIdRoute = CardsCollectionIdRouteImport.update({
+  id: '/$collectionId',
+  path: '/$collectionId',
+  getParentRoute: () => CardsRoute,
+} as any)
+const CardsCollectionIdCardIdRoute = CardsCollectionIdCardIdRouteImport.update({
   id: '/$cardId',
   path: '/$cardId',
-  getParentRoute: () => CardsRoute,
+  getParentRoute: () => CardsCollectionIdRoute,
 } as any)
 
 export interface FileRoutesByFullPath {
@@ -59,17 +71,20 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/me': typeof MeRoute
   '/review': typeof ReviewRouteWithChildren
-  '/cards/$cardId': typeof CardsCardIdRoute
+  '/cards/$collectionId': typeof CardsCollectionIdRouteWithChildren
   '/review/session': typeof ReviewSessionRoute
+  '/cards/': typeof CardsIndexRoute
+  '/cards/$collectionId/$cardId': typeof CardsCollectionIdCardIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/cards': typeof CardsRouteWithChildren
   '/login': typeof LoginRoute
   '/me': typeof MeRoute
   '/review': typeof ReviewRouteWithChildren
-  '/cards/$cardId': typeof CardsCardIdRoute
+  '/cards/$collectionId': typeof CardsCollectionIdRouteWithChildren
   '/review/session': typeof ReviewSessionRoute
+  '/cards': typeof CardsIndexRoute
+  '/cards/$collectionId/$cardId': typeof CardsCollectionIdCardIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -78,8 +93,10 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/me': typeof MeRoute
   '/review': typeof ReviewRouteWithChildren
-  '/cards/$cardId': typeof CardsCardIdRoute
+  '/cards/$collectionId': typeof CardsCollectionIdRouteWithChildren
   '/review/session': typeof ReviewSessionRoute
+  '/cards/': typeof CardsIndexRoute
+  '/cards/$collectionId/$cardId': typeof CardsCollectionIdCardIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -89,17 +106,20 @@ export interface FileRouteTypes {
     | '/login'
     | '/me'
     | '/review'
-    | '/cards/$cardId'
+    | '/cards/$collectionId'
     | '/review/session'
+    | '/cards/'
+    | '/cards/$collectionId/$cardId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
-    | '/cards'
     | '/login'
     | '/me'
     | '/review'
-    | '/cards/$cardId'
+    | '/cards/$collectionId'
     | '/review/session'
+    | '/cards'
+    | '/cards/$collectionId/$cardId'
   id:
     | '__root__'
     | '/'
@@ -107,8 +127,10 @@ export interface FileRouteTypes {
     | '/login'
     | '/me'
     | '/review'
-    | '/cards/$cardId'
+    | '/cards/$collectionId'
     | '/review/session'
+    | '/cards/'
+    | '/cards/$collectionId/$cardId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -156,6 +178,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/cards/': {
+      id: '/cards/'
+      path: '/'
+      fullPath: '/cards/'
+      preLoaderRoute: typeof CardsIndexRouteImport
+      parentRoute: typeof CardsRoute
+    }
     '/review/session': {
       id: '/review/session'
       path: '/session'
@@ -163,22 +192,42 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ReviewSessionRouteImport
       parentRoute: typeof ReviewRoute
     }
-    '/cards/$cardId': {
-      id: '/cards/$cardId'
-      path: '/$cardId'
-      fullPath: '/cards/$cardId'
-      preLoaderRoute: typeof CardsCardIdRouteImport
+    '/cards/$collectionId': {
+      id: '/cards/$collectionId'
+      path: '/$collectionId'
+      fullPath: '/cards/$collectionId'
+      preLoaderRoute: typeof CardsCollectionIdRouteImport
       parentRoute: typeof CardsRoute
+    }
+    '/cards/$collectionId/$cardId': {
+      id: '/cards/$collectionId/$cardId'
+      path: '/$cardId'
+      fullPath: '/cards/$collectionId/$cardId'
+      preLoaderRoute: typeof CardsCollectionIdCardIdRouteImport
+      parentRoute: typeof CardsCollectionIdRoute
     }
   }
 }
 
+interface CardsCollectionIdRouteChildren {
+  CardsCollectionIdCardIdRoute: typeof CardsCollectionIdCardIdRoute
+}
+
+const CardsCollectionIdRouteChildren: CardsCollectionIdRouteChildren = {
+  CardsCollectionIdCardIdRoute: CardsCollectionIdCardIdRoute,
+}
+
+const CardsCollectionIdRouteWithChildren =
+  CardsCollectionIdRoute._addFileChildren(CardsCollectionIdRouteChildren)
+
 interface CardsRouteChildren {
-  CardsCardIdRoute: typeof CardsCardIdRoute
+  CardsCollectionIdRoute: typeof CardsCollectionIdRouteWithChildren
+  CardsIndexRoute: typeof CardsIndexRoute
 }
 
 const CardsRouteChildren: CardsRouteChildren = {
-  CardsCardIdRoute: CardsCardIdRoute,
+  CardsCollectionIdRoute: CardsCollectionIdRouteWithChildren,
+  CardsIndexRoute: CardsIndexRoute,
 }
 
 const CardsRouteWithChildren = CardsRoute._addFileChildren(CardsRouteChildren)

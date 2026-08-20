@@ -3,6 +3,7 @@ import { expect, test, type Page, type Route } from "@playwright/test";
 
 interface MockCard {
   id: string;
+  collectionId: string;
   front: string;
   back: string;
   box: number;
@@ -14,10 +15,19 @@ interface MockCard {
 }
 
 const fixedNow = "2026-07-14T08:00:00.000Z";
+const mockCollection = {
+  id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+  name: "Vietnamesisch",
+  icon: "flag-vn",
+  createdAt: fixedNow,
+  updatedAt: fixedNow,
+  deletedAt: null,
+};
 
 function createCard(front = "der Apfel", back = "the apple"): MockCard {
   return {
     id: crypto.randomUUID(),
+    collectionId: mockCollection.id,
     front,
     back,
     box: 0,
@@ -51,6 +61,8 @@ async function installMockApi(page: Page, authenticated = true) {
 
       return route.fulfill({ status: 204 });
     }
+    if (pathname === "/api/collections" && request.method() === "GET")
+      return json(route, [mockCollection]);
     if (pathname === "/api/cards" && request.method() === "GET") return json(route, state.cards);
     if (pathname === "/api/cards" && request.method() === "POST") {
       const input = request.postDataJSON() as { front: string; back: string };
@@ -157,6 +169,7 @@ test("login form remains usable at the narrowest supported width", async ({ page
 test("creates, searches, and opens a Card accessibly", async ({ page }) => {
   await installMockApi(page);
   await page.goto("/cards");
+  await page.getByRole("link", { name: /Vietnamesisch/ }).click();
   await page.getByRole("button", { name: "Karte hinzufügen" }).first().click();
   await page.getByLabel("Vorderseite").fill("xin chào");
   await page.getByLabel("Rückseite").fill("hallo");
@@ -328,7 +341,7 @@ test("uses desktop space for route content without overstretching focused work",
   const state = await installMockApi(page);
   state.cards.push(createCard("die Birne", "the pear"), createCard("die Pflaume", "the plum"));
   await page.setViewportSize({ width: 1440, height: 1000 });
-  await page.goto("/cards");
+  await page.goto(`/cards/${mockCollection.id}`);
 
   const cardItems = page.getByRole("listitem");
   const firstCardBox = await cardItems.nth(0).boundingBox();
@@ -415,6 +428,17 @@ for (const viewport of [
     await page.getByRole("link", { name: /Karten/ }).click();
     await expect(page.getByRole("heading", { name: "Karten" })).toBeVisible();
     await expect(page).toHaveScreenshot(`cards-${viewport.name}.png`, { animations: "disabled" });
+    await page.getByRole("button", { name: "Sammlung hinzufügen" }).click();
+    await expect(page.getByRole("heading", { name: "Sammlung erstellen" })).toBeVisible();
+    await expect(page).toHaveScreenshot(`collection-editor-${viewport.name}.png`, {
+      animations: "disabled",
+    });
+    await page.getByRole("button", { name: "Schließen" }).click();
+    await page.getByRole("link", { name: /Vietnamesisch/ }).click();
+    await expect(page.getByRole("heading", { name: "Vietnamesisch" })).toBeVisible();
+    await expect(page).toHaveScreenshot(`collection-cards-${viewport.name}.png`, {
+      animations: "disabled",
+    });
     await page.getByRole("button", { name: "Karte hinzufügen" }).first().click();
     await expect(page.getByRole("heading", { name: "Karte erstellen" })).toBeVisible();
     await expect(page).toHaveScreenshot(`card-editor-${viewport.name}.png`, {

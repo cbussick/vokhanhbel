@@ -6,6 +6,7 @@ import { createTutorResponse } from "./tutor.js";
 
 const card: Card = {
   id: "019c52a9-50e8-7000-8000-000000000001",
+  collectionId: "019c52a9-50e8-7000-8000-0000000000c1",
   front: "der Apfel",
   back: "the apple",
   box: 0,

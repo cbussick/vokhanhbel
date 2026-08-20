@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { POST as createCard } from "../../api/cards/index.js";
+import { POST as createCollection } from "../../api/collections/index.js";
 import { POST as createReview } from "../../api/reviews.js";
 import { POST as createSession } from "../../api/session.js";
 import { GET as readStats } from "../../api/stats.js";
@@ -31,8 +32,19 @@ describe("real API handler stack", () => {
     const cookie = loginResponse.headers.get("set-cookie")?.split(";", 1)[0];
     expect(cookie).toMatch(/^__Host-session=/u);
 
+    const collectionResponse = await createCollection(
+      request("/api/collections", "POST", { name: "Echter Stack", icon: "book" }, cookie),
+    );
+    expect(collectionResponse.status).toBe(201);
+    const collection = (await collectionResponse.json()) as { id: string };
+
     const cardResponse = await createCard(
-      request("/api/cards", "POST", { front: "real stack", back: "echter Stack" }, cookie),
+      request(
+        "/api/cards",
+        "POST",
+        { collectionId: collection.id, front: "real stack", back: "echter Stack" },
+        cookie,
+      ),
     );
     expect(cardResponse.status).toBe(201);
     const card = (await cardResponse.json()) as { id: string };

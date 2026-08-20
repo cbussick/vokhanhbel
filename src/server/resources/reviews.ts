@@ -34,6 +34,7 @@ const reviewRowSchema = z.object({
 
 const databaseCardRowSchema = z.object({
   id: z.uuid(),
+  collection_id: z.uuid(),
   front: z.string(),
   back: z.string(),
   box: boxSchema,
@@ -53,6 +54,7 @@ function mapDatabaseCard(value: unknown) {
 
   return mapCard({
     id: row.id,
+    collectionId: row.collection_id,
     front: row.front,
     back: row.back,
     box: row.box,

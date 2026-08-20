@@ -13,6 +13,7 @@ vi.mock("openai", () => ({
 
 const card: Card = {
   id: "019c52a9-50e8-7000-8000-000000000001",
+  collectionId: "019c52a9-50e8-7000-8000-0000000000c1",
   front: "front",
   back: "back",
   box: 0,

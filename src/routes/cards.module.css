@@ -1,3 +1,17 @@
+.back {
+  display: inline-block;
+  margin-block-end: var(--space-4);
+  color: var(--color-text-secondary);
+  font-size: var(--font-sm);
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.back:hover,
+.back:focus-visible {
+  text-decoration: underline;
+}
+
 .toolbar {
   display: grid;
   gap: var(--space-2);
@@ -16,7 +30,13 @@
   background: white;
 }
 
-.toolbar > button,
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.actions button,
 .center button {
   min-block-size: 56px;
   border: 0;
@@ -26,7 +46,26 @@
   font-weight: 800;
 }
 
+.actions button {
+  flex: 1 1 12rem;
+  padding-inline: var(--space-4);
+}
+
+.actions .manage {
+  flex: 0 1 auto;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-weight: 700;
+}
+
 .toolbar p {
+  color: var(--color-text-secondary);
+  font-size: var(--font-sm);
+}
+
+.offline {
+  margin-block-start: var(--space-4);
   color: var(--color-text-secondary);
   font-size: var(--font-sm);
 }
@@ -34,29 +73,39 @@
 .list {
   display: grid;
   gap: var(--space-3);
+  margin-block-end: var(--space-6);
   list-style: none;
 }
 
-.list button {
+.list a {
   inline-size: 100%;
   min-block-size: 76px;
-  display: grid;
-  gap: var(--space-1);
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
   padding: var(--space-4);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-medium);
   background: var(--color-surface);
   box-shadow: var(--shadow-small);
+  color: inherit;
   text-align: start;
+  text-decoration: none;
+}
+
+.rowText {
+  display: grid;
+  gap: var(--space-1);
+  min-inline-size: 0;
 }
 
 .list strong,
-.list span {
+.list .rowDetail {
   overflow-wrap: anywhere;
   white-space: pre-line;
 }
 
-.list span {
+.list .rowDetail {
   color: var(--color-text-secondary);
   display: -webkit-box;
   overflow: hidden;
@@ -93,7 +142,12 @@
     grid-column: 1 / -1;
   }
 
-  .toolbar > button {
+  .toolbar .actions {
+    flex-wrap: nowrap;
+  }
+
+  .actions button {
+    flex: 0 0 auto;
     padding-inline: var(--space-6);
   }
 
@@ -102,7 +156,7 @@
   }
 
   .list li,
-  .list button {
+  .list a {
     block-size: 100%;
   }
 }

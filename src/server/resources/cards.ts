@@ -2,15 +2,23 @@ import { and, desc, eq, isNull } from "drizzle-orm";
 import type { CreateCardInput, UpdateCardInput } from "../../contracts/card.js";
 import { problemTypes } from "../../contracts/problem.js";
 import { getDatabase } from "../database/client.js";
+import { isForeignKeyViolation, isUniqueViolation } from "../database/errors.js";
 import { cards } from "../database/schema.js";
 import { AppProblem } from "../http/problem.js";
 import { mapCard } from "./cardMapper.js";
 
-function isUniqueViolation(error: unknown): boolean {
-  if (typeof error !== "object" || error === null) return false;
-  if ("code" in error && error.code === "23505") return true;
-
-  return "cause" in error && isUniqueViolation(error.cause);
+function throwCardWriteProblem(error: unknown): never {
+  if (isUniqueViolation(error))
+    throw new AppProblem(
+      409,
+      problemTypes.cardFrontConflict,
+      "Diese Vorderseite gibt es schon",
+      undefined,
+      [{ pointer: "/front", code: "not_unique" }],
+    );
+  if (isForeignKeyViolation(error))
+    throw new AppProblem(404, problemTypes.collectionNotFound, "Sammlung nicht gefunden");
+  throw error;
 }
 
 export async function listCards() {
@@ -39,20 +47,17 @@ export async function createCard(input: CreateCardInput) {
   try {
     const rows = await getDatabase()
       .insert(cards)
-      .values({ front: input.front, normalizedFront: input.front, back: input.back })
+      .values({
+        collectionId: input.collectionId,
+        front: input.front,
+        normalizedFront: input.front,
+        back: input.back,
+      })
       .returning();
 
     return mapCard(rows[0]!);
   } catch (error) {
-    if (isUniqueViolation(error))
-      throw new AppProblem(
-        409,
-        problemTypes.cardFrontConflict,
-        "Diese Vorderseite gibt es schon",
-        undefined,
-        [{ pointer: "/front", code: "not_unique" }],
-      );
-    throw error;
+    throwCardWriteProblem(error);
   }
 }
 
@@ -64,6 +69,7 @@ export async function updateCard(cardId: string, input: UpdateCardInput) {
     values.normalizedFront = input.front;
   }
   if (input.back !== undefined) values.back = input.back;
+  if (input.collectionId !== undefined) values.collectionId = input.collectionId;
   try {
     const rows = await getDatabase()
       .update(cards)
@@ -75,15 +81,7 @@ export async function updateCard(cardId: string, input: UpdateCardInput) {
 
     return mapCard(rows[0]);
   } catch (error) {
-    if (isUniqueViolation(error))
-      throw new AppProblem(
-        409,
-        problemTypes.cardFrontConflict,
-        "Diese Vorderseite gibt es schon",
-        undefined,
-        [{ pointer: "/front", code: "not_unique" }],
-      );
-    throw error;
+    throwCardWriteProblem(error);
   }
 }
 

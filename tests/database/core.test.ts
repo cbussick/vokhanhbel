@@ -3,26 +3,119 @@ import { createCard, deleteCard, listCards } from "../../src/server/resources/ca
 import { getPool } from "../../src/server/database/client.js";
 import { encodePassword } from "../../src/server/auth/password.js";
 import { resetServerEnvironmentForTests } from "../../src/server/config/environment.js";
+import { defaultCollectionId } from "../../src/server/database/schema.js";
+import {
+  createCollection,
+  deleteCollection,
+  listCollections,
+} from "../../src/server/resources/collections.js";
 import { recordReview } from "../../src/server/resources/reviews.js";
 import { login } from "../../src/server/resources/sessions.js";
 import { getStats } from "../../src/server/resources/stats.js";
 import { consumeTutorAllowance } from "../../src/server/resources/tutor.js";
 
+const inDefaultCollection = { collectionId: defaultCollectionId };
+
 describe("PostgreSQL application behavior", () => {
   it("enforces active normalized-front uniqueness and releases it after soft deletion", async () => {
-    const card = await createCard({ front: "Take care", back: "Pass auf" });
-    await expect(createCard({ front: "take care", back: "Mach es gut" })).rejects.toMatchObject({
-      status: 409,
+    const card = await createCard({
+      ...inDefaultCollection,
+      front: "Take care",
+      back: "Pass auf",
     });
+    await expect(
+      createCard({ ...inDefaultCollection, front: "take care", back: "Mach es gut" }),
+    ).rejects.toMatchObject({ status: 409 });
     await deleteCard(card.id);
-    await expect(createCard({ front: "TAKE CARE", back: "Mach es gut" })).resolves.toMatchObject({
-      front: "TAKE CARE",
-    });
+    await expect(
+      createCard({ ...inDefaultCollection, front: "TAKE CARE", back: "Mach es gut" }),
+    ).resolves.toMatchObject({ front: "TAKE CARE" });
     expect(await listCards()).toHaveLength(1);
   });
 
+  it("scopes front uniqueness to a single Collection", async () => {
+    const other = await createCollection({ name: "Englisch", icon: "flag-gb" });
+    await createCard({ ...inDefaultCollection, front: "Take care", back: "Pass auf" });
+
+    await expect(
+      createCard({ collectionId: other.id, front: "Take care", back: "Mach es gut" }),
+    ).resolves.toMatchObject({ collectionId: other.id });
+    await expect(
+      createCard({ collectionId: other.id, front: "take care", back: "Noch einmal" }),
+    ).rejects.toMatchObject({ status: 409 });
+  });
+
+  it("rejects a Card written into an unknown Collection", async () => {
+    await expect(
+      createCard({ collectionId: crypto.randomUUID(), front: "waise", back: "orphan" }),
+    ).rejects.toMatchObject({ status: 404, type: "/problems/collection-not-found" });
+  });
+
+  it("gives a migrated Collection the default icon and stores a chosen one", async () => {
+    expect(await listCollections()).toMatchObject([{ id: defaultCollectionId, icon: "book" }]);
+    await expect(createCollection({ name: "Englisch", icon: "flag-gb" })).resolves.toMatchObject({
+      icon: "flag-gb",
+    });
+  });
+
+  it("rejects Collection names that bypass stored normalization", async () => {
+    await expect(
+      getPool().query(
+        `INSERT INTO collections (name, normalized_name) VALUES ('  Englisch  ', '  Englisch  ')`,
+      ),
+    ).rejects.toThrow();
+    await expect(
+      getPool().query(`INSERT INTO collections (name, normalized_name) VALUES ('a', 'b')`),
+    ).rejects.toThrow();
+  });
+
+  it("keeps a Collection that still holds Cards, and always keeps the last one", async () => {
+    const other = await createCollection({ name: "Englisch", icon: "flag-gb" });
+    const card = await createCard({
+      collectionId: other.id,
+      front: "Take care",
+      back: "Pass auf",
+    });
+
+    await expect(deleteCollection(other.id)).rejects.toMatchObject({
+      status: 409,
+      type: "/problems/collection-not-empty",
+    });
+
+    await deleteCard(card.id);
+    await deleteCollection(other.id);
+    expect(await listCollections()).toHaveLength(1);
+
+    await expect(deleteCollection(defaultCollectionId)).rejects.toMatchObject({
+      status: 409,
+      type: "/problems/last-collection",
+    });
+  });
+
+  it("stores the Collection in the Review snapshot the replay path reads back", async () => {
+    const card = await createCard({ ...inDefaultCollection, front: "Schnee", back: "tuyết" });
+    const input = {
+      id: crypto.randomUUID(),
+      cardId: card.id,
+      grade: "knew_it" as const,
+      reviewedAt: new Date().toISOString(),
+    };
+    const result = await recordReview(input);
+
+    expect(result.card.collectionId).toBe(defaultCollectionId);
+    await expect(recordReview(input)).resolves.toEqual(result);
+    expect(
+      (
+        await getPool().query<{ collection_id: string }>(
+          "SELECT result_card->>'collectionId' AS collection_id FROM reviews WHERE id=$1",
+          [input.id],
+        )
+      ).rows[0]?.collection_id,
+    ).toBe(defaultCollectionId);
+  });
+
   it("records exact replays once and serializes distinct concurrent Grades", async () => {
-    const card = await createCard({ front: "steady", back: "stetig" });
+    const card = await createCard({ ...inDefaultCollection, front: "steady", back: "stetig" });
     const reviewedAt = new Date().toISOString();
     const first = {
       id: crypto.randomUUID(),
@@ -57,7 +150,11 @@ describe("PostgreSQL application behavior", () => {
   });
 
   it("returns the original resulting Card for identical concurrent Review replays", async () => {
-    const card = await createCard({ front: "immutable result", back: "unveränderlich" });
+    const card = await createCard({
+      ...inDefaultCollection,
+      front: "immutable result",
+      back: "unveränderlich",
+    });
     const input = {
       id: crypto.randomUUID(),
       cardId: card.id,
@@ -161,7 +258,11 @@ describe("PostgreSQL application behavior", () => {
   });
 
   it("keeps Reviews and Points after a Card is deleted", async () => {
-    const card = await createCard({ front: "remember", back: "sich erinnern" });
+    const card = await createCard({
+      ...inDefaultCollection,
+      front: "remember",
+      back: "sich erinnern",
+    });
     await recordReview({
       id: crypto.randomUUID(),
       cardId: card.id,

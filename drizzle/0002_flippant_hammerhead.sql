@@ -1,0 +1,2 @@
+ALTER TABLE "collections" ADD COLUMN "icon" text DEFAULT 'book' NOT NULL;--> statement-breakpoint
+ALTER TABLE "collections" ADD CONSTRAINT "collections_icon_length" CHECK (char_length("collections"."icon") between 1 and 40);

@@ -10,6 +10,8 @@ import styles from "./AppShell.module.css";
 interface AppShellProps {
   children: ReactNode;
   title: string;
+  /** Rendered before the title in the standard header, for example a Collection's icon. */
+  titleIcon?: ReactNode;
   variant?: "standard" | "focused";
 }
 
@@ -78,7 +80,7 @@ function PointsBadge({ points }: { points: number }) {
   );
 }
 
-export function AppShell({ children, title, variant = "standard" }: AppShellProps) {
+export function AppShell({ children, title, titleIcon, variant = "standard" }: AppShellProps) {
   const { t } = useTranslation();
   const desktopLayout = useDesktopLayout();
   const { submissionSync } = useReviewSubmissions();
@@ -115,7 +117,10 @@ export function AppShell({ children, title, variant = "standard" }: AppShellProp
               </aside>
             )}
             <header className={styles.header}>
-              <h1>{title}</h1>
+              <h1 className={styles.title}>
+                {titleIcon}
+                {title}
+              </h1>
               {!desktopLayout && <PointsBadge points={points} />}
             </header>
           </>
