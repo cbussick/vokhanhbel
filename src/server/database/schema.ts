@@ -12,6 +12,7 @@ import {
   uuid,
 } from "drizzle-orm/pg-core";
 import type { Card } from "../../contracts/card.js";
+import { defaultCollectionIcon } from "../../contracts/collection.js";
 
 /**
  * Every Card created before Collections existed belongs here, and the column default keeps the
@@ -25,12 +26,15 @@ export const collections = pgTable(
     id: uuid("id").primaryKey().defaultRandom(),
     name: text("name").notNull(),
     normalizedName: text("normalized_name").notNull(),
+    icon: text("icon").notNull().default(defaultCollectionIcon),
     createdAt: timestamp("created_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
     deletedAt: timestamp("deleted_at", { withTimezone: true, mode: "date" }),
   },
   (table) => [
     check("collections_name_length", sql`char_length(${table.name}) between 1 and 60`),
+    // Deliberately a length bound, not a value list: adding an icon stays a code-only change.
+    check("collections_icon_length", sql`char_length(${table.icon}) between 1 and 40`),
     check("collections_name_normalized", sql`${table.name} = normalize_card_text(${table.name})`),
     check("collections_normalized_name_matches", sql`${table.normalizedName} = ${table.name}`),
     uniqueIndex("collections_active_name_unique")

@@ -146,6 +146,28 @@ describe("rendered app journeys", () => {
     await waitFor(() => expect(created.collectionId).toBe(testCollections[1]!.id));
   });
 
+  it("creates a Collection with the chosen icon", async () => {
+    const user = userEvent.setup();
+    let created: { name?: string; icon?: string } = {};
+    mockServer.use(
+      http.post("/api/collections", async ({ request }) => {
+        created = (await request.json()) as { name?: string; icon?: string };
+
+        return HttpResponse.json({ ...testCollections[0]!, ...created }, { status: 201 });
+      }),
+    );
+    renderApp("/cards");
+
+    await user.click(await screen.findByRole("button", { name: "Sammlung hinzufügen" }));
+    await user.type(await screen.findByLabelText("Name der Sammlung"), "Französisch");
+
+    expect(screen.getByRole("radio", { name: "Standard" })).toBeChecked();
+    await user.click(screen.getByRole("radio", { name: "Vietnam" }));
+    await user.click(screen.getByRole("button", { name: "Speichern" }));
+
+    await waitFor(() => expect(created).toEqual({ name: "Französisch", icon: "flag-vn" }));
+  });
+
   it("renames a Collection from inside it", async () => {
     const user = userEvent.setup();
     let renamed = "";

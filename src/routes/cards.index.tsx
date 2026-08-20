@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { AppShell } from "../components/AppShell";
 import { CollectionFormDialog } from "../components/CollectionFormDialog";
+import { CollectionIcon } from "../components/CollectionIcon";
 import { DelayedSkeleton } from "../components/DelayedSkeleton";
 import type { Card } from "../contracts/card";
 import { useOnlineStatus } from "../lib/browserState";
@@ -63,9 +64,12 @@ function CollectionsRoute() {
               {collectionList.map((collection) => (
                 <li key={collection.id}>
                   <Link to="/cards/$collectionId" params={{ collectionId: collection.id }}>
-                    <strong>{collection.name}</strong>
-                    <span>
-                      {t("collections.cardCount", { count: cardCounts.get(collection.id) ?? 0 })}
+                    <CollectionIcon icon={collection.icon} />
+                    <span className={styles.rowText}>
+                      <strong>{collection.name}</strong>
+                      <span>
+                        {t("collections.cardCount", { count: cardCounts.get(collection.id) ?? 0 })}
+                      </span>
                     </span>
                   </Link>
                 </li>

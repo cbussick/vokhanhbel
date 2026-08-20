@@ -3,6 +3,7 @@ import { createFileRoute, Outlet, useNavigate, useRouterState } from "@tanstack/
 import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { AppShell } from "../components/AppShell";
+import { CollectionIcon } from "../components/CollectionIcon";
 import { DelayedSkeleton } from "../components/DelayedSkeleton";
 import { RequireSession } from "../components/RequireSession";
 import type { Card } from "../contracts/card";
@@ -116,6 +117,7 @@ function ReviewRoute() {
                         disabled={own.length === 0}
                         onClick={() => begin(selectQueue(own, now))}
                       >
+                        <CollectionIcon icon={collection.icon} />
                         <strong>{collection.name}</strong>
                         <span>
                           {ownDueCount > 0

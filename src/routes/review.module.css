@@ -30,9 +30,8 @@
   min-block-size: 56px;
   display: flex;
   flex-wrap: wrap;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: var(--space-2);
+  align-items: center;
+  gap: var(--space-3);
   padding: var(--space-3) var(--space-4);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-medium);
@@ -45,6 +44,7 @@
 }
 
 .collections strong {
+  margin-inline-end: auto;
   overflow-wrap: anywhere;
 }
 

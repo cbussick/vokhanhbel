@@ -31,7 +31,7 @@ export async function createCollection(input: CollectionInput) {
   try {
     const rows = await getDatabase()
       .insert(collections)
-      .values({ name: input.name, normalizedName: input.name })
+      .values({ name: input.name, normalizedName: input.name, icon: input.icon })
       .returning();
 
     return mapCollection(rows[0]!);
@@ -45,7 +45,12 @@ export async function updateCollection(collectionId: string, input: CollectionIn
   try {
     const rows = await getDatabase()
       .update(collections)
-      .set({ name: input.name, normalizedName: input.name, updatedAt: new Date() })
+      .set({
+        name: input.name,
+        normalizedName: input.name,
+        icon: input.icon,
+        updatedAt: new Date(),
+      })
       .where(and(eq(collections.id, collectionId), isNull(collections.deletedAt)))
       .returning();
 

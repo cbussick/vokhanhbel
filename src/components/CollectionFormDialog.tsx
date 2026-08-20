@@ -2,11 +2,19 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { apiPaths } from "../contracts/apiPaths";
-import { collectionInputSchema, collectionSchema, type Collection } from "../contracts/collection";
+import {
+  collectionIconKeys,
+  collectionInputSchema,
+  collectionSchema,
+  defaultCollectionIcon,
+  type Collection,
+  type CollectionIconKey,
+} from "../contracts/collection";
 import { problemTypes } from "../contracts/problem";
 import { apiRequest, ApiError } from "../lib/apiClient";
 import { useOnlineStatus } from "../lib/browserState";
 import { queryKeys } from "../lib/queryKeys";
+import { CollectionIcon } from "./CollectionIcon";
 import styles from "./Dialog.module.css";
 
 export function CollectionFormDialog({
@@ -26,10 +34,12 @@ export function CollectionFormDialog({
   const nameRef = useRef<HTMLInputElement>(null);
 
   const [name, setName] = useState(collection?.name ?? "");
+  const [icon, setIcon] = useState<CollectionIconKey>(collection?.icon ?? defaultCollectionIcon);
   const [confirmation, setConfirmation] = useState<"delete" | "discard">();
   const [error, setError] = useState<string>();
 
-  const dirty = name !== (collection?.name ?? "");
+  const dirty =
+    name !== (collection?.name ?? "") || icon !== (collection?.icon ?? defaultCollectionIcon);
 
   useEffect(() => {
     const dialog = dialogRef.current;
@@ -66,7 +76,7 @@ export function CollectionFormDialog({
 
   const save = useMutation({
     mutationFn: async () => {
-      const input = collectionInputSchema.parse({ name });
+      const input = collectionInputSchema.parse({ name, icon });
 
       return collectionSchema.parse(
         collection
@@ -194,6 +204,25 @@ export function CollectionFormDialog({
               value={name}
               onChange={(event) => setName(event.target.value)}
             />
+            <fieldset className={styles.iconChoices}>
+              <legend className={styles.fieldLabel}>{t("collections.icon")}</legend>
+              {collectionIconKeys.map((key) => (
+                <div key={key}>
+                  <input
+                    type="radio"
+                    id={`collection-icon-${key}`}
+                    name="collection-icon"
+                    value={key}
+                    checked={icon === key}
+                    onChange={() => setIcon(key)}
+                  />
+                  <label htmlFor={`collection-icon-${key}`}>
+                    <CollectionIcon icon={key} />
+                    {t(`collections.icons.${key}`)}
+                  </label>
+                </div>
+              ))}
+            </fieldset>
             {error && (
               <p role="alert" className={styles.error}>
                 {error}

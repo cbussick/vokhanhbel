@@ -18,6 +18,7 @@ const fixedNow = "2026-07-14T08:00:00.000Z";
 const mockCollection = {
   id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
   name: "Vietnamesisch",
+  icon: "flag-vn",
   createdAt: fixedNow,
   updatedAt: fixedNow,
   deletedAt: null,
@@ -427,6 +428,12 @@ for (const viewport of [
     await page.getByRole("link", { name: /Karten/ }).click();
     await expect(page.getByRole("heading", { name: "Karten" })).toBeVisible();
     await expect(page).toHaveScreenshot(`cards-${viewport.name}.png`, { animations: "disabled" });
+    await page.getByRole("button", { name: "Sammlung hinzufügen" }).click();
+    await expect(page.getByRole("heading", { name: "Sammlung erstellen" })).toBeVisible();
+    await expect(page).toHaveScreenshot(`collection-editor-${viewport.name}.png`, {
+      animations: "disabled",
+    });
+    await page.getByRole("button", { name: "Schließen" }).click();
     await page.getByRole("link", { name: /Vietnamesisch/ }).click();
     await expect(page.getByRole("heading", { name: "Vietnamesisch" })).toBeVisible();
     await expect(page).toHaveScreenshot(`collection-cards-${viewport.name}.png`, {

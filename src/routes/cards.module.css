@@ -80,9 +80,9 @@
 .list a {
   inline-size: 100%;
   min-block-size: 76px;
-  display: grid;
-  align-content: center;
-  gap: var(--space-1);
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
   padding: var(--space-4);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-medium);
@@ -91,6 +91,12 @@
   color: inherit;
   text-align: start;
   text-decoration: none;
+}
+
+.rowText {
+  display: grid;
+  gap: var(--space-1);
+  min-inline-size: 0;
 }
 
 .list strong,

@@ -34,7 +34,7 @@ describe("PostgreSQL application behavior", () => {
   });
 
   it("scopes front uniqueness to a single Collection", async () => {
-    const other = await createCollection({ name: "Englisch" });
+    const other = await createCollection({ name: "Englisch", icon: "flag-gb" });
     await createCard({ ...inDefaultCollection, front: "Take care", back: "Pass auf" });
 
     await expect(
@@ -51,6 +51,13 @@ describe("PostgreSQL application behavior", () => {
     ).rejects.toMatchObject({ status: 404, type: "/problems/collection-not-found" });
   });
 
+  it("gives a migrated Collection the default icon and stores a chosen one", async () => {
+    expect(await listCollections()).toMatchObject([{ id: defaultCollectionId, icon: "book" }]);
+    await expect(createCollection({ name: "Englisch", icon: "flag-gb" })).resolves.toMatchObject({
+      icon: "flag-gb",
+    });
+  });
+
   it("rejects Collection names that bypass stored normalization", async () => {
     await expect(
       getPool().query(
@@ -63,7 +70,7 @@ describe("PostgreSQL application behavior", () => {
   });
 
   it("keeps a Collection that still holds Cards, and always keeps the last one", async () => {
-    const other = await createCollection({ name: "Englisch" });
+    const other = await createCollection({ name: "Englisch", icon: "flag-gb" });
     const card = await createCard({
       collectionId: other.id,
       front: "Take care",

@@ -58,6 +58,12 @@ export const de = {
       backToAll: "Alle Sammlungen",
       name: "Name der Sammlung",
       nameHint: "1–60 Zeichen",
+      icon: "Symbol",
+      icons: {
+        book: "Standard",
+        "flag-vn": "Vietnam",
+        "flag-gb": "Großbritannien",
+      },
       create: "Sammlung erstellen",
       add: "Sammlung hinzufügen",
       edit: "Sammlung bearbeiten",

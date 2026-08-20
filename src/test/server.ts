@@ -6,6 +6,7 @@ export const testCollections = [
   {
     id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
     name: "Vietnamesisch",
+    icon: "flag-vn",
     createdAt: now,
     updatedAt: now,
     deletedAt: null,
@@ -13,6 +14,7 @@ export const testCollections = [
   {
     id: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
     name: "Englisch",
+    icon: "flag-gb",
     createdAt: now,
     updatedAt: now,
     deletedAt: null,

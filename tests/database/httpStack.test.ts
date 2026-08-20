@@ -33,7 +33,7 @@ describe("real API handler stack", () => {
     expect(cookie).toMatch(/^__Host-session=/u);
 
     const collectionResponse = await createCollection(
-      request("/api/collections", "POST", { name: "Echter Stack" }, cookie),
+      request("/api/collections", "POST", { name: "Echter Stack", icon: "book" }, cookie),
     );
     expect(collectionResponse.status).toBe(201);
     const collection = (await collectionResponse.json()) as { id: string };
