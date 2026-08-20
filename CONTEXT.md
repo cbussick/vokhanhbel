@@ -44,6 +44,9 @@ _Avoid_: Session (reserved for the auth session), study session
 The household's total score, always derived as the sum of points awarded across all Reviews, never stored as its own counter.
 _Avoid_: Score, total
 
-**Khunhphap**:
-The named AI tutor persona surfaced in UI copy when a user asks about a card.
-_Avoid_: AI tutor, assistant
+**Tutor**:
+The AI explanation capability a Learner reaches from a Card: German-language, rate-limited, tool-free, and holding no conversation beyond the current exchange. Names the capability itself — its endpoint, contracts, problem types, and server code.
+_Avoid_: Assistant, bot, chatbot
+
+**Tutopher**:
+The Tutor's persona name. Belongs in user-facing copy, the mascot, and the system prompt — not in paths, identifiers, or contracts, which name the Tutor concept so the persona can be renamed without touching them.

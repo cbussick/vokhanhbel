@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { AppShell } from "../components/AppShell";
 import { RequireSession } from "../components/RequireSession";
-import { KhunhphapDialog } from "../components/KhunhphapDialog";
+import { TutorDialog } from "../components/TutorDialog";
 import type { Grade } from "../domain/review";
 import { useOnlineStatus } from "../lib/browserState";
 import { useReviewSession } from "../state/ReviewSessionContext";
@@ -17,7 +17,7 @@ function ReviewSessionRoute() {
   const navigate = useNavigate();
   const reviewSession = useReviewSession();
   const online = useOnlineStatus();
-  const [khunhphapOpen, setKhunhphapOpen] = useState(false);
+  const [tutorOpen, setTutorOpen] = useState(false);
   const [revealComplete, setRevealComplete] = useState(false);
 
   if (reviewSession.view.kind === "idle") return <Navigate to="/review" />;
@@ -86,7 +86,7 @@ function ReviewSessionRoute() {
   const grade = (value: Grade) => {
     reviewSession.gradeCard(value);
     setRevealComplete(false);
-    setKhunhphapOpen(false);
+    setTutorOpen(false);
   };
 
   return (
@@ -155,8 +155,8 @@ function ReviewSessionRoute() {
               <>
                 <button
                   type="button"
-                  className={styles.khunhphapButton}
-                  onClick={() => setKhunhphapOpen(true)}
+                  className={styles.tutorButton}
+                  onClick={() => setTutorOpen(true)}
                   disabled={!online}
                 >
                   <svg aria-hidden="true" viewBox="0 0 24 24">
@@ -166,7 +166,7 @@ function ReviewSessionRoute() {
                       opacity=".65"
                     />
                   </svg>
-                  {t("khunhphap.open")}
+                  {t("tutor.open")}
                 </button>
                 <fieldset
                   className={styles.grades}
@@ -188,7 +188,7 @@ function ReviewSessionRoute() {
               </>
             )}
           </div>
-          {khunhphapOpen && <KhunhphapDialog card={card} onClose={() => setKhunhphapOpen(false)} />}
+          {tutorOpen && <TutorDialog card={card} onClose={() => setTutorOpen(false)} />}
         </section>
       </AppShell>
     </RequireSession>

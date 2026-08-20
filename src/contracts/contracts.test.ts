@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { cardSchema, createCardInputSchema } from "./card.js";
-import { khunhphapStreamEventSchema } from "./khunhphap.js";
+import { tutorStreamEventSchema } from "./tutor.js";
 import { problemSchema } from "./problem.js";
 import { reviewSubmissionInputSchema } from "./review.js";
 import { loginInputSchema } from "./session.js";
@@ -66,15 +66,15 @@ describe("public contracts", () => {
     ).toBe(true);
   });
 
-  it("validates Khunhphap stream events before the client consumes them", () => {
+  it("validates Tutor stream events before the client consumes them", () => {
     expect(
-      khunhphapStreamEventSchema.parse({ event: "delta", data: { text: "Ein Beispiel" } }),
+      tutorStreamEventSchema.parse({ event: "delta", data: { text: "Ein Beispiel" } }),
     ).toEqual({ event: "delta", data: { text: "Ein Beispiel" } });
     expect(
-      khunhphapStreamEventSchema.safeParse({ event: "done", data: { truncated: "no" } }).success,
+      tutorStreamEventSchema.safeParse({ event: "done", data: { truncated: "no" } }).success,
     ).toBe(false);
     expect(
-      khunhphapStreamEventSchema.safeParse({
+      tutorStreamEventSchema.safeParse({
         event: "error",
         data: { type: "/problems/unexpected" },
       }).success,

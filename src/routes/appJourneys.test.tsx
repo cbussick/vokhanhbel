@@ -500,14 +500,14 @@ describe("rendered app journeys", () => {
     expect(screen.queryByText("dddddddd-dddd-4ddd-8ddd-dddddddddddd")).not.toBeInTheDocument();
   });
 
-  it("discards a partial failed Khunhphap answer and retains the question for retry", async () => {
+  it("discards a partial failed Tutor answer and retains the question for retry", async () => {
     const user = userEvent.setup();
     mockServer.use(
       http.post(
-        "/api/cards/:cardId/khunhphap-replies",
+        "/api/cards/:cardId/tutor-replies",
         () =>
           new HttpResponse(
-            'event: delta\ndata: {"text":"Teilantwort"}\n\nevent: error\ndata: {"type":"/problems/khunhphap-failed"}\n\n',
+            'event: delta\ndata: {"text":"Teilantwort"}\n\nevent: error\ndata: {"type":"/problems/tutor-failed"}\n\n',
             { headers: { "content-type": "text/event-stream" } },
           ),
       ),
@@ -515,7 +515,7 @@ describe("rendered app journeys", () => {
     renderApp("/review");
     await user.click(await screen.findByRole("button", { name: "Review starten" }));
     await user.click(screen.getByRole("button", { name: "Antwort zeigen" }));
-    await user.click(await screen.findByRole("button", { name: "Khunhphap fragen" }));
+    await user.click(await screen.findByRole("button", { name: "Tutopher fragen" }));
     const question = await screen.findByLabelText("Deine Frage");
     await user.type(question, "Warum ist das so?");
     await user.click(screen.getByRole("button", { name: "Fragen" }));
@@ -526,10 +526,10 @@ describe("rendered app journeys", () => {
     expect(screen.getByRole("button", { name: "Erneut versuchen" })).toBeEnabled();
   });
 
-  it("expires the shared Session when a Khunhphap request returns 401", async () => {
+  it("expires the shared Session when a Tutor request returns 401", async () => {
     const user = userEvent.setup();
     mockServer.use(
-      http.post("/api/cards/:cardId/khunhphap-replies", () =>
+      http.post("/api/cards/:cardId/tutor-replies", () =>
         HttpResponse.json(
           {
             type: "/problems/unauthenticated",
@@ -544,22 +544,22 @@ describe("rendered app journeys", () => {
     renderApp("/review");
     await user.click(await screen.findByRole("button", { name: "Review starten" }));
     await user.click(screen.getByRole("button", { name: "Antwort zeigen" }));
-    await user.click(await screen.findByRole("button", { name: "Khunhphap fragen" }));
+    await user.click(await screen.findByRole("button", { name: "Tutopher fragen" }));
     await user.type(await screen.findByLabelText("Deine Frage"), "Warum?");
     await user.click(screen.getByRole("button", { name: "Fragen" }));
 
     expect(await screen.findByText(/Du wurdest abgemeldet/)).toBeVisible();
-    expect(screen.queryByRole("dialog", { name: "Khunhphap" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("dialog", { name: "Tutopher" })).not.toBeInTheDocument();
   });
 
-  it("uses the Khunhphap limit Retry-After integer as a disabled retry countdown", async () => {
+  it("uses the Tutor limit Retry-After integer as a disabled retry countdown", async () => {
     const user = userEvent.setup();
     mockServer.use(
-      http.post("/api/cards/:cardId/khunhphap-replies", () =>
+      http.post("/api/cards/:cardId/tutor-replies", () =>
         HttpResponse.json(
           {
-            type: "/problems/khunhphap-session-limit",
-            title: "Khunhphap braucht eine Pause",
+            type: "/problems/tutor-session-limit",
+            title: "Tutopher braucht eine Pause",
             status: 429,
             instance: "urn:uuid:88888888-8888-4888-8888-888888888888",
           },
@@ -570,7 +570,7 @@ describe("rendered app journeys", () => {
     renderApp("/review");
     await user.click(await screen.findByRole("button", { name: "Review starten" }));
     await user.click(screen.getByRole("button", { name: "Antwort zeigen" }));
-    await user.click(await screen.findByRole("button", { name: "Khunhphap fragen" }));
+    await user.click(await screen.findByRole("button", { name: "Tutopher fragen" }));
     await user.type(await screen.findByLabelText("Deine Frage"), "Warum?");
     await user.click(screen.getByRole("button", { name: "Fragen" }));
 

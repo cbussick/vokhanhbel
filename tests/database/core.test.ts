@@ -6,7 +6,7 @@ import { resetServerEnvironmentForTests } from "../../src/server/config/environm
 import { recordReview } from "../../src/server/resources/reviews.js";
 import { login } from "../../src/server/resources/sessions.js";
 import { getStats } from "../../src/server/resources/stats.js";
-import { consumeKhunhphapAllowance } from "../../src/server/resources/khunhphap.js";
+import { consumeTutorAllowance } from "../../src/server/resources/tutor.js";
 
 describe("PostgreSQL application behavior", () => {
   it("enforces active normalized-front uniqueness and releases it after soft deletion", async () => {
@@ -79,15 +79,15 @@ describe("PostgreSQL application behavior", () => {
     });
   });
 
-  it("serializes concurrent Khunhphap allowance checks at both limits", async () => {
+  it("serializes concurrent Tutor allowance checks at both limits", async () => {
     const sessionHash = "session-boundary";
     await getPool().query(
       `INSERT INTO ai_usage (session_hash) SELECT $1 FROM generate_series(1, 29)`,
       [sessionHash],
     );
     const sessionBoundary = await Promise.allSettled([
-      consumeKhunhphapAllowance(sessionHash),
-      consumeKhunhphapAllowance(sessionHash),
+      consumeTutorAllowance(sessionHash),
+      consumeTutorAllowance(sessionHash),
     ]);
     expect(sessionBoundary.filter((result) => result.status === "fulfilled")).toHaveLength(1);
     expect(sessionBoundary.filter((result) => result.status === "rejected")).toHaveLength(1);
@@ -97,8 +97,8 @@ describe("PostgreSQL application behavior", () => {
       `INSERT INTO ai_usage (session_hash) SELECT 'daily-' || value FROM generate_series(1, 199) value`,
     );
     const dailyBoundary = await Promise.allSettled([
-      consumeKhunhphapAllowance("daily-final-a"),
-      consumeKhunhphapAllowance("daily-final-b"),
+      consumeTutorAllowance("daily-final-a"),
+      consumeTutorAllowance("daily-final-b"),
     ]);
     expect(dailyBoundary.filter((result) => result.status === "fulfilled")).toHaveLength(1);
     expect(dailyBoundary.filter((result) => result.status === "rejected")).toHaveLength(1);

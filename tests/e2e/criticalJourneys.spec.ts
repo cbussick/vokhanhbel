@@ -84,7 +84,7 @@ async function installMockApi(page: Page, authenticated = true) {
         bestDay: { date: "2026-07-14", reviewCount: 4 },
         dailyRecap: { period: "today", date: "2026-07-14", reviewCount: 4, knewItCount: 3 },
       });
-    if (pathname.endsWith("/khunhphap-replies"))
+    if (pathname.endsWith("/tutor-replies"))
       return route.fulfill({
         status: 200,
         contentType: "text/event-stream",
@@ -167,7 +167,7 @@ test("creates, searches, and opens a Card accessibly", async ({ page }) => {
   await expectNoSeriousAxeViolations(page);
 });
 
-test("completes Review, Khunhphap, repeat-ready summary, and Me", async ({ page }) => {
+test("completes Review, Tutor, repeat-ready summary, and Me", async ({ page }) => {
   const preloadErrors: string[] = [];
   page.on("console", (message) => {
     if (message.type() === "error" && message.text().includes("_nonReactive"))
@@ -182,8 +182,8 @@ test("completes Review, Khunhphap, repeat-ready summary, and Me", async ({ page 
   await page.goto("/review");
   await page.getByRole("button", { name: "Review starten" }).click();
   await page.getByRole("button", { name: "Antwort zeigen" }).click();
-  await expect(page.getByRole("button", { name: "Khunhphap fragen" })).toBeVisible();
-  await page.getByRole("button", { name: "Khunhphap fragen" }).click();
+  await expect(page.getByRole("button", { name: "Tutopher fragen" })).toBeVisible();
+  await page.getByRole("button", { name: "Tutopher fragen" }).click();
   await page.getByRole("button", { name: "Einfach erklären" }).click();
   await expect(page.getByText("Ein Apfel ist eine Frucht.")).toBeVisible();
   await page.getByRole("button", { name: "Schließen" }).click();
@@ -398,9 +398,9 @@ for (const viewport of [
     await expect(page).toHaveScreenshot(`review-back-${viewport.name}.png`, {
       animations: "disabled",
     });
-    await page.getByRole("button", { name: "Khunhphap fragen" }).click();
-    await expect(page.getByRole("heading", { name: "Khunhphap" })).toBeVisible();
-    await expect(page).toHaveScreenshot(`khunhphap-${viewport.name}.png`, {
+    await page.getByRole("button", { name: "Tutopher fragen" }).click();
+    await expect(page.getByRole("heading", { name: "Tutopher" })).toBeVisible();
+    await expect(page).toHaveScreenshot(`tutor-${viewport.name}.png`, {
       animations: "disabled",
     });
     await page.getByRole("button", { name: "Schließen" }).click();

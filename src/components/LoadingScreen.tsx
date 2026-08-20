@@ -1,13 +1,13 @@
 import { useTranslation } from "react-i18next";
 import styles from "./LoadingScreen.module.css";
-import { KhunhphapAvatar } from "./KhunhphapAvatar";
+import { TutopherAvatar } from "./TutopherAvatar";
 
 export function LoadingScreen() {
   const { t } = useTranslation();
 
   return (
     <main className={styles.screen}>
-      <KhunhphapAvatar />
+      <TutopherAvatar />
       <p>{t("loading")}</p>
     </main>
   );

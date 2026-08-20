@@ -149,7 +149,7 @@
 }
 
 .revealButton,
-.khunhphapButton {
+.tutorButton {
   min-block-size: 56px;
   border: 0;
   border-radius: var(--radius-medium);
@@ -158,7 +158,7 @@
   font-weight: 800;
 }
 
-.khunhphapButton {
+.tutorButton {
   min-block-size: 44px;
   inline-size: fit-content;
   margin-inline: auto;
@@ -174,7 +174,7 @@
   font-weight: 600;
 }
 
-.khunhphapButton svg {
+.tutorButton svg {
   inline-size: 1rem;
   block-size: 1rem;
   fill: var(--color-warning);

@@ -3,7 +3,7 @@ import { createFileRoute, Navigate, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { LoadingScreen } from "../components/LoadingScreen";
-import { KhunhphapAvatar } from "../components/KhunhphapAvatar";
+import { TutopherAvatar } from "../components/TutopherAvatar";
 import { SessionErrorScreen } from "../components/SessionErrorScreen";
 import { apiPaths } from "../contracts/apiPaths";
 import { problemTypes } from "../contracts/problem";
@@ -98,7 +98,7 @@ function LoginRoute() {
   return (
     <main className={styles.screen}>
       <section className={styles.card}>
-        <KhunhphapAvatar />
+        <TutopherAvatar />
         <div>
           <h1>{t("login.title")}</h1>
           <p>{t("login.intro")}</p>

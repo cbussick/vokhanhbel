@@ -32,7 +32,7 @@ async function collectProviderEvents(events: unknown[]) {
   const provider = createOpenAiProvider();
   const collected = [];
 
-  for await (const event of provider.streamKhunhphapReply({
+  for await (const event of provider.streamTutorReply({
     card,
     input: { message: "question", messages: [] },
     signal: new AbortController().signal,
