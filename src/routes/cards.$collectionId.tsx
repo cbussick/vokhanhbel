@@ -121,7 +121,7 @@ function CollectionCardsRoute() {
         {creating && (
           <CardFormDialog defaultCollectionId={collectionId} onClose={() => setCreating(false)} />
         )}
-        {editingCollection && collection && (
+        {editingCollection && (
           <CollectionFormDialog
             collection={collection}
             onClose={() => setEditingCollection(false)}

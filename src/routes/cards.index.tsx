@@ -83,7 +83,7 @@ function CollectionsRoute() {
             {t("errors.stale")}
           </p>
         )}
-        {!online && <p className={styles.offline}>{t("cards.offline")}</p>}
+        {!online && <p className={styles.offline}>{t("collections.offline")}</p>}
       </>
     );
   }

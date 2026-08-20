@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { createNormalizedTextSchema, utcTimestampSchema, uuidSchema } from "./common.js";
 
-export const collectionNameSchema = createNormalizedTextSchema(60);
+const collectionNameSchema = createNormalizedTextSchema(60);
 
 export const collectionSchema = z.object({
   id: uuidSchema,
@@ -13,10 +13,7 @@ export const collectionSchema = z.object({
 
 export type Collection = z.infer<typeof collectionSchema>;
 
-export const createCollectionInputSchema = z.object({ name: collectionNameSchema });
-export type CreateCollectionInput = z.infer<typeof createCollectionInputSchema>;
-
-export const updateCollectionInputSchema = z.object({ name: collectionNameSchema });
-export type UpdateCollectionInput = z.infer<typeof updateCollectionInputSchema>;
+export const collectionInputSchema = z.object({ name: collectionNameSchema });
+export type CollectionInput = z.infer<typeof collectionInputSchema>;
 
 export const collectionListSchema = z.array(collectionSchema);

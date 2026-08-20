@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { updateCollectionInputSchema } from "../../src/contracts/collection.js";
+import { collectionInputSchema } from "../../src/contracts/collection.js";
 import { problemTypes } from "../../src/contracts/problem.js";
 import { handleRequest } from "../../src/server/http/handler.js";
 import { AppProblem } from "../../src/server/http/problem.js";
@@ -18,7 +18,7 @@ function getCollectionId(request: Request): string {
 export async function PATCH(request: Request): Promise<Response> {
   return handleRequest(
     request,
-    { unsafe: true, protected: true, bodySchema: updateCollectionInputSchema },
+    { unsafe: true, protected: true, bodySchema: collectionInputSchema },
     async ({ body }) => Response.json(await updateCollection(getCollectionId(request), body)),
   );
 }

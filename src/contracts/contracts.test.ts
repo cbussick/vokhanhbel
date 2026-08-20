@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { cardSchema, createCardInputSchema, updateCardInputSchema } from "./card.js";
-import { createCollectionInputSchema } from "./collection.js";
+import { collectionInputSchema } from "./collection.js";
 import { tutorStreamEventSchema } from "./tutor.js";
 import { problemSchema } from "./problem.js";
 import { reviewSubmissionInputSchema } from "./review.js";
@@ -21,11 +21,11 @@ describe("public contracts", () => {
   });
 
   it("normalizes a Collection name and keeps it within 60 characters", () => {
-    expect(createCollectionInputSchema.parse({ name: "  Viet   namesisch " })).toEqual({
+    expect(collectionInputSchema.parse({ name: "  Viet   namesisch " })).toEqual({
       name: "Viet namesisch",
     });
-    expect(createCollectionInputSchema.safeParse({ name: "  " }).success).toBe(false);
-    expect(createCollectionInputSchema.safeParse({ name: "x".repeat(61) }).success).toBe(false);
+    expect(collectionInputSchema.safeParse({ name: "  " }).success).toBe(false);
+    expect(collectionInputSchema.safeParse({ name: "x".repeat(61) }).success).toBe(false);
   });
 
   it("moves a Card between Collections without other fields", () => {

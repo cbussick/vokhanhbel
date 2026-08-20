@@ -1,4 +1,4 @@
-import { createCollectionInputSchema } from "../../src/contracts/collection.js";
+import { collectionInputSchema } from "../../src/contracts/collection.js";
 import { handleRequest } from "../../src/server/http/handler.js";
 import { createCollection, listCollections } from "../../src/server/resources/collections.js";
 
@@ -11,7 +11,7 @@ export async function GET(request: Request): Promise<Response> {
 export async function POST(request: Request): Promise<Response> {
   return handleRequest(
     request,
-    { unsafe: true, protected: true, bodySchema: createCollectionInputSchema },
+    { unsafe: true, protected: true, bodySchema: collectionInputSchema },
     async ({ body }) => Response.json(await createCollection(body), { status: 201 }),
   );
 }

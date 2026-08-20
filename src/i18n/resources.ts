@@ -55,7 +55,6 @@ export const de = {
       saveFailed: "Die Karte konnte nicht gespeichert werden.",
     },
     collections: {
-      title: "Sammlungen",
       backToAll: "Alle Sammlungen",
       name: "Name der Sammlung",
       nameHint: "1–60 Zeichen",

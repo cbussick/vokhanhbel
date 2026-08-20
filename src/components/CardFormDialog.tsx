@@ -35,12 +35,10 @@ export function CardFormDialog({
   const [confirmation, setConfirmation] = useState<"delete" | "discard">();
   const [error, setError] = useState<string>();
 
-  // The Collection list may still be loading when the dialog opens, so fall back to the first one.
-  const selectedCollectionId = collectionId || (collections.data?.[0]?.id ?? "");
   const dirty =
     front !== (card?.front ?? "") ||
     back !== (card?.back ?? "") ||
-    (card !== undefined && selectedCollectionId !== card.collectionId);
+    (card !== undefined && collectionId !== card.collectionId);
 
   useEffect(() => {
     const dialog = dialogRef.current;
@@ -68,7 +66,7 @@ export function CardFormDialog({
   const save = useMutation({
     mutationFn: async () => {
       const input = createCardInputSchema.parse({
-        collectionId: selectedCollectionId,
+        collectionId,
         front,
         back,
       });
@@ -190,7 +188,7 @@ export function CardFormDialog({
             <select
               id="card-collection"
               required
-              value={selectedCollectionId}
+              value={collectionId}
               onChange={(event) => setCollectionId(event.target.value)}
             >
               {(collections.data ?? []).map((collection) => (
@@ -245,7 +243,7 @@ export function CardFormDialog({
               <button
                 type="submit"
                 className={styles.primary}
-                disabled={save.isPending || !selectedCollectionId || !front.trim() || !back.trim()}
+                disabled={save.isPending || !collectionId || !front.trim() || !back.trim()}
               >
                 {t("common.save")}
               </button>

@@ -1,5 +1,5 @@
 import { and, asc, count, eq, isNull, ne } from "drizzle-orm";
-import type { CreateCollectionInput, UpdateCollectionInput } from "../../contracts/collection.js";
+import type { CollectionInput } from "../../contracts/collection.js";
 import { problemTypes } from "../../contracts/problem.js";
 import { getDatabase } from "../database/client.js";
 import { isUniqueViolation } from "../database/errors.js";
@@ -27,7 +27,7 @@ export async function listCollections() {
   return rows.map(mapCollection);
 }
 
-export async function createCollection(input: CreateCollectionInput) {
+export async function createCollection(input: CollectionInput) {
   try {
     const rows = await getDatabase()
       .insert(collections)
@@ -41,7 +41,7 @@ export async function createCollection(input: CreateCollectionInput) {
   }
 }
 
-export async function updateCollection(collectionId: string, input: UpdateCollectionInput) {
+export async function updateCollection(collectionId: string, input: CollectionInput) {
   try {
     const rows = await getDatabase()
       .update(collections)
@@ -67,12 +67,7 @@ export async function deleteCollection(collectionId: string): Promise<void> {
     .where(and(eq(cards.collectionId, collectionId), isNull(cards.deletedAt)));
 
   if ((held?.value ?? 0) > 0)
-    throw new AppProblem(
-      409,
-      problemTypes.collectionNotEmpty,
-      "Verschiebe zuerst die Karten",
-      undefined,
-    );
+    throw new AppProblem(409, problemTypes.collectionNotEmpty, "Verschiebe zuerst die Karten");
 
   const [remaining] = await database
     .select({ value: count() })

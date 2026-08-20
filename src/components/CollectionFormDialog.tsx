@@ -2,11 +2,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { apiPaths } from "../contracts/apiPaths";
-import {
-  collectionSchema,
-  createCollectionInputSchema,
-  type Collection,
-} from "../contracts/collection";
+import { collectionInputSchema, collectionSchema, type Collection } from "../contracts/collection";
 import { problemTypes } from "../contracts/problem";
 import { apiRequest, ApiError } from "../lib/apiClient";
 import { useOnlineStatus } from "../lib/browserState";
@@ -70,7 +66,7 @@ export function CollectionFormDialog({
 
   const save = useMutation({
     mutationFn: async () => {
-      const input = createCollectionInputSchema.parse({ name });
+      const input = collectionInputSchema.parse({ name });
 
       return collectionSchema.parse(
         collection
