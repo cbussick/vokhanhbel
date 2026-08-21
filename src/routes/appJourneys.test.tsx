@@ -265,6 +265,145 @@ describe("rendered app journeys", () => {
     await waitFor(() => expect(recordedGrade).toBe("knew_it"));
   });
 
+  it("prefetches Review audio at low priority and skips an unavailable audio-only Card without grading", async () => {
+    const user = userEvent.setup();
+    const audioId = "88888888-8888-4888-8888-888888888888";
+    const audioCard = {
+      ...testCards[0]!,
+      front: {
+        text: null,
+        audio: { id: audioId, durationMs: 1_000, contentType: "audio/wav", byteSize: 8_044 },
+      },
+      back: { text: "Antwort", audio: null },
+    };
+    let prefetched = 0;
+    let reviews = 0;
+    mockServer.use(
+      http.get("/api/cards", () => HttpResponse.json([audioCard])),
+      http.get(`/api/audio/${audioId}`, () => {
+        prefetched += 1;
+
+        return new HttpResponse(new Uint8Array([1, 2, 3]), {
+          headers: { "content-type": "audio/wav" },
+        });
+      }),
+      http.post("/api/reviews", () => {
+        reviews += 1;
+
+        return HttpResponse.json({});
+      }),
+    );
+    renderApp("/review");
+    await user.click(await screen.findByRole("button", { name: "Review starten" }));
+    await waitFor(() => expect(prefetched).toBe(1));
+    const audio = document.querySelector("audio")!;
+
+    fireEvent.error(audio);
+    expect(await screen.findByRole("alert")).toHaveTextContent("benötigte Audio");
+    await user.click(screen.getByRole("button", { name: "Audio Vorderseite: Erneut versuchen" }));
+    fireEvent.playing(audio);
+    await waitFor(() => expect(screen.queryByRole("alert")).not.toBeInTheDocument());
+    fireEvent.error(audio);
+    await user.click(screen.getByRole("button", { name: "Karte überspringen" }));
+    expect(await screen.findByRole("heading", { name: "Gut gemacht!" })).toBeVisible();
+    expect(screen.getByText(/0 Reviews · 0 Punkte/)).toBeVisible();
+    expect(reviews).toBe(0);
+  });
+
+  it("keeps the local mixed audio-only Tutor explanation available offline without a provider request", async () => {
+    const user = userEvent.setup();
+    const frontAudioId = "88888888-8888-4888-8888-888888888881";
+    const metadata = { durationMs: 1_000, contentType: "audio/wav", byteSize: 8_044 };
+    const audioCard = {
+      ...testCards[0]!,
+      front: { text: null, audio: { ...metadata, id: frontAudioId } },
+      back: { text: "Antwort", audio: null },
+    };
+    let tutorRequests = 0;
+    Object.defineProperty(navigator, "onLine", { configurable: true, value: false });
+    mockServer.use(
+      http.get("/api/cards", () => HttpResponse.json([audioCard])),
+      http.get("/api/audio/:audioId", () => new HttpResponse(new Uint8Array([1]))),
+      http.post("/api/cards/:cardId/tutor-replies", () => {
+        tutorRequests += 1;
+
+        return HttpResponse.json({});
+      }),
+    );
+
+    try {
+      renderApp("/review");
+      await user.click(await screen.findByRole("button", { name: "Review starten" }));
+      await user.click(screen.getByRole("button", { name: "Antwort zeigen" }));
+      const tutor = await screen.findByRole("button", { name: "Tutopher fragen" });
+
+      expect(tutor).toBeEnabled();
+      await user.click(tutor);
+      expect(await screen.findByText(/Tutopher kann Aufnahmen nicht anhören/)).toBeVisible();
+      expect(tutorRequests).toBe(0);
+    } finally {
+      Object.defineProperty(navigator, "onLine", { configurable: true, value: true });
+    }
+  });
+
+  it("keeps text-backed faces gradable after optional audio failure but blocks a failed audio-only back", async () => {
+    const user = userEvent.setup();
+    const metadata = { durationMs: 1_000, contentType: "audio/wav", byteSize: 8_044 };
+    const first = {
+      ...testCards[0]!,
+      front: {
+        text: "Text bleibt nutzbar",
+        audio: { ...metadata, id: "88888888-8888-4888-8888-888888888883" },
+      },
+      back: { text: "Erste Antwort", audio: null },
+    };
+    const second = {
+      ...testCards[0]!,
+      id: "88888888-8888-4888-8888-888888888884",
+      front: { text: "Zweite Frage", audio: null },
+      back: {
+        text: null,
+        audio: { ...metadata, id: "88888888-8888-4888-8888-888888888885" },
+      },
+    };
+    let reviews = 0;
+    mockServer.use(
+      http.get("/api/cards", () => HttpResponse.json([first, second])),
+      http.get("/api/audio/:audioId", () => new HttpResponse(new Uint8Array([1]))),
+      http.post("/api/reviews", async ({ request }) => {
+        reviews += 1;
+        const input = (await request.json()) as { cardId: string; grade: string };
+
+        return HttpResponse.json({
+          review: { ...input, id: crypto.randomUUID(), pointsAwarded: 10 },
+          card: { ...first, box: 1 },
+        });
+      }),
+    );
+    renderApp("/review");
+    await user.click(await screen.findByRole("button", { name: "Review starten" }));
+    const optionalAudio = document.querySelector("audio")!;
+
+    expect(optionalAudio).not.toHaveAttribute("src");
+    fireEvent.error(optionalAudio);
+    expect(screen.getByRole("button", { name: "Antwort zeigen" })).toBeEnabled();
+    await user.click(screen.getByRole("button", { name: "Antwort zeigen" }));
+    await user.click(await screen.findByRole("button", { name: /Gewusst/ }));
+    expect(await screen.findByText("Zweite Frage")).toBeVisible();
+    await user.click(screen.getByRole("button", { name: "Antwort zeigen" }));
+    const requiredBackAudio = document.querySelector("audio")!;
+
+    fireEvent.error(requiredBackAudio);
+    expect(await screen.findByRole("group", { name: /Wie gut/ })).toBeDisabled();
+    await user.click(screen.getByRole("button", { name: "Audio Rückseite: Erneut versuchen" }));
+    fireEvent.playing(requiredBackAudio);
+    await waitFor(() => expect(screen.getByRole("group", { name: /Wie gut/ })).not.toBeDisabled());
+    fireEvent.error(requiredBackAudio);
+    await user.click(screen.getByRole("button", { name: "Karte überspringen" }));
+    expect(await screen.findByRole("heading", { name: "Gut gemacht!" })).toBeVisible();
+    expect(reviews).toBe(1);
+  });
+
   it("discards active Review state after leaving the Review routes", async () => {
     const user = userEvent.setup();
     const { router } = renderApp("/review");

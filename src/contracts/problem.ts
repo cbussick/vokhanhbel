@@ -13,6 +13,7 @@ export const problemTypes = {
   audioNotFound: "/problems/audio-not-found",
   audioNotOwned: "/problems/audio-not-owned",
   audioUploadRateLimit: "/problems/audio-upload-rate-limit",
+  audioPlaybackRateLimit: "/problems/audio-playback-rate-limit",
   invalidRequest: "/problems/invalid-request",
   lastCollection: "/problems/last-collection",
   loginRateLimit: "/problems/login-rate-limit",

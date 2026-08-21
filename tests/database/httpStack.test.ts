@@ -12,6 +12,8 @@ import {
   InMemoryAudioObjectStore,
   setAudioObjectStoreForTests,
 } from "../../src/server/audio/audioObjectStore.js";
+import { getPool } from "../../src/server/database/client.js";
+import { createWavFixture } from "../../src/server/audio/audioFixture.test-helper.js";
 
 const origin = "http://localhost:4173";
 
@@ -96,7 +98,7 @@ describe("real API handler stack", () => {
     setAudioObjectStoreForTests(new InMemoryAudioObjectStore());
     const loginResponse = await createSession(request("/api/session", "POST", { password }));
     const cookie = loginResponse.headers.get("set-cookie")?.split(";", 1)[0];
-    const bytes = wavFixture();
+    const bytes = createWavFixture();
     const uploadRequest = new Request(`${origin}/api/audio`, {
       method: "POST",
       headers: {
@@ -127,37 +129,41 @@ describe("real API handler stack", () => {
     );
 
     expect(cardResponse.status).toBe(201);
+    const invalidOriginResponse = await playAudio(
+      new Request(`${origin}/api/audio/${audio.id}`, {
+        headers: {
+          cookie: cookie!,
+          origin: "https://evil.example",
+          "sec-fetch-site": "cross-site",
+        },
+      }),
+    );
+    expect(invalidOriginResponse.status).toBe(403);
+
     const playbackResponse = await playAudio(
       new Request(`${origin}/api/audio/${audio.id}`, {
-        headers: { cookie: cookie!, range: "bytes=0-9" },
+        headers: { cookie: cookie!, range: "bytes=0-9", "sec-fetch-site": "same-origin" },
       }),
     );
     expect(playbackResponse.status).toBe(206);
     expect(playbackResponse.headers.get("content-range")).toBe(`bytes 0-9/${bytes.byteLength}`);
     expect(new Uint8Array(await playbackResponse.arrayBuffer())).toEqual(bytes.slice(0, 10));
+
+    const attempt = await getPool().query<{ session_hash: string }>(
+      "SELECT session_hash FROM audio_playback_attempts LIMIT 1",
+    );
+    await getPool().query(
+      "INSERT INTO audio_playback_attempts (session_hash) SELECT $1 FROM generate_series(1, 299)",
+      [attempt.rows[0]!.session_hash],
+    );
+    const limitedResponse = await playAudio(
+      new Request(`${origin}/api/audio/${audio.id}`, {
+        headers: { cookie: cookie!, "sec-fetch-site": "same-origin" },
+      }),
+    );
+    expect(limitedResponse.status).toBe(429);
+    await expect(limitedResponse.json()).resolves.toMatchObject({
+      type: "/problems/audio-playback-rate-limit",
+    });
   });
 });
-
-function wavFixture(): Uint8Array {
-  const bytes = new Uint8Array(8_044);
-  const view = new DataView(bytes.buffer);
-  const write = (offset: number, value: string) => {
-    for (let index = 0; index < value.length; index += 1)
-      bytes[offset + index] = value.charCodeAt(index);
-  };
-
-  write(0, "RIFF");
-  view.setUint32(4, bytes.byteLength - 8, true);
-  write(8, "WAVEfmt ");
-  view.setUint32(16, 16, true);
-  view.setUint16(20, 1, true);
-  view.setUint16(22, 1, true);
-  view.setUint32(24, 8_000, true);
-  view.setUint32(28, 8_000, true);
-  view.setUint16(32, 1, true);
-  view.setUint16(34, 8, true);
-  write(36, "data");
-  view.setUint32(40, 8_000, true);
-
-  return bytes;
-}

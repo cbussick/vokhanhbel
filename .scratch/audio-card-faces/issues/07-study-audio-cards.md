@@ -4,7 +4,7 @@
 
 **Blocked by:** 03 — Create Cards from imported audio.
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] Review Sessions always present the front and reveal the back for text-only, text-plus-audio, and audio-only faces; media never changes scheduling direction.
 - [ ] Each active face renders text before its matching player, exposes accurate face-specific accessible labels, and never autoplays on session start or reveal.
@@ -16,3 +16,6 @@
 - [ ] Review reducer, route, and authenticated journey tests cover fixed direction, no autoplay, text-first layout, non-blocking prefetch, both failure modes, grading prevention, schedule-neutral Skip Card, and ordinary grading regression behavior.
 - [ ] Automated accessibility, explicit keyboard, touch-target, and stable mobile, tablet, and desktop screenshots cover front and revealed back faces with text-plus-audio and audio-only fixtures.
 
+## Comments
+
+Implemented fixed-direction, no-autoplay Review media, low-priority failure-tolerant prefetch, optional/required audio failure behavior, and schedule-neutral Skip. Reducer and rendered route tests cover both failure modes; inspected responsive baselines cover text-plus-audio and audio-only front/back faces.

@@ -1,7 +1,7 @@
 import type { ZodType } from "zod";
 import { problemTypes } from "../../contracts/problem.js";
 import { getAuthenticatedSessionHash } from "../auth/session.js";
-import { isAllowedUnsafeRequest } from "./origin.js";
+import { isAllowedPrivateMediaRequest, isAllowedUnsafeRequest } from "./origin.js";
 import { AppProblem, problemResponse } from "./problem.js";
 
 const maximumJsonBodyBytes = 32 * 1024;
@@ -18,6 +18,7 @@ interface HandlerOptions<TBody> {
   protected?: boolean;
   bodySchema?: ZodType<TBody>;
   cacheControl?: string;
+  privateMedia?: boolean;
 }
 
 function applyHeaders(response: Response, requestId: string, cacheControl: string): Response {
@@ -90,6 +91,9 @@ export async function handleRequest<TBody = undefined>(
 
   try {
     if (options.unsafe && !isAllowedUnsafeRequest(request)) {
+      throw new AppProblem(403, problemTypes.invalidOrigin, "Anfrage nicht erlaubt");
+    }
+    if (options.privateMedia && !isAllowedPrivateMediaRequest(request)) {
       throw new AppProblem(403, problemTypes.invalidOrigin, "Anfrage nicht erlaubt");
     }
 

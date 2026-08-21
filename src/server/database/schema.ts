@@ -174,6 +174,20 @@ export const audioUploadAttempts = pgTable(
   ],
 );
 
+export const audioPlaybackAttempts = pgTable(
+  "audio_playback_attempts",
+  {
+    id: bigserial("id", { mode: "number" }).primaryKey(),
+    sessionHash: text("session_hash").notNull(),
+    attemptedAt: timestamp("attempted_at", { withTimezone: true, mode: "date" })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    index("audio_playback_attempts_session_time_idx").on(table.sessionHash, table.attemptedAt),
+  ],
+);
+
 export const reviews = pgTable(
   "reviews",
   {

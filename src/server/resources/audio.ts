@@ -1,4 +1,5 @@
 import { and, eq, isNull, lt, or, sql } from "drizzle-orm";
+import { z } from "zod";
 import { audioMetadataSchema, type AudioMetadata } from "../../contracts/card.js";
 import { problemTypes } from "../../contracts/problem.js";
 import { getAudioObjectStore, type AudioObjectRange } from "../audio/audioObjectStore.js";
@@ -178,12 +179,14 @@ export async function enforceAudioUploadRateLimit(sessionHash: string): Promise<
     await client.query(
       "DELETE FROM audio_upload_attempts WHERE attempted_at < now() - interval '1 hour'",
     );
-    const result = await client.query<{ count: string }>(
+    const result = await client.query(
       "SELECT count(*) FROM audio_upload_attempts WHERE session_hash=$1 AND attempted_at >= now() - interval '1 hour'",
       [sessionHash],
     );
 
-    if (Number(result.rows[0]?.count ?? 0) >= 30)
+    const count = z.object({ count: z.coerce.number().int().nonnegative() }).parse(result.rows[0]);
+
+    if (count.count >= 30)
       throw new AppProblem(
         429,
         problemTypes.audioUploadRateLimit,
@@ -193,6 +196,44 @@ export async function enforceAudioUploadRateLimit(sessionHash: string): Promise<
         60,
       );
     await client.query("INSERT INTO audio_upload_attempts (session_hash) VALUES ($1)", [
+      sessionHash,
+    ]);
+    await client.query("COMMIT");
+  } catch (error) {
+    await client.query("ROLLBACK");
+    throw error;
+  } finally {
+    client.release();
+  }
+}
+
+export async function enforceAudioPlaybackRateLimit(sessionHash: string): Promise<void> {
+  const client = await getPool().connect();
+
+  try {
+    await client.query("BEGIN");
+    await client.query("SELECT pg_advisory_xact_lock(hashtextextended($1, 0))", [
+      `audio-playback:${sessionHash}`,
+    ]);
+    await client.query(
+      "DELETE FROM audio_playback_attempts WHERE attempted_at < now() - interval '1 hour'",
+    );
+    const result = await client.query(
+      "SELECT count(*) FROM audio_playback_attempts WHERE session_hash=$1 AND attempted_at >= now() - interval '1 hour'",
+      [sessionHash],
+    );
+    const count = z.object({ count: z.coerce.number().int().nonnegative() }).parse(result.rows[0]);
+
+    if (count.count >= 300)
+      throw new AppProblem(
+        429,
+        problemTypes.audioPlaybackRateLimit,
+        "Zu viele Audio-Anfragen. Versuch es später erneut.",
+        undefined,
+        undefined,
+        60,
+      );
+    await client.query("INSERT INTO audio_playback_attempts (session_hash) VALUES ($1)", [
       sessionHash,
     ]);
     await client.query("COMMIT");

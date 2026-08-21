@@ -1,3 +1,4 @@
+import { z } from "zod";
 import { getR2Environment, type R2Environment } from "../config/environment.js";
 
 export interface AudioObjectRange {
@@ -49,7 +50,64 @@ export class InMemoryAudioObjectStore implements AudioObjectStore {
   }
 }
 
+export class FailingAudioObjectStore implements AudioObjectStore {
+  readonly delegate: InMemoryAudioObjectStore;
+  readonly failures = new Set<keyof AudioObjectStore>();
+
+  constructor(delegate = new InMemoryAudioObjectStore()) {
+    this.delegate = delegate;
+  }
+
+  private rejectWhenConfigured(operation: keyof AudioObjectStore): void {
+    if (this.failures.has(operation)) throw new Error(`Injected audio ${operation} failure`);
+  }
+
+  async put(objectKey: string, bytes: Uint8Array, contentType: string): Promise<void> {
+    this.rejectWhenConfigured("put");
+
+    await this.delegate.put(objectKey, bytes, contentType);
+  }
+
+  async read(objectKey: string, range?: AudioObjectRange): Promise<StoredAudioObject | null> {
+    this.rejectWhenConfigured("read");
+
+    return this.delegate.read(objectKey, range);
+  }
+
+  async delete(objectKey: string): Promise<void> {
+    this.rejectWhenConfigured("delete");
+
+    await this.delegate.delete(objectKey);
+  }
+}
+
 const encoder = new TextEncoder();
+const responseIntegerSchema = z.coerce.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER);
+const contentLengthSchema = responseIntegerSchema;
+const contentRangeSchema = z
+  .string()
+  .regex(/^bytes \d+-\d+\/\d+$/u)
+  .transform((value, context) => {
+    const match = /^bytes (\d+)-(\d+)\/(\d+)$/u.exec(value)!;
+    const parsed = z
+      .tuple([responseIntegerSchema, responseIntegerSchema, responseIntegerSchema])
+      .safeParse(match.slice(1));
+
+    if (!parsed.success) {
+      context.addIssue({ code: "custom", message: "Invalid R2 content range integers" });
+
+      return z.NEVER;
+    }
+    const [start, end, totalSize] = parsed.data;
+
+    if (start > end || end >= totalSize) {
+      context.addIssue({ code: "custom", message: "Invalid R2 content range bounds" });
+
+      return z.NEVER;
+    }
+
+    return { value, start, end, totalSize };
+  });
 
 function toHex(bytes: ArrayBuffer): string {
   return [...new Uint8Array(bytes)].map((byte) => byte.toString(16).padStart(2, "0")).join("");
@@ -145,12 +203,30 @@ export class R2AudioObjectStore implements AudioObjectStore {
     if (!response.ok) throw new Error(`R2 read failed (${response.status})`);
 
     const bytes = new Uint8Array(await response.arrayBuffer());
-    const contentRange = response.headers.get("content-range") ?? undefined;
-    const totalSize = contentRange
-      ? Number(contentRange.slice(contentRange.lastIndexOf("/") + 1))
-      : Number(response.headers.get("content-length") ?? bytes.byteLength);
+    const contentRangeHeader = response.headers.get("content-range");
+    const contentRange = contentRangeHeader
+      ? contentRangeSchema.parse(contentRangeHeader)
+      : undefined;
+    const contentLength = contentLengthSchema.parse(
+      response.headers.get("content-length") ?? bytes.byteLength,
+    );
 
-    return { bytes, totalSize, ...(contentRange ? { contentRange } : {}) };
+    if (contentLength !== bytes.byteLength)
+      throw new Error("R2 returned an invalid content length");
+    if (
+      contentRange &&
+      (contentRange.end - contentRange.start + 1 !== bytes.byteLength ||
+        contentRange.start !== range?.start ||
+        (range?.end !== undefined && contentRange.end > range.end))
+    )
+      throw new Error("R2 returned an unexpected content range");
+    const totalSize = contentRange?.totalSize ?? contentLength;
+
+    return {
+      bytes,
+      totalSize,
+      ...(contentRange ? { contentRange: contentRange.value } : {}),
+    };
   }
 
   async delete(objectKey: string): Promise<void> {

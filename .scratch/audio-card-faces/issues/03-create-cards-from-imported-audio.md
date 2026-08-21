@@ -4,7 +4,7 @@
 
 **Blocked by:** 02 — Stage and play private audio through authenticated endpoints.
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] The editor provides an accessible click-to-select and drop zone for each face, accepts only one draft clip per face, and keeps file import available regardless of microphone support.
 - [ ] Client validation gives immediate German feedback for unsupported, corrupt, oversized, or overlong clips while the server remains authoritative.
@@ -17,3 +17,6 @@
 - [ ] Successful responses expose only safe audio metadata needed for labelling and playback, and created Cards retain the standard initial scheduling state.
 - [ ] Route, component, HTTP-stack, accessibility, and responsive journey tests cover file selection, dropping, previews, every media combination, compensation, and text-only regression behavior.
 
+## Comments
+
+Implemented per-face file/drop drafts, client and server validation, lazy coordinated previews, sequential Save-time staging, and compensating deletion. Valid media combinations and text-only behavior are covered across contracts, resources, rendered journeys, accessibility checks, and responsive browser baselines.

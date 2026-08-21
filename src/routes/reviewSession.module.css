@@ -116,7 +116,7 @@
     opacity var(--duration-normal);
 }
 
-.face > span {
+.face [data-card-face-text] {
   white-space: pre-line;
   overflow-wrap: anywhere;
   font-family: var(--font-display);
@@ -130,7 +130,7 @@
   rotate: y 180deg;
 }
 
-.back > span {
+.back [data-card-face-text] {
   font-family: var(--font-ui);
   font-size: var(--font-2xl);
   line-height: 1.5;

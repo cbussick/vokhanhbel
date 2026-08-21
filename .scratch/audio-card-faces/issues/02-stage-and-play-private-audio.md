@@ -4,7 +4,7 @@
 
 **Blocked by:** 01 — Adopt structured Card faces for existing text Cards.
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] Authenticated upload accepts one clip up to 2,000,000 bytes and 7,000 milliseconds and records an opaque audio ID, immutable object key, validated media details, byte size, duration, checksum, ownership context, and creation time without retaining the original filename.
 - [ ] Authoritative inspection accepts MP3, MP4/M4A with AAC, WebM with Opus, Ogg with Opus, and WAV, including a valid iOS-compatible MP4/AAC fixture.
@@ -15,3 +15,6 @@
 - [ ] Abandoned staged objects have bounded automatic expiry, cleanup is safe to repeat, and a cleanup retry cannot delete a referenced object.
 - [ ] Authenticated HTTP tests exercise validation, metadata persistence, private playback, ranges, ownership, missing objects, cleanup, and storage failures without live network access.
 
+## Comments
+
+Implemented private bounded upload and same-origin range playback, authoritative media inspection, per-session upload/playback limits, storage validation, expiry, and in-memory/failing/R2 adapters. HTTP and database tests cover authentication, origin rejection, ranges, rate limiting, and cleanup behavior without live R2 access.

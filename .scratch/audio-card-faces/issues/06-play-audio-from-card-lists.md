@@ -4,7 +4,7 @@
 
 **Blocked by:** 03 — Create Cards from imported audio.
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] A Card row renders normalized text before the matching compact player and labels front and back controls separately with their actual duration.
 - [ ] An audio-only front has a dynamic `Audio · m:ss` management label instead of appearing blank, and duplicate audio-only fronts are allowed.
@@ -16,3 +16,6 @@
 - [ ] Component and route tests prove separate navigation, face labels, duration rendering, audio-only management, one-at-a-time playback, Retry, lazy fetch, cache-compatible requests, and text-only search.
 - [ ] Automated accessibility, explicit keyboard, touch-target, and stable mobile, tablet, and desktop screenshot checks cover text-plus-audio and audio-only rows.
 
+## Comments
+
+Implemented sibling list navigation/player actions, text-first face rendering, audio-only labels, face-specific lazy playback, shared coordination, Retry, and text-only search. Component tests and inspected mobile/tablet/desktop baselines cover the resulting list UI.

@@ -4,7 +4,7 @@
 
 **Blocked by:** 02 — Stage and play private audio through authenticated endpoints.
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] Runtime configuration requires the private bucket, EU endpoint, and narrowly scoped server credentials needed by the production audio-object-store adapter and fails safely when they are absent or malformed.
 - [ ] Preview and production configuration use distinct buckets and credentials, with no default that can silently point preview traffic at production audio.
@@ -14,3 +14,6 @@
 - [ ] Documentation states that R2 recordings have no backup or restore path in this version and confirms that the existing encrypted Postgres backup and restore process remains unchanged.
 - [ ] Default automated tests use replaceable storage adapters and require neither live R2 access nor Cloudflare credentials.
 
+## Comments
+
+Implemented strict isolated R2 configuration, server-only SigV4 storage, structured lifecycle logs, hourly cleanup, and replaceable in-memory/failing test adapters. The operations runbook documents provisioning, isolation, credentials, expiry/retry, recovery limits, and the unchanged PostgreSQL backup path.

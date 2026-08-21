@@ -4,7 +4,7 @@
 
 **Blocked by:** 03 — Create Cards from imported audio.
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] Update contracts distinguish unchanged audio, replacement by an owned staged audio ID, and explicit removal independently for each face.
 - [ ] Cancelling the editor preserves existing recordings and discards local replacement intent.
@@ -16,3 +16,6 @@
 - [ ] Failed obsolete-object deletion creates an observable retryable cleanup record, repeated cleanup is idempotent, and retries never delete an object currently referenced by a Card.
 - [ ] Editor, authenticated HTTP-stack, database, and failure-adapter tests cover retaining, replacing, removing, deleting, compensation, missing objects, cleanup retry, and stable scheduling fields.
 
+## Comments
+
+Implemented atomic retain/replace/remove semantics, post-switch obsolete deletion, Card-delete cleanup, upload compensation, and reference-safe retry jobs. Regression tests include replacement source invalidation, stable scheduling, deterministic deletion failure, and idempotent retry.

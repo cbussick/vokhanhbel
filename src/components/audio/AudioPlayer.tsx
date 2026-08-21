@@ -34,6 +34,22 @@ export function AudioPlayer({
   );
   const [currentTime, setCurrentTime] = useState(0);
   const resolvedSource = source ?? apiPaths.audio(audio.id);
+  const previousSourceRef = useRef(resolvedSource);
+
+  useEffect(() => {
+    if (previousSourceRef.current === resolvedSource) return;
+    previousSourceRef.current = resolvedSource;
+    const element = elementRef.current;
+
+    endPlayback(participantRef.current);
+    element?.pause();
+    element?.removeAttribute("src");
+    element?.load();
+    setLoadedSource(undefined);
+    setCurrentTime(0);
+    setState("idle");
+    onAvailabilityChange?.(true);
+  }, [resolvedSource, onAvailabilityChange]);
 
   useEffect(() => {
     const element = elementRef.current;

@@ -4,14 +4,24 @@ import { expect, test, type Page, type Route } from "@playwright/test";
 interface MockCard {
   id: string;
   collectionId: string;
-  front: string;
-  back: string;
+  front: string | MockFace;
+  back: string | MockFace;
   box: number;
   dueAt: string;
   lastReviewedAt: string | null;
   createdAt: string;
   updatedAt: string;
   deletedAt: null;
+}
+
+interface MockFace {
+  text: string | null;
+  audio: {
+    id: string;
+    durationMs: number;
+    contentType: "audio/wav";
+    byteSize: number;
+  } | null;
 }
 
 const fixedNow = "2026-07-14T08:00:00.000Z";
@@ -24,7 +34,10 @@ const mockCollection = {
   deletedAt: null,
 };
 
-function createCard(front = "der Apfel", back = "the apple"): MockCard {
+function createCard(
+  front: MockCard["front"] = "der Apfel",
+  back: MockCard["back"] = "the apple",
+): MockCard {
   return {
     id: crypto.randomUUID(),
     collectionId: mockCollection.id,
@@ -37,6 +50,10 @@ function createCard(front = "der Apfel", back = "the apple"): MockCard {
     updatedAt: fixedNow,
     deletedAt: null,
   };
+}
+
+function audio(id: string) {
+  return { id, durationMs: 1_000, contentType: "audio/wav" as const, byteSize: 8_044 };
 }
 
 async function json(route: Route, body: unknown, status = 200) {
@@ -65,12 +82,20 @@ async function installMockApi(page: Page, authenticated = true) {
       return json(route, [mockCollection]);
     if (pathname === "/api/cards" && request.method() === "GET") return json(route, state.cards);
     if (pathname === "/api/cards" && request.method() === "POST") {
-      const input = request.postDataJSON() as { front: string; back: string };
-      const card = createCard(input.front, input.back);
+      const input = request.postDataJSON() as {
+        front: { text: string | null; audioId: string | null };
+        back: { text: string | null; audioId: string | null };
+      };
+      const card = createCard(
+        { text: input.front.text, audio: null },
+        { text: input.back.text, audio: null },
+      );
       state.cards.unshift(card);
 
       return json(route, card, 201);
     }
+    if (pathname.startsWith("/api/audio/") && request.method() === "GET")
+      return route.fulfill({ status: 200, contentType: "audio/wav", body: "mock audio" });
     if (pathname === "/api/reviews" && request.method() === "POST") {
       const input = request.postDataJSON() as { id: string; cardId: string; grade: string };
 
@@ -401,7 +426,17 @@ for (const viewport of [
     test.skip(browserName !== "chromium", "One browser owns the cross-platform visual baselines.");
     await page.setViewportSize(viewport);
     await page.emulateMedia({ reducedMotion: "reduce" });
-    await installMockApi(page, false);
+    const state = await installMockApi(page, false);
+    state.cards[0] = createCard(
+      {
+        text: "der Apfel",
+        audio: audio("88888888-8888-4888-8888-888888888891"),
+      },
+      {
+        text: "the apple",
+        audio: audio("88888888-8888-4888-8888-888888888892"),
+      },
+    );
     await page.goto("/login");
     await expect(page.getByLabel("Passwort")).toBeVisible();
     await expect(page).toHaveScreenshot(`login-${viewport.name}.png`, { animations: "disabled" });
@@ -459,5 +494,21 @@ for (const viewport of [
     await page.getByRole("link", { name: /Ich/ }).click();
     await expect(page.getByRole("heading", { name: "Khanhs Fortschritt" })).toBeVisible();
     await expect(page).toHaveScreenshot(`me-${viewport.name}.png`, { animations: "disabled" });
+
+    state.cards[0] = createCard(
+      { text: null, audio: audio("88888888-8888-4888-8888-888888888893") },
+      { text: null, audio: audio("88888888-8888-4888-8888-888888888894") },
+    );
+    await page.goto("/review");
+    await page.getByRole("button", { name: "Review starten" }).click();
+    await expect(page.getByRole("button", { name: "Audio Vorderseite: Abspielen" })).toBeVisible();
+    await expect(page).toHaveScreenshot(`review-audio-only-front-${viewport.name}.png`, {
+      animations: "disabled",
+    });
+    await page.getByRole("button", { name: "Antwort zeigen" }).click();
+    await expect(page.getByRole("button", { name: "Audio Rückseite: Abspielen" })).toBeVisible();
+    await expect(page).toHaveScreenshot(`review-audio-only-back-${viewport.name}.png`, {
+      animations: "disabled",
+    });
   });
 }

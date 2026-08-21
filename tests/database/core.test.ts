@@ -13,11 +13,13 @@ import { recordReview } from "../../src/server/resources/reviews.js";
 import { login } from "../../src/server/resources/sessions.js";
 import { getStats } from "../../src/server/resources/stats.js";
 import { consumeTutorAllowance, createTutorStream } from "../../src/server/resources/tutor.js";
-import { stageAudio } from "../../src/server/resources/audio.js";
+import { retryAudioCleanup, stageAudio } from "../../src/server/resources/audio.js";
 import {
+  FailingAudioObjectStore,
   InMemoryAudioObjectStore,
   setAudioObjectStoreForTests,
 } from "../../src/server/audio/audioObjectStore.js";
+import { createWavFixture } from "../../src/server/audio/audioFixture.test-helper.js";
 
 const inDefaultCollection = { collectionId: defaultCollectionId };
 
@@ -56,8 +58,8 @@ describe("PostgreSQL application behavior", () => {
     const store = new InMemoryAudioObjectStore();
     const sessionHash = "audio-session";
     setAudioObjectStoreForTests(store);
-    const firstAudio = await stageAudio(sessionHash, wavFixture(), "audio/wav");
-    const secondAudio = await stageAudio(sessionHash, wavFixture(), "audio/wav");
+    const firstAudio = await stageAudio(sessionHash, createWavFixture(), "audio/wav");
+    const secondAudio = await stageAudio(sessionHash, createWavFixture(), "audio/wav");
     const first = await createCard(
       {
         ...inDefaultCollection,
@@ -85,11 +87,39 @@ describe("PostgreSQL application behavior", () => {
     expect(store.objects.size).toBe(1);
   });
 
+  it("records obsolete-object deletion failures and resolves them idempotently", async () => {
+    const store = new FailingAudioObjectStore();
+    const sessionHash = "audio-cleanup-session";
+    setAudioObjectStoreForTests(store);
+    const audio = await stageAudio(sessionHash, createWavFixture(), "audio/wav");
+    const card = await createCard(
+      {
+        ...inDefaultCollection,
+        front: { text: null, audioId: audio.id },
+        back: { text: "Antwort", audioId: null },
+      },
+      sessionHash,
+    );
+    store.failures.add("delete");
+    await deleteCard(card.id);
+    expect(store.delegate.objects.size).toBe(1);
+    const pending = await getPool().query<{ attempts: number }>(
+      "SELECT attempts FROM audio_cleanup_jobs WHERE audio_id=$1 AND completed_at IS NULL",
+      [audio.id],
+    );
+    expect(pending.rows[0]?.attempts).toBe(1);
+
+    store.failures.delete("delete");
+    await expect(retryAudioCleanup()).resolves.toBe(1);
+    await expect(retryAudioCleanup()).resolves.toBe(0);
+    expect(store.delegate.objects.size).toBe(0);
+  });
+
   it("rejects Tutor for an audio-only face before provider use or allowance consumption", async () => {
     const store = new InMemoryAudioObjectStore();
     const sessionHash = "audio-tutor-session";
     setAudioObjectStoreForTests(store);
-    const audio = await stageAudio(sessionHash, wavFixture(), "audio/wav");
+    const audio = await stageAudio(sessionHash, createWavFixture(), "audio/wav");
     const card = await createCard(
       {
         ...inDefaultCollection,
@@ -365,27 +395,3 @@ describe("PostgreSQL application behavior", () => {
     expect(autumn.rows[0]?.due_at.toISOString()).toBe("2026-10-24T22:00:00.000Z");
   });
 });
-
-function wavFixture(): Uint8Array {
-  const bytes = new Uint8Array(8_044);
-  const view = new DataView(bytes.buffer);
-  const write = (offset: number, value: string) => {
-    for (let index = 0; index < value.length; index += 1)
-      bytes[offset + index] = value.charCodeAt(index);
-  };
-
-  write(0, "RIFF");
-  view.setUint32(4, bytes.byteLength - 8, true);
-  write(8, "WAVEfmt ");
-  view.setUint32(16, 16, true);
-  view.setUint16(20, 1, true);
-  view.setUint16(22, 1, true);
-  view.setUint32(24, 8_000, true);
-  view.setUint32(28, 8_000, true);
-  view.setUint16(32, 1, true);
-  view.setUint16(34, 8, true);
-  write(36, "data");
-  view.setUint32(40, 8_000, true);
-
-  return bytes;
-}

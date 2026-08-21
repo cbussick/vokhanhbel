@@ -182,7 +182,7 @@ function ReviewSessionRoute() {
                   type="button"
                   className={styles.tutorButton}
                   onClick={() => setTutorOpen(true)}
-                  disabled={!online}
+                  disabled={!online && Boolean(card.front.text) && Boolean(card.back.text)}
                 >
                   <svg aria-hidden="true" viewBox="0 0 24 24">
                     <path d="M12 2.5c.7 4.5 2.9 6.7 7.4 7.4-4.5.7-6.7 2.9-7.4 7.4-.7-4.5-2.9-6.7-7.4-7.4 4.5-.7 6.7-2.9 7.4-7.4Z" />

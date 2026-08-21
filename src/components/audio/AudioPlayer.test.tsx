@@ -56,4 +56,17 @@ describe("AudioPlayer", () => {
     fireEvent.ended(element);
     expect(screen.getByRole("button", { name: "Audio Vorderseite: Wiederholen" })).toBeVisible();
   });
+
+  it("drops a private source when the immutable audio asset changes", async () => {
+    const user = userEvent.setup();
+    const { rerender } = render(<AudioPlayer audio={firstAudio} label="Audio Vorderseite" />);
+    const element = document.querySelector("audio")!;
+
+    await user.click(screen.getByRole("button", { name: "Audio Vorderseite: Abspielen" }));
+    expect(element).toHaveAttribute("src", `/api/audio/${firstAudio.id}`);
+    rerender(<AudioPlayer audio={secondAudio} label="Audio Vorderseite" />);
+    expect(element).not.toHaveAttribute("src");
+    await user.click(screen.getByRole("button", { name: "Audio Vorderseite: Abspielen" }));
+    expect(element).toHaveAttribute("src", `/api/audio/${secondAudio.id}`);
+  });
 });

@@ -4,7 +4,7 @@
 
 **Blocked by:** 03 — Create Cards from imported audio.
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] Microphone permission is requested only from an explicit Learner action and uses the default input device without offering device selection.
 - [ ] Recording selects a supported `MediaRecorder` output at runtime, prefers a compressed format, and supports the compatible MP4/AAC fallback needed by iOS browsers.
@@ -17,3 +17,6 @@
 - [ ] MediaRecorder and media-stream tests cover permission success and failure, default-device use, manual and automatic stop, output selection, countdown, Record Again, removal, object-URL revocation, playback coordination, and stopping every device track.
 - [ ] Keyboard, screen-reader state, touch-target, reduced-motion, and responsive editor journeys pass at the supported viewport sizes.
 
+## Comments
+
+Implemented explicit default-microphone capture with Opus preference and MP4/AAC fallback, visible countdown, manual/automatic stop, preview/re-record/remove, playback coordination, and complete track cleanup. Deterministic MediaRecorder tests and supported responsive/accessibility browser journeys pass.

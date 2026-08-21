@@ -9,12 +9,13 @@ import {
 } from "../contracts/card";
 import { apiPaths } from "../contracts/apiPaths";
 import { problemTypes } from "../contracts/problem";
-import { apiRequest, ApiError, stageAudioDraft } from "../lib/apiClient";
+import { ApiError, apiRequest } from "../lib/apiClient";
 import { useOnlineStatus } from "../lib/browserState";
 import { collectionsQuery } from "../lib/queries";
 import { queryKeys } from "../lib/queryKeys";
 import { CollectionSelect } from "./CollectionSelect";
 import { AudioInput, releaseAudioDraft, type AudioDraft } from "./audio/AudioInput";
+import { stageAudioDraft } from "./audio/audioApi";
 import styles from "./Dialog.module.css";
 
 export function CardFormDialog({

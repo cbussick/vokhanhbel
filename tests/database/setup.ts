@@ -9,7 +9,7 @@ beforeAll(async () => {
 
 beforeEach(async () => {
   await getPool().query(
-    "TRUNCATE ai_usage, audio_upload_attempts, login_attempts, sessions, reviews, cards, audio_cleanup_jobs, audio_assets RESTART IDENTITY CASCADE",
+    "TRUNCATE ai_usage, audio_playback_attempts, audio_upload_attempts, login_attempts, sessions, reviews, cards, audio_cleanup_jobs, audio_assets RESTART IDENTITY CASCADE",
   );
   // The Collection the cards.collection_id default points at has to survive every reset.
   await getPool().query("DELETE FROM collections WHERE id <> $1", [defaultCollectionId]);

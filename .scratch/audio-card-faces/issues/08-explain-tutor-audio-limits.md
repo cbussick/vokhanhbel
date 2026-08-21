@@ -4,7 +4,7 @@
 
 **Blocked by:** 03 — Create Cards from imported audio.
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] The Tutor button remains visible in its normal Review Session location for every valid face-media combination.
 - [ ] Opening Tutor for a Card with either audio-only face shows a clear dedicated explanation and usable dialog focus behavior.
@@ -13,3 +13,6 @@
 - [ ] Tutor provider input contains normalized front and back text only and never contains audio bytes, audio identifiers, storage keys, metadata, or transcription.
 - [ ] Resource, provider, route, and accessibility tests cover audio-only front, audio-only back, audio on both faces, text-plus-audio, no-request/no-allowance behavior, and text-only regression behavior.
 
+## Comments
+
+Implemented an always-located Tutor action with a local audio-only explanation, including offline availability. Resource and route tests prove no provider request or allowance use for unsupported faces and text-only provider input for supported Cards.

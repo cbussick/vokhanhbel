@@ -4,7 +4,7 @@
 
 **Blocked by:** None — can start immediately.
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] Card contracts represent front and back as symmetric faces with nullable normalized text and nullable safe audio metadata; responses never expose audio bytes or provider object keys.
 - [ ] The database migration preserves all existing Card identities, Collections, scheduling fields, timestamps, Reviews, and derived Points while converting current Cards and compatible Review snapshots to text-only structured faces.
@@ -15,3 +15,6 @@
 - [ ] The visual Card accepts arbitrary React content for each face, while the domain renderer displays normalized text before any matching audio slot and persists only the supported face structure.
 - [ ] Domain documentation defines a Card as a fixed-direction pair of faces containing text, audio, or both, and confirms that retained Reviews do not retain playable deleted audio.
 
+## Comments
+
+Implemented with migration compatibility for the preceding deployment, symmetric validated face contracts, partial textual-front uniqueness, text-only regression coverage, and updated domain documentation. Verified by unit, database, build, and browser suites; independent standards and spec reviews completed.

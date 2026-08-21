@@ -1,11 +1,7 @@
-import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import type { CardFace as CardFaceValue } from "../../contracts/card";
 import { AudioPlayer } from "./AudioPlayer";
-
-export function VisualCardFace({ children }: { children: ReactNode }) {
-  return <>{children}</>;
-}
+import { VisualCardFace } from "./VisualCardFace";
 
 export function CardFace({
   face,
@@ -22,7 +18,7 @@ export function CardFace({
 
   return (
     <VisualCardFace>
-      {face.text ? <span>{face.text}</span> : null}
+      {face.text ? <span data-card-face-text>{face.text}</span> : null}
       {face.audio ? (
         <AudioPlayer
           key={face.audio.id}
