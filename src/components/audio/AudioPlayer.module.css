@@ -22,6 +22,17 @@
   outline-offset: 2px;
 }
 
+.spinner {
+  display: block;
+  inline-size: 1rem;
+  block-size: 1rem;
+  margin: auto;
+  border: 2px solid var(--color-border);
+  border-block-start-color: currentcolor;
+  border-radius: var(--radius-full);
+  animation: player-loading 800ms linear infinite;
+}
+
 .player progress {
   inline-size: 100%;
   block-size: 0.5rem;
@@ -44,14 +55,34 @@
   display: none;
 }
 
+.visuallyHidden {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
 .compact {
   grid-template-columns: 44px minmax(2rem, 1fr) auto;
   gap: var(--space-1);
   inline-size: 100%;
 }
 
+@keyframes player-loading {
+  to {
+    transform: rotate(1turn);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .player progress {
     transition: none;
+  }
+
+  .spinner {
+    border-style: dotted;
+    animation: none;
   }
 }

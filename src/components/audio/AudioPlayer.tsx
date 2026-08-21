@@ -119,7 +119,16 @@ export function AudioPlayer({
           endPlayback(participantRef.current);
         }}
       />
-      {state === "playing" ? (
+      {state === "loading" ? (
+        <button
+          type="button"
+          aria-busy="true"
+          aria-disabled="true"
+          aria-label={`${label}: ${t("audio.loading")}`}
+        >
+          <span className={styles.spinner} aria-hidden="true" />
+        </button>
+      ) : state === "playing" ? (
         <button type="button" onClick={pause} aria-label={`${label}: ${t("audio.pause")}`}>
           <span aria-hidden="true">Ⅱ</span>
         </button>
@@ -142,7 +151,10 @@ export function AudioPlayer({
         max={audio.durationMs}
       />
       <span className={styles.time}>{formatAudioDuration(audio.durationMs)}</span>
-      <span className={styles.status} aria-live="polite">
+      <span
+        className={state === "error" ? styles.status : styles.visuallyHidden}
+        aria-live="polite"
+      >
         {state === "loading" ? t("audio.loading") : state === "error" ? t("audio.unavailable") : ""}
       </span>
     </div>

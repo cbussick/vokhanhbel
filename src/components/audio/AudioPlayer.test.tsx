@@ -57,6 +57,24 @@ describe("AudioPlayer", () => {
     expect(screen.getByRole("button", { name: "Audio Vorderseite: Wiederholen" })).toBeVisible();
   });
 
+  it("moves the loading state into the play control without showing an error", async () => {
+    vi.spyOn(HTMLMediaElement.prototype, "play").mockImplementation(
+      () => new Promise(() => undefined),
+    );
+    const user = userEvent.setup();
+    render(<AudioPlayer audio={firstAudio} label="Audio Vorderseite" />);
+
+    await user.click(screen.getByRole("button", { name: "Audio Vorderseite: Abspielen" }));
+
+    const loading = screen.getByRole("button", {
+      name: "Audio Vorderseite: Audio wird geladen",
+    });
+    expect(loading).toHaveAttribute("aria-busy", "true");
+    expect(loading).toHaveAttribute("aria-disabled", "true");
+    expect(screen.getByText("Audio wird geladen").className).toContain("visuallyHidden");
+    expect(screen.queryByText("Audio nicht verfügbar")).not.toBeInTheDocument();
+  });
+
   it("drops a private source when the immutable audio asset changes", async () => {
     const user = userEvent.setup();
     const { rerender } = render(<AudioPlayer audio={firstAudio} label="Audio Vorderseite" />);
