@@ -139,8 +139,8 @@ describe("rendered app journeys", () => {
     renderApp(`/cards/${testCollections[1]!.id}`);
 
     await user.click(await screen.findByRole("button", { name: "Karte hinzufügen" }));
-    await user.type(await screen.findByLabelText("Vorderseite"), "Schnee");
-    await user.type(screen.getByLabelText("Rückseite"), "snow");
+    await user.type(await screen.findByLabelText("Vorderseite Text bis 1.000 Zeichen"), "Schnee");
+    await user.type(screen.getByLabelText("Rückseite Text bis 1.000 Zeichen"), "snow");
     await user.click(screen.getByRole("button", { name: "Speichern" }));
 
     await waitFor(() => expect(created.collectionId).toBe(testCollections[1]!.id));

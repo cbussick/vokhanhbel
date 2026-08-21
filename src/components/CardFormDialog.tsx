@@ -209,53 +209,69 @@ export function CardFormDialog({
               onChange={setCollectionId}
               required
             />
-            <div className={styles.faceEditor}>
-              <label htmlFor="card-front">{t("cards.front")}</label>
-              <span id="front-hint" className={styles.hint}>
-                {t("cards.frontHint")}
+            <fieldset className={styles.faceEditor}>
+              <legend id="front-face-label">{t("cards.front")}</legend>
+              <span id="front-media-hint" className={styles.hint}>
+                {t("cards.faceMediaHint")}
               </span>
-              <textarea
-                ref={frontRef}
-                id="card-front"
-                aria-describedby="front-hint"
-                maxLength={1_000}
-                value={front}
-                onChange={(event) => setFront(event.target.value)}
-              />
-              <div className={styles.audioAttachment}>
-                <AudioInput
-                  face="front"
-                  draft={frontDraft}
-                  existing={card?.front.audio ?? null}
-                  existingRemoved={frontAudioRemoved}
-                  onDraftChange={setFrontDraft}
-                  onExistingRemovedChange={setFrontAudioRemoved}
-                />
+              <div className={styles.faceControl}>
+                <div className={styles.textControl}>
+                  <label id="front-text-label" htmlFor="card-front">
+                    {t("cards.textLabel")}
+                  </label>
+                  <textarea
+                    ref={frontRef}
+                    id="card-front"
+                    aria-labelledby="front-face-label front-text-label"
+                    aria-describedby="front-media-hint"
+                    maxLength={1_000}
+                    value={front}
+                    onChange={(event) => setFront(event.target.value)}
+                  />
+                </div>
+                <div className={styles.audioAttachment}>
+                  <AudioInput
+                    face="front"
+                    draft={frontDraft}
+                    existing={card?.front.audio ?? null}
+                    existingRemoved={frontAudioRemoved}
+                    onDraftChange={setFrontDraft}
+                    onExistingRemovedChange={setFrontAudioRemoved}
+                  />
+                </div>
               </div>
-            </div>
-            <div className={styles.faceEditor}>
-              <label htmlFor="card-back">{t("cards.back")}</label>
-              <span id="back-hint" className={styles.hint}>
-                {t("cards.backHint")}
+            </fieldset>
+            <fieldset className={styles.faceEditor}>
+              <legend id="back-face-label">{t("cards.back")}</legend>
+              <span id="back-media-hint" className={styles.hint}>
+                {t("cards.faceMediaHint")}
               </span>
-              <textarea
-                id="card-back"
-                aria-describedby="back-hint"
-                maxLength={1_000}
-                value={back}
-                onChange={(event) => setBack(event.target.value)}
-              />
-              <div className={styles.audioAttachment}>
-                <AudioInput
-                  face="back"
-                  draft={backDraft}
-                  existing={card?.back.audio ?? null}
-                  existingRemoved={backAudioRemoved}
-                  onDraftChange={setBackDraft}
-                  onExistingRemovedChange={setBackAudioRemoved}
-                />
+              <div className={styles.faceControl}>
+                <div className={styles.textControl}>
+                  <label id="back-text-label" htmlFor="card-back">
+                    {t("cards.textLabel")}
+                  </label>
+                  <textarea
+                    id="card-back"
+                    aria-labelledby="back-face-label back-text-label"
+                    aria-describedby="back-media-hint"
+                    maxLength={1_000}
+                    value={back}
+                    onChange={(event) => setBack(event.target.value)}
+                  />
+                </div>
+                <div className={styles.audioAttachment}>
+                  <AudioInput
+                    face="back"
+                    draft={backDraft}
+                    existing={card?.back.audio ?? null}
+                    existingRemoved={backAudioRemoved}
+                    onDraftChange={setBackDraft}
+                    onExistingRemovedChange={setBackAudioRemoved}
+                  />
+                </div>
               </div>
-            </div>
+            </fieldset>
             {error && (
               <p role="alert" className={styles.error}>
                 {error}

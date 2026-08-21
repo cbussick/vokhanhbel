@@ -202,8 +202,8 @@ test("creates, searches, and opens a Card accessibly", async ({ page }) => {
   await expect(page.getByRole("listbox")).toBeVisible();
   await expectNoSeriousAxeViolations(page);
   await collection.press("Escape");
-  await page.getByLabel("Vorderseite", { exact: true }).fill("xin chào");
-  await page.getByLabel("Rückseite", { exact: true }).fill("hallo");
+  await page.getByRole("textbox", { name: "Vorderseite Text bis 1.000 Zeichen" }).fill("xin chào");
+  await page.getByRole("textbox", { name: "Rückseite Text bis 1.000 Zeichen" }).fill("hallo");
   await page.getByRole("button", { name: "Speichern" }).click();
   await expect(page.getByText("xin chào")).toBeVisible();
   await page.getByLabel("Karten durchsuchen").fill("CHÀO");
