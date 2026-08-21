@@ -206,11 +206,6 @@
   border-radius: var(--radius-medium);
   font-size: 0.9375rem;
   font-weight: 800;
-  transition: scale var(--duration-fast);
-}
-
-.grades button:active {
-  scale: 0.98;
 }
 
 .grades button:first-of-type {
@@ -308,10 +303,6 @@
 
   .revealed .back {
     opacity: 1;
-  }
-
-  .grades button:active {
-    scale: 1;
   }
 
   .grades {

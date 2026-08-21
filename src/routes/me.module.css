@@ -107,12 +107,8 @@
   font-size: 1.0625rem;
   font-weight: 600;
   transition:
-    transform var(--duration-fast) var(--ease-standard),
+    translate var(--duration-fast) var(--ease-standard),
     filter var(--duration-fast) var(--ease-standard);
-}
-
-.account button:active:not(:disabled) {
-  transform: scale(0.97);
 }
 
 @media (width >= 64rem) {
@@ -124,9 +120,5 @@
 @media (prefers-reduced-motion: reduce) {
   .account button {
     transition: none;
-  }
-
-  .account button:active:not(:disabled) {
-    transform: none;
   }
 }

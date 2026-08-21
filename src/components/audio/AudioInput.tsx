@@ -307,7 +307,7 @@ export function AudioInput({
             <span className={styles.icon} aria-hidden="true">
               <AudioWaveIcon />
             </span>
-            {dragging ? t("audio.drop") : t("audio.label")}
+            {t("audio.label")}
           </span>
           <span className={styles.recordingIndicator} aria-hidden="true">
             {isRecording ? (
@@ -347,7 +347,37 @@ export function AudioInput({
           accept="audio/mpeg,audio/mp4,audio/webm,audio/ogg,audio/wav,.mp3,.m4a,.mp4,.webm,.ogg,.wav"
           onChange={(event) => void chooseFile(event.target.files?.[0])}
         />
-        <div className={styles.actions}>
+        <button
+          type="button"
+          className={`${styles.actionButton} ${isRecording ? styles.stopButton : styles.recordButton}`}
+          aria-label={
+            isRecording ? t("audio.stop") : t(visibleAudio ? "audio.recordAgain" : "audio.record")
+          }
+          disabled={isRequesting}
+          onClick={isRecording ? stopRecording : () => void startRecording()}
+        >
+          <span className={styles.icon} aria-hidden="true">
+            {isRecording ? <StopIcon /> : <MicrophoneIcon />}
+          </span>
+          <span>
+            {isRecording
+              ? t("audio.stopShort")
+              : isRequesting
+                ? t("audio.requestingShort")
+                : t(visibleAudio ? "audio.recordAgain" : "audio.recordShort")}
+          </span>
+        </button>
+        <div className={styles.separator}>
+          <span>{t("audio.or")}</span>
+        </div>
+        <div className={styles.dropZone}>
+          <span className={`${styles.icon} ${styles.dropIcon}`} aria-hidden="true">
+            <UploadIcon />
+          </span>
+          <span className={styles.dropCopy}>
+            <strong>{t(dragging ? "audio.drop" : "audio.dropIdle")}</strong>
+            <span>{t("audio.formats")}</span>
+          </span>
           <button
             type="button"
             className={`${styles.actionButton} ${styles.fileButton}`}
@@ -355,30 +385,7 @@ export function AudioInput({
             disabled={isRecording || isRequesting}
             onClick={() => inputRef.current?.click()}
           >
-            <span className={styles.icon} aria-hidden="true">
-              <UploadIcon />
-            </span>
             <span>{visibleAudio ? t("audio.replaceFile") : t("audio.select")}</span>
-          </button>
-          <button
-            type="button"
-            className={`${styles.actionButton} ${isRecording ? styles.stopButton : styles.recordButton}`}
-            aria-label={
-              isRecording ? t("audio.stop") : t(visibleAudio ? "audio.recordAgain" : "audio.record")
-            }
-            disabled={isRequesting}
-            onClick={isRecording ? stopRecording : () => void startRecording()}
-          >
-            <span className={styles.icon} aria-hidden="true">
-              {isRecording ? <StopIcon /> : <MicrophoneIcon />}
-            </span>
-            <span>
-              {isRecording
-                ? t("audio.stopShort")
-                : isRequesting
-                  ? t("audio.requestingShort")
-                  : t(visibleAudio ? "audio.recordAgain" : "audio.recordShort")}
-            </span>
           </button>
         </div>
         <span className={styles.limits}>{t("audio.limits")}</span>

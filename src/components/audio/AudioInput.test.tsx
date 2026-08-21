@@ -92,9 +92,17 @@ describe("AudioInput microphone gate", () => {
     );
     const input = screen.getByRole("group", { name: "Audio für Vorderseite" });
     const dataTransfer = { types: ["Files"], files: [], dropEffect: "none" };
+    const recordButton = screen.getByRole("button", { name: "Audio aufnehmen" });
+    const fileButton = screen.getByRole("button", { name: /Audiodatei auswählen/ });
+
+    expect(screen.getByText("Audiodatei hier ablegen")).toBeVisible();
+    expect(
+      recordButton.compareDocumentPosition(fileButton) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
 
     fireEvent.dragEnter(input, { dataTransfer });
     expect(input).toHaveAttribute("data-dragging", "true");
+    expect(screen.getByText("Datei hier ablegen")).toBeVisible();
     fireEvent.dragOver(input, { dataTransfer });
     expect(dataTransfer.dropEffect).toBe("copy");
     fireEvent.dragLeave(input, { dataTransfer });

@@ -284,12 +284,66 @@ test("keeps the Card audio rail stable while dragging and recording", async ({ p
 
   await rail.dispatchEvent("dragenter", { dataTransfer });
   await expect(rail).toHaveAttribute("data-dragging", "true");
-  await expect(rail.getByText("Datei hier ablegen")).toBeVisible();
+  const dropCopy = rail.getByText("Datei hier ablegen");
+  await expect(dropCopy).toBeVisible();
+  const dropStyles = await dropCopy.evaluate((element) => {
+    const dropZone = element.parentElement?.parentElement;
+    if (!dropZone) throw new Error("Audio drop zone not found");
+    const browser = globalThis as unknown as {
+      getComputedStyle: (target: unknown) => { borderRadius: string; cursor: string };
+    };
+    const styles = browser.getComputedStyle(dropZone);
+
+    return {
+      borderRadius: styles.borderRadius,
+      cursor: styles.cursor,
+    };
+  });
+  expect(dropStyles.borderRadius).not.toBe("0px");
+  expect(dropStyles.cursor).toBe("copy");
   await rail.dispatchEvent("dragleave", { dataTransfer });
   await dataTransfer.dispose();
   await expect(rail).not.toHaveAttribute("data-dragging");
 
-  await rail.getByRole("button", { name: "Audio aufnehmen" }).click();
+  const recordButton = rail.getByRole("button", { name: "Audio aufnehmen" });
+  const idleButtonStyles = await recordButton.evaluate((element) => {
+    const browser = globalThis as unknown as {
+      getComputedStyle: (target: unknown) => {
+        fontSize: string;
+        fontWeight: string;
+        scale: string;
+      };
+    };
+    const styles = browser.getComputedStyle(element);
+
+    return { fontSize: styles.fontSize, fontWeight: styles.fontWeight, scale: styles.scale };
+  });
+  const recordBox = await recordButton.boundingBox();
+  if (!recordBox) throw new Error("Audio record button not found");
+  await page.mouse.move(recordBox.x + recordBox.width / 2, recordBox.y + recordBox.height / 2);
+  await page.mouse.down();
+  await page.waitForTimeout(150);
+  const pressedButtonStyles = await recordButton.evaluate((element) => {
+    const browser = globalThis as unknown as {
+      getComputedStyle: (target: unknown) => {
+        fontSize: string;
+        fontWeight: string;
+        scale: string;
+        translate: string;
+      };
+    };
+    const styles = browser.getComputedStyle(element);
+
+    return {
+      fontSize: styles.fontSize,
+      fontWeight: styles.fontWeight,
+      scale: styles.scale,
+      translate: styles.translate,
+    };
+  });
+  expect(pressedButtonStyles).toMatchObject(idleButtonStyles);
+  expect(pressedButtonStyles.translate).toBe("0px 1px");
+  await page.mouse.up();
   await expect(rail.getByRole("button", { name: "Aufnahme stoppen" })).toBeVisible();
   await expect(rail.getByText(/Aufnahme · \d\.\d s/)).toBeVisible();
   const recordingBox = await rail.boundingBox();

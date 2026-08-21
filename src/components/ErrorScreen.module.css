@@ -40,19 +40,4 @@
   background: var(--color-primary);
   color: var(--color-primary-text);
   font-weight: 800;
-  transition: scale var(--duration-fast) var(--ease-standard);
-}
-
-.card button:active {
-  scale: 0.98;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .card button {
-    transition: none;
-  }
-
-  .card button:active {
-    scale: 1;
-  }
 }

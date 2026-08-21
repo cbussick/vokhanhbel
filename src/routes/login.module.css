@@ -64,11 +64,6 @@
   background: var(--color-primary);
   color: var(--color-primary-text);
   font-weight: 800;
-  transition: scale var(--duration-fast) var(--ease-standard);
-}
-
-.card button:active:not(:disabled) {
-  scale: 0.98;
 }
 
 .error {
@@ -103,13 +98,5 @@
 @media (prefers-reduced-motion: reduce) {
   .card input[aria-invalid="true"] {
     animation: none;
-  }
-
-  .card button {
-    transition: background-color var(--duration-fast);
-  }
-
-  .card button:active:not(:disabled) {
-    scale: 1;
   }
 }

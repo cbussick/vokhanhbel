@@ -34,6 +34,7 @@
 
   button {
     cursor: pointer;
+    transition: translate var(--duration-fast) var(--ease-standard);
   }
 
   img,
@@ -118,6 +119,10 @@
     opacity: 0.58;
   }
 
+  button:active:not(:disabled) {
+    translate: 0 1px;
+  }
+
   :where(a, button, input, textarea):focus-visible {
     outline: 3px solid var(--color-primary-text);
     outline-offset: 2px;
@@ -143,5 +148,13 @@
 @media (prefers-reduced-motion: reduce) {
   html:focus-within {
     scroll-behavior: auto;
+  }
+
+  button {
+    transition-duration: 0ms;
+  }
+
+  button:active:not(:disabled) {
+    translate: 0;
   }
 }

@@ -30,12 +30,6 @@
     box-shadow var(--duration-fast) var(--ease-standard);
 }
 
-.input[data-dragging="true"] .rail {
-  border-block-start-color: var(--color-primary-text);
-  background: color-mix(in srgb, var(--color-primary) 24%, var(--color-surface));
-  box-shadow: inset 0 0 0 1px var(--color-primary-text);
-}
-
 .recordingRail {
   border-block-start-color: color-mix(in srgb, var(--color-danger) 58%, var(--color-border));
   background: color-mix(in srgb, var(--color-danger) 7%, var(--color-surface));
@@ -119,12 +113,6 @@
   text-underline-offset: 0.15em;
 }
 
-.actions {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: var(--space-2);
-}
-
 .actionButton {
   min-inline-size: 0;
   min-block-size: 44px;
@@ -137,19 +125,22 @@
   font-weight: 800;
   line-height: 1.2;
   transition:
-    transform var(--duration-fast) var(--ease-standard),
+    translate var(--duration-fast) var(--ease-standard),
     border-color var(--duration-fast) var(--ease-standard),
     background-color var(--duration-fast) var(--ease-standard);
 }
 
-.actionButton:active:not(:disabled) {
-  transform: scale(0.98);
-}
-
 .fileButton {
+  min-block-size: 40px;
   border: 1px solid var(--color-border);
   background: var(--color-surface);
   color: var(--color-text);
+}
+
+.recordButton,
+.stopButton {
+  inline-size: 100%;
+  min-block-size: 48px;
 }
 
 .recordButton {
@@ -162,6 +153,60 @@
   border: 1px solid var(--color-danger);
   background: var(--color-danger);
   color: white;
+}
+
+.separator {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--color-text-secondary);
+  font-size: var(--font-xs);
+}
+
+.separator::before,
+.separator::after {
+  content: "";
+  border-block-start: 1px solid var(--color-border);
+}
+
+.dropZone {
+  min-inline-size: 0;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border: 1px dashed var(--color-border);
+  border-radius: var(--radius-medium);
+  background: color-mix(in srgb, var(--color-surface) 84%, var(--color-primary));
+  transition:
+    border-color var(--duration-fast) var(--ease-standard),
+    background-color var(--duration-fast) var(--ease-standard);
+}
+
+.input[data-dragging="true"] .dropZone {
+  border-color: var(--color-primary-text);
+  background: color-mix(in srgb, var(--color-primary) 30%, var(--color-surface));
+  cursor: copy;
+}
+
+.dropIcon {
+  color: var(--color-primary-text);
+}
+
+.dropCopy {
+  min-inline-size: 0;
+  display: grid;
+  gap: var(--space-1);
+  color: var(--color-text-secondary);
+  font-size: var(--font-xs);
+  line-height: 1.3;
+}
+
+.dropCopy strong {
+  color: var(--color-text);
+  font-size: var(--font-sm);
 }
 
 .limits,
@@ -215,6 +260,15 @@
   .recordingIndicator {
     min-inline-size: 7.5rem;
   }
+
+  .dropZone {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .fileButton {
+    grid-column: 1 / -1;
+    inline-size: 100%;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -222,7 +276,8 @@
     animation: none;
   }
 
-  .actionButton {
+  .actionButton,
+  .dropZone {
     transition-duration: 0ms;
   }
 }
