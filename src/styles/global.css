@@ -119,7 +119,7 @@
     opacity: 0.58;
   }
 
-  button:active:not(:disabled) {
+  button:active:not(:disabled, [aria-disabled="true"]) {
     translate: 0 1px;
   }
 
@@ -154,7 +154,7 @@
     transition-duration: 0ms;
   }
 
-  button:active:not(:disabled) {
+  button:active:not(:disabled, [aria-disabled="true"]) {
     translate: 0;
   }
 }
