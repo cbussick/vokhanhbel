@@ -60,6 +60,30 @@ backup, and restore operations instead require `DATABASE_URL_UNPOOLED` so they b
 connection pool. `OPENAI_MODEL` is an optional deployment override: omit it to use the application
 default.
 
+## Preview migration
+
+Preview uses a separate Neon database branch. Copy the preview migration template to its ignored
+local file, then restrict it to its owner:
+
+```sh
+cp .env.preview-migration.example .env.preview-migration.local
+chmod 600 .env.preview-migration.local
+```
+
+Add the direct, unpooled connection string for the separate preview branch to
+`.env.preview-migration.local`, then run:
+
+```sh
+npm run db:migrate:preview
+```
+
+The command accepts only a direct PostgreSQL connection string and displays the host, database, and
+user without the password or connection options. If `.env.production-migration.local` exists, it
+refuses a preview target that points to the same host, port, and database as production. It then
+applies the committed Drizzle migrations. Preview data is disposable, so this command does not
+create the encrypted backup required by the production migration flow. Do not use
+`npm run db:migrate` for preview; that command loads `.env.local` and targets local development.
+
 ## Private R2 audio storage
 
 Enable R2 in Cloudflare. Create two private Standard buckets in the EU jurisdiction: one for

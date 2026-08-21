@@ -6,6 +6,7 @@ test-results/
 .env
 .env.*
 !.env.example
+!.env.preview-migration.example
 !.env.production-migration.example
 .secrets/
 *.dump
