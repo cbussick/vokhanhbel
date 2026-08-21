@@ -315,20 +315,24 @@ test("keeps one scroll container when a Card textarea is enlarged", async ({ pag
     dialogOverflow: string;
     sheetOverflow: string;
     sheetHasOverflow: boolean;
+    textareaResize: string;
   }>(`(() => {
     const dialog = document.querySelector("dialog");
     const sheet = dialog?.querySelector(":scope > section");
-    if (!dialog || !sheet) throw new Error("Card dialog sheet not found");
+    const textarea = document.querySelector("#card-front");
+    if (!dialog || !sheet || !textarea) throw new Error("Card dialog sheet not found");
     return {
       dialogOverflow: getComputedStyle(dialog).overflowY,
       sheetOverflow: getComputedStyle(sheet).overflowY,
       sheetHasOverflow: sheet.scrollHeight > sheet.clientHeight,
+      textareaResize: getComputedStyle(textarea).resize,
     };
   })()`);
 
   expect(scrollState.dialogOverflow).toBe("visible");
   expect(scrollState.sheetOverflow).toBe("auto");
   expect(scrollState.sheetHasOverflow).toBe(true);
+  expect(scrollState.textareaResize).toBe("none");
 });
 
 test("completes Review, Tutor, repeat-ready summary, and Me", async ({ page }) => {

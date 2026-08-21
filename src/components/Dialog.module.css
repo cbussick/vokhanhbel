@@ -201,7 +201,7 @@
 .sheet textarea {
   inline-size: 100%;
   min-block-size: 7rem;
-  resize: vertical;
+  resize: none;
   padding: var(--space-3);
   border: 2px solid var(--color-border);
   border-radius: var(--radius-medium);
