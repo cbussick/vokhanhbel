@@ -1,14 +1,20 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { cardSchema, createCardInputSchema, type Card } from "../contracts/card";
+import {
+  cardSchema,
+  createCardInputSchema,
+  updateCardInputSchema,
+  type Card,
+} from "../contracts/card";
 import { apiPaths } from "../contracts/apiPaths";
 import { problemTypes } from "../contracts/problem";
-import { apiRequest, ApiError } from "../lib/apiClient";
+import { apiRequest, ApiError, stageAudioDraft } from "../lib/apiClient";
 import { useOnlineStatus } from "../lib/browserState";
 import { collectionsQuery } from "../lib/queries";
 import { queryKeys } from "../lib/queryKeys";
 import { CollectionSelect } from "./CollectionSelect";
+import { AudioInput, releaseAudioDraft, type AudioDraft } from "./audio/AudioInput";
 import styles from "./Dialog.module.css";
 
 export function CardFormDialog({
@@ -31,8 +37,12 @@ export function CardFormDialog({
   const frontRef = useRef<HTMLTextAreaElement>(null);
 
   const [collectionId, setCollectionId] = useState(card?.collectionId ?? defaultCollectionId ?? "");
-  const [front, setFront] = useState(card?.front ?? "");
-  const [back, setBack] = useState(card?.back ?? "");
+  const [front, setFront] = useState(card?.front.text ?? "");
+  const [back, setBack] = useState(card?.back.text ?? "");
+  const [frontDraft, setFrontDraft] = useState<AudioDraft | null>(null);
+  const [backDraft, setBackDraft] = useState<AudioDraft | null>(null);
+  const [frontAudioRemoved, setFrontAudioRemoved] = useState(false);
+  const [backAudioRemoved, setBackAudioRemoved] = useState(false);
   const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
   const [error, setError] = useState<string>();
 
@@ -45,32 +55,58 @@ export function CardFormDialog({
   }, []);
 
   const close = () => {
+    releaseAudioDraft(frontDraft);
+    releaseAudioDraft(backDraft);
     dialogRef.current?.close();
     onClose();
   };
 
   const save = useMutation({
     mutationFn: async () => {
-      const input = createCardInputSchema.parse({
-        collectionId,
-        front,
-        back,
-      });
+      const stagedIds: string[] = [];
 
-      return card
-        ? cardSchema.parse(
-            await apiRequest(apiPaths.card(card.id), {
-              method: "PATCH",
-              body: JSON.stringify(input),
-            }),
-          )
-        : cardSchema.parse(
-            await apiRequest(apiPaths.cards, { method: "POST", body: JSON.stringify(input) }),
-          );
+      try {
+        const stagedFront = frontDraft ? await stageAudioDraft(frontDraft.blob) : undefined;
+
+        if (stagedFront) stagedIds.push(stagedFront.id);
+        const stagedBack = backDraft ? await stageAudioDraft(backDraft.blob) : undefined;
+
+        if (stagedBack) stagedIds.push(stagedBack.id);
+        const value = {
+          collectionId,
+          front: {
+            text: front.trim() ? front : null,
+            audioId:
+              stagedFront?.id ?? (frontAudioRemoved ? null : (card?.front.audio?.id ?? null)),
+          },
+          back: {
+            text: back.trim() ? back : null,
+            audioId: stagedBack?.id ?? (backAudioRemoved ? null : (card?.back.audio?.id ?? null)),
+          },
+        };
+        const input = card
+          ? updateCardInputSchema.parse(value)
+          : createCardInputSchema.parse(value);
+        const saved = cardSchema.parse(
+          await apiRequest(card ? apiPaths.card(card.id) : apiPaths.cards, {
+            method: card ? "PATCH" : "POST",
+            body: JSON.stringify(input),
+          }),
+        );
+
+        return saved;
+      } catch (value) {
+        await Promise.allSettled(
+          stagedIds.map((audioId) => apiRequest(apiPaths.audio(audioId), { method: "DELETE" })),
+        );
+        throw value;
+      }
     },
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: queryKeys.cards });
 
+      releaseAudioDraft(frontDraft);
+      releaseAudioDraft(backDraft);
       dialogRef.current?.close();
       onClose();
     },
@@ -179,8 +215,7 @@ export function CardFormDialog({
               ref={frontRef}
               id="card-front"
               aria-describedby="front-hint"
-              required
-              maxLength={200}
+              maxLength={1_000}
               value={front}
               onChange={(event) => setFront(event.target.value)}
             />
@@ -191,10 +226,25 @@ export function CardFormDialog({
             <textarea
               id="card-back"
               aria-describedby="back-hint"
-              required
               maxLength={1_000}
               value={back}
               onChange={(event) => setBack(event.target.value)}
+            />
+            <AudioInput
+              face="front"
+              draft={frontDraft}
+              existing={card?.front.audio ?? null}
+              existingRemoved={frontAudioRemoved}
+              onDraftChange={setFrontDraft}
+              onExistingRemovedChange={setFrontAudioRemoved}
+            />
+            <AudioInput
+              face="back"
+              draft={backDraft}
+              existing={card?.back.audio ?? null}
+              existingRemoved={backAudioRemoved}
+              onDraftChange={setBackDraft}
+              onExistingRemovedChange={setBackAudioRemoved}
             />
             {error && (
               <p role="alert" className={styles.error}>
@@ -217,7 +267,12 @@ export function CardFormDialog({
               <button
                 type="submit"
                 className={styles.primary}
-                disabled={save.isPending || !collectionId || !front.trim() || !back.trim()}
+                disabled={
+                  save.isPending ||
+                  !collectionId ||
+                  (!front.trim() && !frontDraft && (frontAudioRemoved || !card?.front.audio)) ||
+                  (!back.trim() && !backDraft && (backAudioRemoved || !card?.back.audio))
+                }
               >
                 {t("common.save")}
               </button>

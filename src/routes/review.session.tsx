@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next";
 import { AppShell } from "../components/AppShell";
 import { RequireSession } from "../components/RequireSession";
 import { TutorDialog } from "../components/TutorDialog";
+import { CardFace } from "../components/audio/CardFace";
 import type { Grade } from "../domain/review";
 import { useOnlineStatus } from "../lib/browserState";
 import { useReviewSession } from "../state/ReviewSessionContext";
@@ -19,6 +20,8 @@ function ReviewSessionRoute() {
   const online = useOnlineStatus();
   const [tutorOpen, setTutorOpen] = useState(false);
   const [revealComplete, setRevealComplete] = useState(false);
+  const [frontAudioAvailable, setFrontAudioAvailable] = useState(true);
+  const [backAudioAvailable, setBackAudioAvailable] = useState(true);
 
   if (reviewSession.view.kind === "idle") return <Navigate to="/review" />;
 
@@ -82,11 +85,20 @@ function ReviewSessionRoute() {
   }
 
   const card = reviewSession.view.currentCard;
+  const frontRequiredUnavailable =
+    !card.front.text && Boolean(card.front.audio) && !frontAudioAvailable;
+  const backRequiredUnavailable =
+    reviewSession.view.revealed &&
+    !card.back.text &&
+    Boolean(card.back.audio) &&
+    !backAudioAvailable;
 
   const grade = (value: Grade) => {
     reviewSession.gradeCard(value);
     setRevealComplete(false);
     setTutorOpen(false);
+    setFrontAudioAvailable(true);
+    setBackAudioAvailable(true);
   };
 
   return (
@@ -135,7 +147,11 @@ function ReviewSessionRoute() {
                 aria-hidden={reviewSession.view.revealed}
                 tabIndex={reviewSession.view.revealed ? -1 : 0}
               >
-                <span>{card.front}</span>
+                <CardFace
+                  face={card.front}
+                  label="front"
+                  onAudioAvailabilityChange={setFrontAudioAvailable}
+                />
               </section>
               <section
                 className={`${styles.face} ${styles.back}`}
@@ -143,11 +159,20 @@ function ReviewSessionRoute() {
                 aria-hidden={!reviewSession.view.revealed}
                 tabIndex={reviewSession.view.revealed ? 0 : -1}
               >
-                <span>{card.back}</span>
+                <CardFace
+                  face={card.back}
+                  label="back"
+                  onAudioAvailabilityChange={setBackAudioAvailable}
+                />
               </section>
             </div>
             {!reviewSession.view.revealed && (
-              <button type="button" className={styles.revealButton} onClick={reveal}>
+              <button
+                type="button"
+                className={styles.revealButton}
+                onClick={reveal}
+                disabled={frontRequiredUnavailable}
+              >
                 {t("review.reveal")}
               </button>
             )}
@@ -171,7 +196,9 @@ function ReviewSessionRoute() {
                 <fieldset
                   className={styles.grades}
                   disabled={
-                    reviewSession.view.issue === "clock" || reviewSession.view.issue === "conflict"
+                    backRequiredUnavailable ||
+                    reviewSession.view.issue === "clock" ||
+                    reviewSession.view.issue === "conflict"
                   }
                 >
                   <legend>{t("review.grading")}</legend>
@@ -186,6 +213,22 @@ function ReviewSessionRoute() {
                   </button>
                 </fieldset>
               </>
+            )}
+            {(frontRequiredUnavailable || backRequiredUnavailable) && (
+              <div className={styles.audioUnavailable} role="alert">
+                <p>{t("review.audioRequiredUnavailable")}</p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    reviewSession.skipCard();
+                    setRevealComplete(false);
+                    setFrontAudioAvailable(true);
+                    setBackAudioAvailable(true);
+                  }}
+                >
+                  {t("review.skipCard")}
+                </button>
+              </div>
             )}
           </div>
           {tutorOpen && <TutorDialog card={card} onClose={() => setTutorOpen(false)} />}

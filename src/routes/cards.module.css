@@ -98,6 +98,32 @@
   text-decoration: none;
 }
 
+.list li {
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-medium);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-small);
+}
+
+.list li > a {
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.rowAudio {
+  display: grid;
+  gap: var(--space-2);
+  padding: 0 var(--space-4) var(--space-3);
+}
+
+.rowAudio > span {
+  color: var(--color-text-secondary);
+  font-size: var(--font-xs);
+  font-weight: 700;
+}
+
 .rowText {
   display: grid;
   gap: var(--space-1);

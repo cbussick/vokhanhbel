@@ -8,6 +8,7 @@ import { CollectionFormDialog } from "../components/CollectionFormDialog";
 import { CollectionIcon } from "../components/CollectionIcon";
 import { DelayedSkeleton } from "../components/DelayedSkeleton";
 import { IconButton } from "../components/IconButton";
+import { AudioPlayer, formatAudioDuration } from "../components/audio/AudioPlayer";
 import { useOnlineStatus } from "../lib/browserState";
 import { cardsQuery, collectionsQuery } from "../lib/queries";
 import styles from "./cards.module.css";
@@ -52,8 +53,8 @@ function CollectionCardsRoute() {
   const visible = normalizedQuery
     ? inCollection.filter(
         (card) =>
-          card.front.toLocaleLowerCase("de").includes(normalizedQuery) ||
-          card.back.toLocaleLowerCase("de").includes(normalizedQuery),
+          (card.front.text?.toLocaleLowerCase("de").includes(normalizedQuery) ?? false) ||
+          (card.back.text?.toLocaleLowerCase("de").includes(normalizedQuery) ?? false),
       )
     : inCollection;
   const hasCards = inCollection.length > 0;
@@ -124,10 +125,36 @@ function CollectionCardsRoute() {
               <li key={card.id}>
                 <Link to="/cards/$collectionId/$cardId" params={{ collectionId, cardId: card.id }}>
                   <span className={styles.rowText}>
-                    <strong>{card.front}</strong>
-                    <span className={styles.rowDetail}>{card.back}</span>
+                    <strong>
+                      {card.front.text ??
+                        (card.front.audio
+                          ? t("audio.duration", {
+                              duration: formatAudioDuration(card.front.audio.durationMs),
+                            })
+                          : "")}
+                    </strong>
+                    <span className={styles.rowDetail}>
+                      {card.back.text ??
+                        (card.back.audio
+                          ? t("audio.duration", {
+                              duration: formatAudioDuration(card.back.audio.durationMs),
+                            })
+                          : "")}
+                    </span>
                   </span>
                 </Link>
+                {card.front.audio ? (
+                  <div className={styles.rowAudio}>
+                    <span>{t("audio.front")}</span>
+                    <AudioPlayer audio={card.front.audio} label={t("audio.frontLabel")} compact />
+                  </div>
+                ) : null}
+                {card.back.audio ? (
+                  <div className={styles.rowAudio}>
+                    <span>{t("audio.back")}</span>
+                    <AudioPlayer audio={card.back.audio} label={t("audio.backLabel")} compact />
+                  </div>
+                ) : null}
               </li>
             ))}
           </ul>

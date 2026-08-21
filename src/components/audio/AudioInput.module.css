@@ -1,0 +1,61 @@
+.input {
+  display: grid;
+  gap: var(--space-3);
+  margin-block-start: var(--space-3);
+  padding: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-medium);
+}
+
+.input legend {
+  padding-inline: var(--space-1);
+  font-weight: 700;
+}
+
+.input button {
+  min-block-size: 44px;
+  padding-inline: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-medium);
+  background: white;
+  font-weight: 700;
+}
+
+.dropZone {
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-4);
+  border: 2px dashed var(--color-border);
+  border-radius: var(--radius-medium);
+  background: color-mix(in srgb, var(--color-primary) 8%, white);
+}
+
+.dropZone label {
+  margin: 0;
+}
+
+.dropZone span,
+.status {
+  color: var(--color-text-secondary);
+  font-size: var(--font-xs);
+}
+
+.preview,
+.recording {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.recording span {
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+}
+
+.error {
+  color: var(--color-danger);
+  font-weight: 600;
+}
+
+.status:empty {
+  display: none;
+}

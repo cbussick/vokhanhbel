@@ -1,10 +1,9 @@
 import OpenAI from "openai";
-import type { Card } from "../../contracts/card.js";
 import type { TutorInput } from "../../contracts/tutor.js";
 import { getServerEnvironment } from "../config/environment.js";
 
 export interface TutorProviderRequest {
-  card: Card;
+  card: { front: string; back: string };
   input: TutorInput;
   signal: AbortSignal;
 }

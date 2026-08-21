@@ -24,13 +24,14 @@ export async function PATCH(request: Request): Promise<Response> {
   return handleRequest(
     request,
     { unsafe: true, protected: true, bodySchema: updateCardInputSchema },
-    async ({ body }) => Response.json(await updateCard(getCardId(request), body)),
+    async ({ body, sessionHash, requestId }) =>
+      Response.json(await updateCard(getCardId(request), body, sessionHash, requestId)),
   );
 }
 
 export async function DELETE(request: Request): Promise<Response> {
-  return handleRequest(request, { unsafe: true, protected: true }, async () => {
-    await deleteCard(getCardId(request));
+  return handleRequest(request, { unsafe: true, protected: true }, async ({ requestId }) => {
+    await deleteCard(getCardId(request), requestId);
 
     return new Response(null, { status: 204 });
   });

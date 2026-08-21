@@ -1,4 +1,5 @@
 import { apiPaths } from "../contracts/apiPaths";
+import { audioMetadataSchema, type AudioMetadata } from "../contracts/card";
 import { problemSchema, problemTypes, type Problem } from "../contracts/problem";
 import { publishSessionExpired } from "./sessionEvents";
 
@@ -43,4 +44,29 @@ export async function apiRequest<T>(path: string, init?: RequestInit): Promise<T
 
 export function isTemporaryError(error: unknown): boolean {
   return !navigator.onLine || !(error instanceof ApiError) || error.problem.status >= 500;
+}
+
+export async function stageAudioDraft(blob: Blob): Promise<AudioMetadata> {
+  const response = await fetch(apiPaths.stageAudio, {
+    method: "POST",
+    body: blob,
+    headers: { "Content-Type": blob.type },
+    credentials: "same-origin",
+  });
+
+  if (!response.ok) {
+    const parsed = problemSchema.safeParse(await response.json().catch(() => undefined));
+    const problem = parsed.success
+      ? parsed.data
+      : {
+          type: problemTypes.unexpected,
+          title: "Da ist etwas schiefgegangen",
+          status: response.status,
+          instance: `urn:uuid:${crypto.randomUUID()}`,
+        };
+
+    throw new ApiError(problem, undefined, response.headers.get("x-request-id") ?? undefined);
+  }
+
+  return audioMetadataSchema.parse(await response.json());
 }

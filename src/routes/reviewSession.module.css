@@ -322,3 +322,20 @@
     display: none;
   }
 }
+
+.audioUnavailable {
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  border-radius: var(--radius-medium);
+  background: color-mix(in srgb, var(--color-warning) 28%, white);
+}
+
+.audioUnavailable button {
+  min-block-size: 44px;
+  border: 0;
+  border-radius: var(--radius-medium);
+  background: var(--color-primary);
+  color: var(--color-primary-text);
+  font-weight: 700;
+}

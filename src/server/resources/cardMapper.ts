@@ -1,12 +1,14 @@
 import { z } from "zod";
-import { cardSchema, type Card } from "../../contracts/card.js";
+import { audioMetadataSchema, cardSchema, type Card } from "../../contracts/card.js";
 import { boxSchema } from "../../domain/review.js";
+
+const audioRowSchema = audioMetadataSchema.extend({ deletedAt: z.date().nullable() }).nullable();
 
 const cardRowSchema = z.object({
   id: z.uuid(),
   collectionId: z.uuid(),
-  front: z.string(),
-  back: z.string(),
+  frontText: z.string().nullable(),
+  backText: z.string().nullable(),
   box: boxSchema,
   dueAt: z.date(),
   lastReviewedAt: z.date().nullable(),
@@ -15,19 +17,49 @@ const cardRowSchema = z.object({
   deletedAt: z.date().nullable(),
 });
 
+const joinedCardRowSchema = z.object({
+  card: cardRowSchema,
+  frontAudio: audioRowSchema,
+  backAudio: audioRowSchema,
+});
+
+export type CardRow = z.input<typeof joinedCardRowSchema>;
+
 export function mapCard(value: unknown): Card {
-  const row = cardRowSchema.parse(value);
+  const row = joinedCardRowSchema.parse(value);
+  const frontAudio = row.frontAudio?.deletedAt ? null : row.frontAudio;
+  const backAudio = row.backAudio?.deletedAt ? null : row.backAudio;
 
   return cardSchema.parse({
-    id: row.id,
-    collectionId: row.collectionId,
-    front: row.front,
-    back: row.back,
-    box: row.box,
-    dueAt: row.dueAt.toISOString(),
-    lastReviewedAt: row.lastReviewedAt?.toISOString() ?? null,
-    createdAt: row.createdAt.toISOString(),
-    updatedAt: row.updatedAt.toISOString(),
-    deletedAt: row.deletedAt?.toISOString() ?? null,
+    id: row.card.id,
+    collectionId: row.card.collectionId,
+    front: {
+      text: row.card.frontText,
+      audio: frontAudio
+        ? {
+            id: frontAudio.id,
+            durationMs: frontAudio.durationMs,
+            contentType: frontAudio.contentType,
+            byteSize: frontAudio.byteSize,
+          }
+        : null,
+    },
+    back: {
+      text: row.card.backText,
+      audio: backAudio
+        ? {
+            id: backAudio.id,
+            durationMs: backAudio.durationMs,
+            contentType: backAudio.contentType,
+            byteSize: backAudio.byteSize,
+          }
+        : null,
+    },
+    box: row.card.box,
+    dueAt: row.card.dueAt.toISOString(),
+    lastReviewedAt: row.card.lastReviewedAt?.toISOString() ?? null,
+    createdAt: row.card.createdAt.toISOString(),
+    updatedAt: row.card.updatedAt.toISOString(),
+    deletedAt: row.card.deletedAt?.toISOString() ?? null,
   });
 }

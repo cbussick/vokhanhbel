@@ -35,14 +35,24 @@ const reviewRowSchema = z.object({
 const databaseCardRowSchema = z.object({
   id: z.uuid(),
   collection_id: z.uuid(),
-  front: z.string(),
-  back: z.string(),
+  front_text: z.string().nullable(),
+  back_text: z.string().nullable(),
   box: boxSchema,
   due_at: z.date(),
   last_reviewed_at: z.date().nullable(),
   created_at: z.date(),
   updated_at: z.date(),
   deleted_at: z.date().nullable(),
+  front_audio_id: z.uuid().nullable(),
+  front_audio_duration_ms: z.number().int().nullable(),
+  front_audio_content_type: z.string().nullable(),
+  front_audio_byte_size: z.number().int().nullable(),
+  front_audio_deleted_at: z.date().nullable(),
+  back_audio_id: z.uuid().nullable(),
+  back_audio_duration_ms: z.number().int().nullable(),
+  back_audio_content_type: z.string().nullable(),
+  back_audio_byte_size: z.number().int().nullable(),
+  back_audio_deleted_at: z.date().nullable(),
 });
 
 const dueRowSchema = z.object({ due_at: z.date() });
@@ -53,18 +63,51 @@ function mapDatabaseCard(value: unknown) {
   const row = databaseCardRowSchema.parse(value);
 
   return mapCard({
-    id: row.id,
-    collectionId: row.collection_id,
-    front: row.front,
-    back: row.back,
-    box: row.box,
-    dueAt: row.due_at,
-    lastReviewedAt: row.last_reviewed_at,
-    createdAt: row.created_at,
-    updatedAt: row.updated_at,
-    deletedAt: row.deleted_at,
+    card: {
+      id: row.id,
+      collectionId: row.collection_id,
+      frontText: row.front_text,
+      backText: row.back_text,
+      box: row.box,
+      dueAt: row.due_at,
+      lastReviewedAt: row.last_reviewed_at,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
+      deletedAt: row.deleted_at,
+    },
+    frontAudio: row.front_audio_id
+      ? {
+          id: row.front_audio_id,
+          durationMs: row.front_audio_duration_ms,
+          contentType: row.front_audio_content_type,
+          byteSize: row.front_audio_byte_size,
+          deletedAt: row.front_audio_deleted_at,
+        }
+      : null,
+    backAudio: row.back_audio_id
+      ? {
+          id: row.back_audio_id,
+          durationMs: row.back_audio_duration_ms,
+          contentType: row.back_audio_content_type,
+          byteSize: row.back_audio_byte_size,
+          deletedAt: row.back_audio_deleted_at,
+        }
+      : null,
   });
 }
+
+const cardSelectSql = `
+  SELECT c.*,
+    fa.id AS front_audio_id, fa.duration_ms AS front_audio_duration_ms,
+    fa.content_type AS front_audio_content_type, fa.byte_size AS front_audio_byte_size,
+    fa.deleted_at AS front_audio_deleted_at,
+    ba.id AS back_audio_id, ba.duration_ms AS back_audio_duration_ms,
+    ba.content_type AS back_audio_content_type, ba.byte_size AS back_audio_byte_size,
+    ba.deleted_at AS back_audio_deleted_at
+  FROM cards c
+  LEFT JOIN audio_assets fa ON fa.id=c.front_audio_id
+  LEFT JOIN audio_assets ba ON ba.id=c.back_audio_id
+  WHERE c.id=$1`;
 
 function mapReview(value: unknown) {
   const row = reviewRowSchema.parse(value);
@@ -112,9 +155,8 @@ export async function recordReview(input: ReviewSubmissionInput): Promise<Review
       });
     }
 
-    const cardResult = await client.query("SELECT * FROM cards WHERE id = $1 FOR UPDATE", [
-      input.cardId,
-    ]);
+    await client.query("SELECT id FROM cards WHERE id = $1 FOR UPDATE", [input.cardId]);
+    const cardResult = await client.query(cardSelectSql, [input.cardId]);
     const card = cardResult.rows[0] ? databaseCardRowSchema.parse(cardResult.rows[0]) : undefined;
 
     if (!card || card.deleted_at)
@@ -136,10 +178,11 @@ export async function recordReview(input: ReviewSubmissionInput): Promise<Review
       [reviewedAt, intervalDays, berlinTimeZone],
     );
     const dueAt = dueRowSchema.parse(dueResult.rows[0]).due_at;
-    const updated = await client.query(
-      "UPDATE cards SET box=$1, due_at=$2, last_reviewed_at=$3, updated_at=now() WHERE id=$4 RETURNING *",
+    await client.query(
+      "UPDATE cards SET box=$1, due_at=$2, last_reviewed_at=$3, updated_at=now() WHERE id=$4",
       [boxAfter, dueAt, reviewedAt, input.cardId],
     );
+    const updated = await client.query(cardSelectSql, [input.cardId]);
     const resultingCard = mapDatabaseCard(updated.rows[0]);
     const inserted = await client.query(
       "INSERT INTO reviews (id, card_id, grade, points_awarded, box_before, box_after, reviewed_at, result_card) VALUES ($1,$2,$3,$4,$5,$6,$7,$8::jsonb) RETURNING *",
