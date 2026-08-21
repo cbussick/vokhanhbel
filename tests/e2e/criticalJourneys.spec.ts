@@ -275,6 +275,17 @@ test("keeps the Card dialog locked while Save is pending", async ({ page }) => {
   await expect(dialog.getByRole("combobox", { name: "Sammlung" })).toBeDisabled();
   await expectNoSeriousAxeViolations(page);
 
+  const pendingSaveBox = await pendingSave.boundingBox();
+  expect(pendingSaveBox).not.toBeNull();
+  await page.mouse.move(
+    pendingSaveBox!.x + pendingSaveBox!.width / 2,
+    pendingSaveBox!.y + pendingSaveBox!.height / 2,
+  );
+  await page.mouse.down();
+  await page.waitForTimeout(200);
+  await expect(pendingSave).toHaveCSS("translate", "none");
+  await page.mouse.up();
+
   await pendingSave.dispatchEvent("click");
   expect(saveRequests).toBe(1);
 
