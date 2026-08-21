@@ -79,6 +79,28 @@ describe("AudioInput microphone gate", () => {
     expect(screen.getByLabelText(/Audiodatei auswählen/)).toBeEnabled();
   });
 
+  it("shows a copy affordance only while a file is dragged over the audio control", () => {
+    render(
+      <AudioInput
+        face="front"
+        draft={null}
+        existing={null}
+        existingRemoved={false}
+        onDraftChange={() => undefined}
+        onExistingRemovedChange={() => undefined}
+      />,
+    );
+    const input = screen.getByRole("group", { name: "Audio für Vorderseite" });
+    const dataTransfer = { types: ["Files"], files: [], dropEffect: "none" };
+
+    fireEvent.dragEnter(input, { dataTransfer });
+    expect(input).toHaveAttribute("data-dragging", "true");
+    fireEvent.dragOver(input, { dataTransfer });
+    expect(dataTransfer.dropEffect).toBe("copy");
+    fireEvent.dragLeave(input, { dataTransfer });
+    expect(input).not.toHaveAttribute("data-dragging");
+  });
+
   it("selects Opus output, stops manually, releases tracks, and offers Record Again", async () => {
     const stopTracks = [vi.fn(), vi.fn()];
     const getUserMedia = vi

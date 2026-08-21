@@ -196,18 +196,89 @@ test("creates, searches, and opens a Card accessibly", async ({ page }) => {
   await page.goto("/cards");
   await page.getByRole("link", { name: /Vietnamesisch/ }).click();
   await page.getByRole("button", { name: "Karte hinzufügen" }).first().click();
+  await expectNoSeriousAxeViolations(page);
   const collection = page.getByRole("combobox", { name: "Sammlung" });
   await collection.click();
   await expect(page.getByRole("listbox")).toBeVisible();
   await expectNoSeriousAxeViolations(page);
   await collection.press("Escape");
-  await page.getByLabel("Vorderseite").fill("xin chào");
-  await page.getByLabel("Rückseite").fill("hallo");
+  await page.getByLabel("Vorderseite", { exact: true }).fill("xin chào");
+  await page.getByLabel("Rückseite", { exact: true }).fill("hallo");
   await page.getByRole("button", { name: "Speichern" }).click();
   await expect(page.getByText("xin chào")).toBeVisible();
   await page.getByLabel("Karten durchsuchen").fill("CHÀO");
   await expect(page.getByText("xin chào")).toBeVisible();
   await expectNoSeriousAxeViolations(page);
+});
+
+test("keeps the Card audio rail stable while dragging and recording", async ({ page }) => {
+  await page.addInitScript(() => {
+    Object.defineProperty(navigator, "mediaDevices", {
+      configurable: true,
+      value: {
+        getUserMedia: async () => ({ getTracks: () => [{ stop: () => undefined }] }),
+      },
+    });
+    Object.defineProperty(globalThis, "MediaRecorder", {
+      configurable: true,
+      value: class {
+        static isTypeSupported() {
+          return true;
+        }
+
+        mimeType: string;
+        state = "inactive";
+        ondataavailable: ((event: { data: Blob }) => void) | null = null;
+        onstop: (() => void) | null = null;
+
+        constructor(_stream: unknown, options?: { mimeType?: string }) {
+          this.mimeType = options?.mimeType ?? "audio/webm;codecs=opus";
+        }
+
+        start() {
+          this.state = "recording";
+        }
+
+        stop() {
+          this.state = "inactive";
+          this.ondataavailable?.({ data: new Blob(["recording"], { type: this.mimeType }) });
+          this.onstop?.();
+        }
+      },
+    });
+  });
+  await installMockApi(page);
+  await page.goto(`/cards/${mockCollection.id}`);
+  await page.getByRole("button", { name: "Karte hinzufügen" }).first().click();
+  const rail = page.getByRole("group", { name: "Audio für Vorderseite" });
+  const idleBox = await rail.boundingBox();
+  const dataTransfer = await page.evaluateHandle(() => {
+    const browser = globalThis as unknown as {
+      DataTransfer: new () => { items: { add: (file: Blob) => void } };
+      File: new (bits: string[], name: string, options: { type: string }) => Blob;
+    };
+    const transfer = new browser.DataTransfer();
+
+    transfer.items.add(new browser.File(["audio"], "test.wav", { type: "audio/wav" }));
+
+    return transfer;
+  });
+
+  await rail.dispatchEvent("dragenter", { dataTransfer });
+  await expect(rail).toHaveAttribute("data-dragging", "true");
+  await expect(rail.getByText("Datei hier ablegen")).toBeVisible();
+  await rail.dispatchEvent("dragleave", { dataTransfer });
+  await dataTransfer.dispose();
+  await expect(rail).not.toHaveAttribute("data-dragging");
+
+  await rail.getByRole("button", { name: "Audio aufnehmen" }).click();
+  await expect(rail.getByRole("button", { name: "Aufnahme stoppen" })).toBeVisible();
+  await expect(rail.getByText(/Aufnahme · \d\.\d s/)).toBeVisible();
+  const recordingBox = await rail.boundingBox();
+
+  expect(idleBox).not.toBeNull();
+  expect(recordingBox).not.toBeNull();
+  expect(Math.abs(recordingBox!.height - idleBox!.height)).toBeLessThanOrEqual(1);
 });
 
 test("completes Review, Tutor, repeat-ready summary, and Me", async ({ page }) => {

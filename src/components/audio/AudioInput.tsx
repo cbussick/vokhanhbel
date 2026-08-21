@@ -31,6 +31,39 @@ function normalizeContentType(type: string): AudioMetadata["contentType"] | unde
   return undefined;
 }
 
+function AudioWaveIcon() {
+  return (
+    <svg viewBox="0 0 24 24" focusable="false">
+      <path d="M4 10v4M8 7v10M12 4v16M16 7v10M20 10v4" />
+    </svg>
+  );
+}
+
+function UploadIcon() {
+  return (
+    <svg viewBox="0 0 24 24" focusable="false">
+      <path d="M12 16V4m0 0L8 8m4-4 4 4M5 15v4h14v-4" />
+    </svg>
+  );
+}
+
+function MicrophoneIcon() {
+  return (
+    <svg viewBox="0 0 24 24" focusable="false">
+      <rect x="9" y="3" width="6" height="11" rx="3" />
+      <path d="M5 11a7 7 0 0 0 14 0M12 18v3M9 21h6" />
+    </svg>
+  );
+}
+
+function StopIcon() {
+  return (
+    <svg viewBox="0 0 24 24" focusable="false">
+      <rect x="7" y="7" width="10" height="10" rx="1" />
+    </svg>
+  );
+}
+
 async function readDuration(source: string): Promise<number> {
   return new Promise((resolve, reject) => {
     const audio = new Audio();
@@ -81,11 +114,13 @@ export function AudioInput({
   const intervalRef = useRef<number | undefined>(undefined);
   const startedAtRef = useRef(0);
   const chunksRef = useRef<Blob[]>([]);
+  const dragDepthRef = useRef(0);
   const [recordingState, setRecordingState] = useState<
     "idle" | "requesting" | "recording" | "denied" | "missing" | "unsupported"
   >("idle");
   const [remainingMs, setRemainingMs] = useState(maximumAudioDurationMs);
   const [error, setError] = useState<string>();
+  const [dragging, setDragging] = useState(false);
 
   const stopTracks = () => {
     streamRef.current?.getTracks().forEach((track) => track.stop());
@@ -168,6 +203,14 @@ export function AudioInput({
     if (inputRef.current) inputRef.current.value = "";
   };
 
+  const hasDraggedFiles = (event: React.DragEvent) =>
+    Array.from(event.dataTransfer.types).includes("Files");
+
+  const resetDragState = () => {
+    dragDepthRef.current = 0;
+    setDragging(false);
+  };
+
   const stopRecording = () => {
     clearTimers();
     if (recorderRef.current?.state === "recording") recorderRef.current.stop();
@@ -223,75 +266,141 @@ export function AudioInput({
 
   const visibleAudio = draft?.metadata ?? (!existingRemoved ? existing : null);
   const source = draft?.source;
+  const isRecording = recordingState === "recording";
+  const isRequesting = recordingState === "requesting";
+  const selectLabel = t("audio.selectForFace", { face: faceLabel });
 
   return (
-    <fieldset className={styles.input}>
-      <legend>{t("audio.inputLegend", { face: faceLabel })}</legend>
-      {visibleAudio ? (
-        <div className={styles.preview}>
-          <AudioPlayer
-            key={visibleAudio.id}
-            audio={visibleAudio}
-            {...(source ? { source } : {})}
-            label={t(face === "front" ? "audio.frontLabel" : "audio.backLabel")}
-          />
-          <button
-            type="button"
-            onClick={() => {
-              setNewDraft(null);
-              onExistingRemovedChange(true);
-            }}
-          >
-            {t("audio.remove")}
-          </button>
+    <fieldset
+      className={styles.input}
+      data-dragging={dragging ? "true" : undefined}
+      onDragEnter={(event) => {
+        if (!hasDraggedFiles(event)) return;
+        event.preventDefault();
+        dragDepthRef.current += 1;
+        setDragging(true);
+      }}
+      onDragOver={(event) => {
+        if (!hasDraggedFiles(event)) return;
+        event.preventDefault();
+        event.dataTransfer.dropEffect = "copy";
+      }}
+      onDragLeave={(event) => {
+        if (!hasDraggedFiles(event)) return;
+        event.preventDefault();
+        dragDepthRef.current = Math.max(0, dragDepthRef.current - 1);
+        if (dragDepthRef.current === 0) setDragging(false);
+      }}
+      onDrop={(event) => {
+        if (!hasDraggedFiles(event)) return;
+        event.preventDefault();
+        resetDragState();
+        void chooseFile(event.dataTransfer.files[0]);
+      }}
+    >
+      <legend className={styles.visuallyHidden}>
+        {t("audio.inputLegend", { face: faceLabel })}
+      </legend>
+      <div className={`${styles.rail} ${isRecording ? styles.recordingRail : ""}`}>
+        <div className={styles.header}>
+          <span className={styles.label}>
+            <span className={styles.icon} aria-hidden="true">
+              <AudioWaveIcon />
+            </span>
+            {dragging ? t("audio.drop") : t("audio.label")}
+          </span>
+          <span className={styles.recordingIndicator} aria-hidden="true">
+            {isRecording ? (
+              <>
+                <span className={styles.recordingDot} />
+                {t("audio.recording", { seconds: (remainingMs / 1_000).toFixed(1) })}
+              </>
+            ) : null}
+          </span>
         </div>
-      ) : null}
-      <div
-        className={styles.dropZone}
-        onDragOver={(event) => event.preventDefault()}
-        onDrop={(event) => {
-          event.preventDefault();
-          void chooseFile(event.dataTransfer.files[0]);
-        }}
-      >
-        <label htmlFor={`audio-${face}`}>{t("audio.select")}</label>
+        {visibleAudio ? (
+          <div className={styles.preview}>
+            <AudioPlayer
+              key={visibleAudio.id}
+              audio={visibleAudio}
+              {...(source ? { source } : {})}
+              label={t(face === "front" ? "audio.frontLabel" : "audio.backLabel")}
+              compact
+            />
+            <button
+              className={styles.removeButton}
+              type="button"
+              onClick={() => {
+                setNewDraft(null);
+                onExistingRemovedChange(true);
+              }}
+            >
+              {t("audio.remove")}
+            </button>
+          </div>
+        ) : null}
         <input
           ref={inputRef}
           id={`audio-${face}`}
           type="file"
+          hidden
           accept="audio/mpeg,audio/mp4,audio/webm,audio/ogg,audio/wav,.mp3,.m4a,.mp4,.webm,.ogg,.wav"
           onChange={(event) => void chooseFile(event.target.files?.[0])}
         />
-        <span>{t("audio.limits")}</span>
-      </div>
-      {recordingState === "recording" ? (
-        <div className={styles.recording} role="status">
-          <span>{t("audio.recording", { seconds: (remainingMs / 1_000).toFixed(1) })}</span>
-          <button type="button" onClick={stopRecording}>
-            {t("audio.stop")}
+        <div className={styles.actions}>
+          <button
+            type="button"
+            className={`${styles.actionButton} ${styles.fileButton}`}
+            aria-label={selectLabel}
+            disabled={isRecording || isRequesting}
+            onClick={() => inputRef.current?.click()}
+          >
+            <span className={styles.icon} aria-hidden="true">
+              <UploadIcon />
+            </span>
+            <span>{visibleAudio ? t("audio.replaceFile") : t("audio.select")}</span>
+          </button>
+          <button
+            type="button"
+            className={`${styles.actionButton} ${isRecording ? styles.stopButton : styles.recordButton}`}
+            aria-label={
+              isRecording ? t("audio.stop") : t(visibleAudio ? "audio.recordAgain" : "audio.record")
+            }
+            disabled={isRequesting}
+            onClick={isRecording ? stopRecording : () => void startRecording()}
+          >
+            <span className={styles.icon} aria-hidden="true">
+              {isRecording ? <StopIcon /> : <MicrophoneIcon />}
+            </span>
+            <span>
+              {isRecording
+                ? t("audio.stopShort")
+                : isRequesting
+                  ? t("audio.requestingShort")
+                  : t(visibleAudio ? "audio.recordAgain" : "audio.recordShort")}
+            </span>
           </button>
         </div>
-      ) : (
-        <button type="button" onClick={() => void startRecording()}>
-          {t(draft ? "audio.recordAgain" : "audio.record")}
-        </button>
-      )}
-      <p className={styles.status} aria-live="polite">
-        {recordingState === "requesting"
-          ? t("audio.requesting")
-          : recordingState === "denied"
-            ? t("audio.denied")
-            : recordingState === "missing"
-              ? t("audio.missing")
-              : recordingState === "unsupported"
-                ? t("audio.unsupportedRecording")
-                : ""}
-      </p>
-      {error ? (
-        <p className={styles.error} role="alert">
-          {error}
+        <span className={styles.limits}>{t("audio.limits")}</span>
+        <p className={isRecording ? styles.visuallyHidden : styles.status} aria-live="polite">
+          {isRecording
+            ? t("audio.recordingActive")
+            : recordingState === "requesting"
+              ? t("audio.requesting")
+              : recordingState === "denied"
+                ? t("audio.denied")
+                : recordingState === "missing"
+                  ? t("audio.missing")
+                  : recordingState === "unsupported"
+                    ? t("audio.unsupportedRecording")
+                    : ""}
         </p>
-      ) : null}
+        {error ? (
+          <p className={styles.error} role="alert">
+            {error}
+          </p>
+        ) : null}
+      </div>
     </fieldset>
   );
 }

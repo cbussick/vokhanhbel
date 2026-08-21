@@ -146,6 +146,21 @@ describe("rendered app journeys", () => {
     await waitFor(() => expect(created.collectionId).toBe(testCollections[1]!.id));
   });
 
+  it("keeps the Card dialog open when the file picker is cancelled", async () => {
+    const user = userEvent.setup();
+    renderApp(`/cards/${testCollections[1]!.id}`);
+
+    await user.click(await screen.findByRole("button", { name: "Karte hinzufügen" }));
+    const dialog = screen.getByRole("dialog");
+    const fileInput = dialog.querySelector<HTMLInputElement>('input[type="file"]');
+
+    expect(fileInput).not.toBeNull();
+    fireEvent(fileInput!, new Event("cancel", { bubbles: true, cancelable: true }));
+
+    expect(dialog).toBeVisible();
+    expect(screen.getByRole("heading", { name: "Karte erstellen" })).toBeVisible();
+  });
+
   it("creates a Collection with the chosen icon", async () => {
     const user = userEvent.setup();
     let created: { name?: string; icon?: string } = {};
