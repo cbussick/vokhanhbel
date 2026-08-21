@@ -9,7 +9,7 @@ The single person whose Cards, Reviews, schedule, and Points the app represents.
 _Avoid_: User, account, profile
 
 **Card**:
-A front/back text pair to be learned, created manually.
+A fixed-direction pair of faces to be learned. Each face contains normalized text, one short audio recording, or both. A Card is created manually and is always reviewed from front to back.
 _Avoid_: Flashcard, word
 
 **Collection**:
@@ -32,6 +32,8 @@ _Avoid_: Pending, ready
 **Review**:
 A single append-only log entry recording one grading event for a card, including the grade, points awarded, and box before/after.
 _Avoid_: Attempt, grading event
+
+Retained Review snapshots preserve Card text and earned Points. They do not retain playable audio after a recording is replaced, removed, or its Card is deleted.
 
 **Review Submission**:
 A client request to record a Grade as a Review. It may be pending, retried, or rejected; only an accepted Review Submission creates a Review.

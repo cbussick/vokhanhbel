@@ -1,15 +1,30 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { cardSchema, createCardInputSchema, type Card } from "../contracts/card";
+import {
+  cardSchema,
+  createCardInputSchema,
+  updateCardInputSchema,
+  type Card,
+} from "../contracts/card";
 import { apiPaths } from "../contracts/apiPaths";
 import { problemTypes } from "../contracts/problem";
-import { apiRequest, ApiError } from "../lib/apiClient";
+import { ApiError, apiRequest } from "../lib/apiClient";
 import { useOnlineStatus } from "../lib/browserState";
 import { collectionsQuery } from "../lib/queries";
 import { queryKeys } from "../lib/queryKeys";
 import { CollectionSelect } from "./CollectionSelect";
+import { AudioInput, releaseAudioDraft, type AudioDraft } from "./audio/AudioInput";
+import { stageAudioDraft } from "./audio/audioApi";
 import styles from "./Dialog.module.css";
+
+function TextIcon() {
+  return (
+    <svg viewBox="0 0 24 24" focusable="false">
+      <path d="M4 6h16M4 12h16M4 18h10" />
+    </svg>
+  );
+}
 
 export function CardFormDialog({
   card,
@@ -31,8 +46,12 @@ export function CardFormDialog({
   const frontRef = useRef<HTMLTextAreaElement>(null);
 
   const [collectionId, setCollectionId] = useState(card?.collectionId ?? defaultCollectionId ?? "");
-  const [front, setFront] = useState(card?.front ?? "");
-  const [back, setBack] = useState(card?.back ?? "");
+  const [front, setFront] = useState(card?.front.text ?? "");
+  const [back, setBack] = useState(card?.back.text ?? "");
+  const [frontDraft, setFrontDraft] = useState<AudioDraft | null>(null);
+  const [backDraft, setBackDraft] = useState<AudioDraft | null>(null);
+  const [frontAudioRemoved, setFrontAudioRemoved] = useState(false);
+  const [backAudioRemoved, setBackAudioRemoved] = useState(false);
   const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
   const [error, setError] = useState<string>();
 
@@ -45,32 +64,58 @@ export function CardFormDialog({
   }, []);
 
   const close = () => {
+    releaseAudioDraft(frontDraft);
+    releaseAudioDraft(backDraft);
     dialogRef.current?.close();
     onClose();
   };
 
   const save = useMutation({
     mutationFn: async () => {
-      const input = createCardInputSchema.parse({
-        collectionId,
-        front,
-        back,
-      });
+      const stagedIds: string[] = [];
 
-      return card
-        ? cardSchema.parse(
-            await apiRequest(apiPaths.card(card.id), {
-              method: "PATCH",
-              body: JSON.stringify(input),
-            }),
-          )
-        : cardSchema.parse(
-            await apiRequest(apiPaths.cards, { method: "POST", body: JSON.stringify(input) }),
-          );
+      try {
+        const stagedFront = frontDraft ? await stageAudioDraft(frontDraft.blob) : undefined;
+
+        if (stagedFront) stagedIds.push(stagedFront.id);
+        const stagedBack = backDraft ? await stageAudioDraft(backDraft.blob) : undefined;
+
+        if (stagedBack) stagedIds.push(stagedBack.id);
+        const value = {
+          collectionId,
+          front: {
+            text: front.trim() ? front : null,
+            audioId:
+              stagedFront?.id ?? (frontAudioRemoved ? null : (card?.front.audio?.id ?? null)),
+          },
+          back: {
+            text: back.trim() ? back : null,
+            audioId: stagedBack?.id ?? (backAudioRemoved ? null : (card?.back.audio?.id ?? null)),
+          },
+        };
+        const input = card
+          ? updateCardInputSchema.parse(value)
+          : createCardInputSchema.parse(value);
+        const saved = cardSchema.parse(
+          await apiRequest(card ? apiPaths.card(card.id) : apiPaths.cards, {
+            method: card ? "PATCH" : "POST",
+            body: JSON.stringify(input),
+          }),
+        );
+
+        return saved;
+      } catch (value) {
+        await Promise.allSettled(
+          stagedIds.map((audioId) => apiRequest(apiPaths.audio(audioId), { method: "DELETE" })),
+        );
+        throw value;
+      }
     },
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: queryKeys.cards });
 
+      releaseAudioDraft(frontDraft);
+      releaseAudioDraft(backDraft);
       dialogRef.current?.close();
       onClose();
     },
@@ -114,6 +159,7 @@ export function CardFormDialog({
       ref={dialogRef}
       className={styles.dialog}
       onCancel={(event) => {
+        if (event.target !== event.currentTarget) return;
         event.preventDefault();
 
         if (isConfirmingDelete) {
@@ -171,31 +217,77 @@ export function CardFormDialog({
               onChange={setCollectionId}
               required
             />
-            <label htmlFor="card-front">{t("cards.front")}</label>
-            <span id="front-hint" className={styles.hint}>
-              {t("cards.frontHint")}
-            </span>
-            <textarea
-              ref={frontRef}
-              id="card-front"
-              aria-describedby="front-hint"
-              required
-              maxLength={200}
-              value={front}
-              onChange={(event) => setFront(event.target.value)}
-            />
-            <label htmlFor="card-back">{t("cards.back")}</label>
-            <span id="back-hint" className={styles.hint}>
-              {t("cards.backHint")}
-            </span>
-            <textarea
-              id="card-back"
-              aria-describedby="back-hint"
-              required
-              maxLength={1_000}
-              value={back}
-              onChange={(event) => setBack(event.target.value)}
-            />
+            <fieldset className={styles.faceEditor}>
+              <legend id="front-face-label">{t("cards.front")}</legend>
+              <span id="front-media-hint" className={styles.hint}>
+                {t("cards.faceMediaHint")}
+              </span>
+              <div className={styles.faceControl}>
+                <div className={styles.textControl}>
+                  <div className={styles.mediaLabel}>
+                    <span className={styles.mediaIcon} aria-hidden="true">
+                      <TextIcon />
+                    </span>
+                    {t("cards.text")}
+                  </div>
+                  <label id="front-text-label" htmlFor="card-front">
+                    {t("cards.textLabel")}
+                  </label>
+                  <textarea
+                    ref={frontRef}
+                    id="card-front"
+                    aria-labelledby="front-face-label front-text-label"
+                    aria-describedby="front-media-hint"
+                    maxLength={1_000}
+                    value={front}
+                    onChange={(event) => setFront(event.target.value)}
+                  />
+                </div>
+                <AudioInput
+                  face="front"
+                  draft={frontDraft}
+                  existing={card?.front.audio ?? null}
+                  existingRemoved={frontAudioRemoved}
+                  onDraftChange={setFrontDraft}
+                  onExistingRemovedChange={setFrontAudioRemoved}
+                />
+              </div>
+            </fieldset>
+            <fieldset className={styles.faceEditor}>
+              <legend id="back-face-label">{t("cards.back")}</legend>
+              <span id="back-media-hint" className={styles.hint}>
+                {t("cards.faceMediaHint")}
+              </span>
+              <div className={styles.faceControl}>
+                <div className={styles.textControl}>
+                  <div className={styles.mediaLabel}>
+                    <span className={styles.mediaIcon} aria-hidden="true">
+                      <TextIcon />
+                    </span>
+                    {t("cards.text")}
+                  </div>
+                  <label id="back-text-label" htmlFor="card-back">
+                    {t("cards.textLabel")}
+                  </label>
+                  <textarea
+                    id="card-back"
+                    aria-labelledby="back-face-label back-text-label"
+                    aria-describedby="back-media-hint"
+                    maxLength={1_000}
+                    value={back}
+                    onChange={(event) => setBack(event.target.value)}
+                  />
+                </div>
+                <AudioInput
+                  face="back"
+                  draft={backDraft}
+                  existing={card?.back.audio ?? null}
+                  existingRemoved={backAudioRemoved}
+                  onDraftChange={setBackDraft}
+                  onExistingRemovedChange={setBackAudioRemoved}
+                />
+              </div>
+            </fieldset>
             {error && (
               <p role="alert" className={styles.error}>
                 {error}
@@ -217,7 +309,12 @@ export function CardFormDialog({
               <button
                 type="submit"
                 className={styles.primary}
-                disabled={save.isPending || !collectionId || !front.trim() || !back.trim()}
+                disabled={
+                  save.isPending ||
+                  !collectionId ||
+                  (!front.trim() && !frontDraft && (frontAudioRemoved || !card?.front.audio)) ||
+                  (!back.trim() && !backDraft && (backAudioRemoved || !card?.back.audio))
+                }
               >
                 {t("common.save")}
               </button>

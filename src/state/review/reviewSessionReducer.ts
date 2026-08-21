@@ -31,6 +31,7 @@ type ReviewSessionAction =
   | { type: "reviewSessionStarted"; reviewSessionId: string; cards: Card[] }
   | { type: "answerRevealed" }
   | { type: "cardGraded"; submission: ReviewSubmission }
+  | { type: "cardSkipped" }
   | { type: "forgottenRepeated" }
   | { type: "reviewSessionLeft" }
   | {
@@ -87,6 +88,23 @@ export function reviewSessionReducer(
         status: "reviewing",
         reviewSession,
         currentIndex: state.currentIndex + 1,
+        revealed: false,
+        issue: undefined,
+        issueRequestId: undefined,
+      };
+    }
+    case "cardSkipped": {
+      if (state.status !== "reviewing") return state;
+      const cards = state.reviewSession.cards.filter((_, index) => index !== state.currentIndex);
+      const reviewSession = { ...state.reviewSession, cards };
+
+      if (cards.length === 0 || state.currentIndex >= cards.length)
+        return { status: "summary", reviewSession };
+
+      return {
+        status: "reviewing",
+        reviewSession,
+        currentIndex: state.currentIndex,
         revealed: false,
         issue: undefined,
         issueRequestId: undefined,

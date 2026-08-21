@@ -4,14 +4,24 @@ import { expect, test, type Page, type Route } from "@playwright/test";
 interface MockCard {
   id: string;
   collectionId: string;
-  front: string;
-  back: string;
+  front: string | MockFace;
+  back: string | MockFace;
   box: number;
   dueAt: string;
   lastReviewedAt: string | null;
   createdAt: string;
   updatedAt: string;
   deletedAt: null;
+}
+
+interface MockFace {
+  text: string | null;
+  audio: {
+    id: string;
+    durationMs: number;
+    contentType: "audio/wav";
+    byteSize: number;
+  } | null;
 }
 
 const fixedNow = "2026-07-14T08:00:00.000Z";
@@ -24,7 +34,10 @@ const mockCollection = {
   deletedAt: null,
 };
 
-function createCard(front = "der Apfel", back = "the apple"): MockCard {
+function createCard(
+  front: MockCard["front"] = "der Apfel",
+  back: MockCard["back"] = "the apple",
+): MockCard {
   return {
     id: crypto.randomUUID(),
     collectionId: mockCollection.id,
@@ -37,6 +50,10 @@ function createCard(front = "der Apfel", back = "the apple"): MockCard {
     updatedAt: fixedNow,
     deletedAt: null,
   };
+}
+
+function audio(id: string) {
+  return { id, durationMs: 1_000, contentType: "audio/wav" as const, byteSize: 8_044 };
 }
 
 async function json(route: Route, body: unknown, status = 200) {
@@ -65,12 +82,20 @@ async function installMockApi(page: Page, authenticated = true) {
       return json(route, [mockCollection]);
     if (pathname === "/api/cards" && request.method() === "GET") return json(route, state.cards);
     if (pathname === "/api/cards" && request.method() === "POST") {
-      const input = request.postDataJSON() as { front: string; back: string };
-      const card = createCard(input.front, input.back);
+      const input = request.postDataJSON() as {
+        front: { text: string | null; audioId: string | null };
+        back: { text: string | null; audioId: string | null };
+      };
+      const card = createCard(
+        { text: input.front.text, audio: null },
+        { text: input.back.text, audio: null },
+      );
       state.cards.unshift(card);
 
       return json(route, card, 201);
     }
+    if (pathname.startsWith("/api/audio/") && request.method() === "GET")
+      return route.fulfill({ status: 200, contentType: "audio/wav", body: "mock audio" });
     if (pathname === "/api/reviews" && request.method() === "POST") {
       const input = request.postDataJSON() as { id: string; cardId: string; grade: string };
 
@@ -171,18 +196,201 @@ test("creates, searches, and opens a Card accessibly", async ({ page }) => {
   await page.goto("/cards");
   await page.getByRole("link", { name: /Vietnamesisch/ }).click();
   await page.getByRole("button", { name: "Karte hinzufügen" }).first().click();
+  await expect(page.getByText("Text", { exact: true })).toHaveCount(2);
+  await expect(page.getByText("Audio", { exact: true })).toHaveCount(2);
+  await expectNoSeriousAxeViolations(page);
+  const frontText = page.getByRole("textbox", {
+    name: "Vorderseite Text bis 1.000 Zeichen",
+  });
+  await frontText.focus();
+  const focusStyles = await page.evaluate<{
+    textareaOutline: string;
+    faceControlShadow: string;
+  }>(`(() => {
+    const textarea = document.querySelector("#card-front");
+    const faceControl = textarea?.closest("fieldset")?.querySelector(":scope > div");
+    if (!textarea || !faceControl) throw new Error("Card face control not found");
+    return {
+      textareaOutline: getComputedStyle(textarea).outlineStyle,
+      faceControlShadow: getComputedStyle(faceControl).boxShadow,
+    };
+  })()`);
+  expect(focusStyles.textareaOutline).toBe("none");
+  expect(focusStyles.faceControlShadow).not.toBe("none");
   const collection = page.getByRole("combobox", { name: "Sammlung" });
   await collection.click();
   await expect(page.getByRole("listbox")).toBeVisible();
   await expectNoSeriousAxeViolations(page);
   await collection.press("Escape");
-  await page.getByLabel("Vorderseite").fill("xin chào");
-  await page.getByLabel("Rückseite").fill("hallo");
+  await page.getByRole("textbox", { name: "Vorderseite Text bis 1.000 Zeichen" }).fill("xin chào");
+  await page.getByRole("textbox", { name: "Rückseite Text bis 1.000 Zeichen" }).fill("hallo");
   await page.getByRole("button", { name: "Speichern" }).click();
   await expect(page.getByText("xin chào")).toBeVisible();
   await page.getByLabel("Karten durchsuchen").fill("CHÀO");
   await expect(page.getByText("xin chào")).toBeVisible();
   await expectNoSeriousAxeViolations(page);
+});
+
+test("keeps the Card audio rail stable while dragging and recording", async ({ page }) => {
+  await page.addInitScript(() => {
+    Object.defineProperty(navigator, "mediaDevices", {
+      configurable: true,
+      value: {
+        getUserMedia: async () => ({ getTracks: () => [{ stop: () => undefined }] }),
+      },
+    });
+    Object.defineProperty(globalThis, "MediaRecorder", {
+      configurable: true,
+      value: class {
+        static isTypeSupported() {
+          return true;
+        }
+
+        mimeType: string;
+        state = "inactive";
+        ondataavailable: ((event: { data: Blob }) => void) | null = null;
+        onstop: (() => void) | null = null;
+
+        constructor(_stream: unknown, options?: { mimeType?: string }) {
+          this.mimeType = options?.mimeType ?? "audio/webm;codecs=opus";
+        }
+
+        start() {
+          this.state = "recording";
+        }
+
+        stop() {
+          this.state = "inactive";
+          this.ondataavailable?.({ data: new Blob(["recording"], { type: this.mimeType }) });
+          this.onstop?.();
+        }
+      },
+    });
+  });
+  await installMockApi(page);
+  await page.goto(`/cards/${mockCollection.id}`);
+  await page.getByRole("button", { name: "Karte hinzufügen" }).first().click();
+  const rail = page.getByRole("group", { name: "Audio für Vorderseite" });
+  const idleBox = await rail.boundingBox();
+  const dataTransfer = await page.evaluateHandle(() => {
+    const browser = globalThis as unknown as {
+      DataTransfer: new () => { items: { add: (file: Blob) => void } };
+      File: new (bits: string[], name: string, options: { type: string }) => Blob;
+    };
+    const transfer = new browser.DataTransfer();
+
+    transfer.items.add(new browser.File(["audio"], "test.wav", { type: "audio/wav" }));
+
+    return transfer;
+  });
+
+  const fileChooserPromise = page.waitForEvent("filechooser");
+  await rail.getByText("Audiodatei hier ablegen oder auswählen").click();
+  await fileChooserPromise;
+
+  await rail.dispatchEvent("dragenter", { dataTransfer });
+  await expect(rail).toHaveAttribute("data-dragging", "true");
+  const dropCopy = rail.getByText("Audiodatei hier ablegen oder auswählen");
+  await expect(dropCopy).toBeVisible();
+  const dropStyles = await dropCopy.evaluate((element) => {
+    const dropZone = element.parentElement;
+    if (!dropZone) throw new Error("Audio drop zone not found");
+    const browser = globalThis as unknown as {
+      getComputedStyle: (target: unknown) => { borderRadius: string; cursor: string };
+    };
+    const styles = browser.getComputedStyle(dropZone);
+
+    return {
+      borderRadius: styles.borderRadius,
+      cursor: styles.cursor,
+    };
+  });
+  expect(dropStyles.borderRadius).not.toBe("0px");
+  expect(dropStyles.cursor).toBe("copy");
+  await rail.dispatchEvent("dragleave", { dataTransfer });
+  await dataTransfer.dispose();
+  await expect(rail).not.toHaveAttribute("data-dragging");
+
+  const recordButton = rail.getByRole("button", { name: "Audio aufnehmen" });
+  const idleButtonStyles = await recordButton.evaluate((element) => {
+    const browser = globalThis as unknown as {
+      getComputedStyle: (target: unknown) => {
+        fontSize: string;
+        fontWeight: string;
+        scale: string;
+      };
+    };
+    const styles = browser.getComputedStyle(element);
+
+    return { fontSize: styles.fontSize, fontWeight: styles.fontWeight, scale: styles.scale };
+  });
+  await recordButton.hover();
+  await page.mouse.down();
+  await page.waitForTimeout(150);
+  const pressedButtonStyles = await recordButton.evaluate((element) => {
+    const browser = globalThis as unknown as {
+      getComputedStyle: (target: unknown) => {
+        fontSize: string;
+        fontWeight: string;
+        scale: string;
+        translate: string;
+      };
+    };
+    const styles = browser.getComputedStyle(element);
+
+    return {
+      fontSize: styles.fontSize,
+      fontWeight: styles.fontWeight,
+      scale: styles.scale,
+      translate: styles.translate,
+    };
+  });
+  expect(pressedButtonStyles).toMatchObject(idleButtonStyles);
+  expect(pressedButtonStyles.translate).toBe("0px 1px");
+  await page.mouse.up();
+  await expect(rail.getByRole("button", { name: "Aufnahme stoppen" })).toBeVisible();
+  await expect(rail.getByText(/Aufnahme · \d\.\d s/)).toBeVisible();
+  const recordingBox = await rail.boundingBox();
+
+  expect(idleBox).not.toBeNull();
+  expect(recordingBox).not.toBeNull();
+  expect(Math.abs(recordingBox!.height - idleBox!.height)).toBeLessThanOrEqual(1);
+});
+
+test("keeps one scroll container when a Card textarea is enlarged", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 700 });
+  await installMockApi(page);
+  await page.goto(`/cards/${mockCollection.id}`);
+  await page.getByRole("button", { name: "Karte hinzufügen" }).first().click();
+  const textarea = page.getByRole("textbox", {
+    name: "Vorderseite Text bis 1.000 Zeichen",
+  });
+
+  await textarea.evaluate((element) => {
+    element.style.height = "80rem";
+  });
+  const scrollState = await page.evaluate<{
+    dialogOverflow: string;
+    sheetOverflow: string;
+    sheetHasOverflow: boolean;
+    textareaResize: string;
+  }>(`(() => {
+    const dialog = document.querySelector("dialog");
+    const sheet = dialog?.querySelector(":scope > section");
+    const textarea = document.querySelector("#card-front");
+    if (!dialog || !sheet || !textarea) throw new Error("Card dialog sheet not found");
+    return {
+      dialogOverflow: getComputedStyle(dialog).overflowY,
+      sheetOverflow: getComputedStyle(sheet).overflowY,
+      sheetHasOverflow: sheet.scrollHeight > sheet.clientHeight,
+      textareaResize: getComputedStyle(textarea).resize,
+    };
+  })()`);
+
+  expect(scrollState.dialogOverflow).toBe("visible");
+  expect(scrollState.sheetOverflow).toBe("auto");
+  expect(scrollState.sheetHasOverflow).toBe(true);
+  expect(scrollState.textareaResize).toBe("none");
 });
 
 test("completes Review, Tutor, repeat-ready summary, and Me", async ({ page }) => {
@@ -392,6 +600,27 @@ test("uses desktop space for route content without overstretching focused work",
   expect(Math.abs(focusedMainBox!.x - (1440 - focusedMainBox!.width) / 2)).toBeLessThanOrEqual(1);
 });
 
+test("keeps audio controls compact in the collection overview", async ({ page }) => {
+  const state = await installMockApi(page);
+  state.cards = [
+    createCard("die Birne", "the pear"),
+    createCard(
+      { text: "die Pflaume", audio: audio("88888888-8888-4888-8888-888888888895") },
+      { text: "the plum", audio: audio("88888888-8888-4888-8888-888888888896") },
+    ),
+  ];
+  await page.setViewportSize({ width: 768, height: 900 });
+  await page.goto(`/cards/${mockCollection.id}`);
+
+  const cardItems = page.getByRole("listitem");
+  const textCardBox = await cardItems.nth(0).boundingBox();
+  const audioCardBox = await cardItems.nth(1).boundingBox();
+
+  expect(textCardBox).not.toBeNull();
+  expect(audioCardBox).not.toBeNull();
+  expect(audioCardBox!.height).toBeLessThanOrEqual(textCardBox!.height + 4);
+});
+
 for (const viewport of [
   { name: "mobile", width: 390, height: 844 },
   { name: "tablet", width: 768, height: 900 },
@@ -401,7 +630,17 @@ for (const viewport of [
     test.skip(browserName !== "chromium", "One browser owns the cross-platform visual baselines.");
     await page.setViewportSize(viewport);
     await page.emulateMedia({ reducedMotion: "reduce" });
-    await installMockApi(page, false);
+    const state = await installMockApi(page, false);
+    state.cards[0] = createCard(
+      {
+        text: "der Apfel",
+        audio: audio("88888888-8888-4888-8888-888888888891"),
+      },
+      {
+        text: "the apple",
+        audio: audio("88888888-8888-4888-8888-888888888892"),
+      },
+    );
     await page.goto("/login");
     await expect(page.getByLabel("Passwort")).toBeVisible();
     await expect(page).toHaveScreenshot(`login-${viewport.name}.png`, { animations: "disabled" });
@@ -459,5 +698,21 @@ for (const viewport of [
     await page.getByRole("link", { name: /Ich/ }).click();
     await expect(page.getByRole("heading", { name: "Khanhs Fortschritt" })).toBeVisible();
     await expect(page).toHaveScreenshot(`me-${viewport.name}.png`, { animations: "disabled" });
+
+    state.cards[0] = createCard(
+      { text: null, audio: audio("88888888-8888-4888-8888-888888888893") },
+      { text: null, audio: audio("88888888-8888-4888-8888-888888888894") },
+    );
+    await page.goto("/review");
+    await page.getByRole("button", { name: "Review starten" }).click();
+    await expect(page.getByRole("button", { name: "Audio Vorderseite: Abspielen" })).toBeVisible();
+    await expect(page).toHaveScreenshot(`review-audio-only-front-${viewport.name}.png`, {
+      animations: "disabled",
+    });
+    await page.getByRole("button", { name: "Antwort zeigen" }).click();
+    await expect(page.getByRole("button", { name: "Audio Rückseite: Abspielen" })).toBeVisible();
+    await expect(page).toHaveScreenshot(`review-audio-only-back-${viewport.name}.png`, {
+      animations: "disabled",
+    });
   });
 }

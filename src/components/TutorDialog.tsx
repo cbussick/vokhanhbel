@@ -215,6 +215,33 @@ export function TutorDialog({ card, onClose }: { card: Card; onClose: () => void
     setFollowing(true);
   };
 
+  if (!card.front.text || !card.back.text) {
+    return (
+      <dialog
+        ref={dialogRef}
+        className={styles.dialog}
+        onCancel={(event) => {
+          event.preventDefault();
+          close();
+        }}
+        aria-labelledby="tutor-title"
+      >
+        <section className={`${styles.sheet} ${styles.explanation}`}>
+          <header>
+            <h2 id="tutor-title">{t("tutor.title")}</h2>
+            <button type="button" onClick={close} aria-label={t("common.close")}>
+              ×
+            </button>
+          </header>
+          <p>{t("tutor.audioOnly")}</p>
+          <button type="button" onClick={close}>
+            {t("common.close")}
+          </button>
+        </section>
+      </dialog>
+    );
+  }
+
   return (
     <dialog
       ref={dialogRef}

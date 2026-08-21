@@ -1,7 +1,7 @@
 import type { ZodType } from "zod";
 import { problemTypes } from "../../contracts/problem.js";
 import { getAuthenticatedSessionHash } from "../auth/session.js";
-import { isAllowedUnsafeRequest } from "./origin.js";
+import { isAllowedPrivateMediaRequest, isAllowedUnsafeRequest } from "./origin.js";
 import { AppProblem, problemResponse } from "./problem.js";
 
 const maximumJsonBodyBytes = 32 * 1024;
@@ -18,6 +18,7 @@ interface HandlerOptions<TBody> {
   protected?: boolean;
   bodySchema?: ZodType<TBody>;
   cacheControl?: string;
+  privateMedia?: boolean;
 }
 
 function applyHeaders(response: Response, requestId: string, cacheControl: string): Response {
@@ -27,7 +28,10 @@ function applyHeaders(response: Response, requestId: string, cacheControl: strin
   headers.set("X-Content-Type-Options", "nosniff");
   headers.set("Referrer-Policy", "no-referrer");
   headers.set("X-Frame-Options", "DENY");
-  headers.set("Permissions-Policy", "camera=(), microphone=(), geolocation=(), payment=(), usb=()");
+  headers.set(
+    "Permissions-Policy",
+    "camera=(), microphone=(self), geolocation=(), payment=(), usb=()",
+  );
 
   return new Response(response.body, {
     status: response.status,
@@ -87,6 +91,9 @@ export async function handleRequest<TBody = undefined>(
 
   try {
     if (options.unsafe && !isAllowedUnsafeRequest(request)) {
+      throw new AppProblem(403, problemTypes.invalidOrigin, "Anfrage nicht erlaubt");
+    }
+    if (options.privateMedia && !isAllowedPrivateMediaRequest(request)) {
       throw new AppProblem(403, problemTypes.invalidOrigin, "Anfrage nicht erlaubt");
     }
 

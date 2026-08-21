@@ -19,26 +19,28 @@ export async function apiRequest<T>(path: string, init?: RequestInit): Promise<T
   const response = await fetch(path, { ...init, headers, credentials: "same-origin" });
 
   if (response.status === 401 && path !== apiPaths.session) publishSessionExpired();
-  if (!response.ok) {
-    const parsed = problemSchema.safeParse(await response.json().catch(() => undefined));
-    const problem = parsed.success
-      ? parsed.data
-      : {
-          type: problemTypes.unexpected,
-          title: "Da ist etwas schiefgegangen",
-          status: response.status,
-          instance: `urn:uuid:${crypto.randomUUID()}`,
-        };
-    const retryHeader = response.headers.get("retry-after");
-    const requestId =
-      response.headers.get("x-request-id") ??
-      (parsed.success ? parsed.data.instance.replace(/^urn:uuid:/u, "") : undefined);
-
-    throw new ApiError(problem, retryHeader ? Number(retryHeader) : undefined, requestId);
-  }
+  if (!response.ok) await throwApiError(response);
   if (response.status === 204) return undefined as T;
 
   return response.json() as Promise<T>;
+}
+
+export async function throwApiError(response: Response): Promise<never> {
+  const parsed = problemSchema.safeParse(await response.json().catch(() => undefined));
+  const problem = parsed.success
+    ? parsed.data
+    : {
+        type: problemTypes.unexpected,
+        title: "Da ist etwas schiefgegangen",
+        status: response.status,
+        instance: `urn:uuid:${crypto.randomUUID()}`,
+      };
+  const retryHeader = response.headers.get("retry-after");
+  const requestId =
+    response.headers.get("x-request-id") ??
+    (parsed.success ? parsed.data.instance.replace(/^urn:uuid:/u, "") : undefined);
+
+  throw new ApiError(problem, retryHeader ? Number(retryHeader) : undefined, requestId);
 }
 
 export function isTemporaryError(error: unknown): boolean {

@@ -1,21 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
-import type { Card } from "../../contracts/card.js";
 import type { TutorInput } from "../../contracts/tutor.js";
 import type { AiProvider, TutorProviderRequest } from "../ai/aiProvider.js";
 import { createTutorResponse } from "./tutor.js";
 
-const card: Card = {
-  id: "019c52a9-50e8-7000-8000-000000000001",
-  collectionId: "019c52a9-50e8-7000-8000-0000000000c1",
-  front: "der Apfel",
-  back: "the apple",
-  box: 0,
-  dueAt: "2026-07-14T00:00:00.000Z",
-  lastReviewedAt: null,
-  createdAt: "2026-07-14T00:00:00.000Z",
-  updatedAt: "2026-07-14T00:00:00.000Z",
-  deletedAt: null,
-};
+const card = { front: "der Apfel", back: "the apple" };
 
 describe("Tutor provider boundary", () => {
   it("passes only the current Card, bounded conversation, question, and signal", async () => {

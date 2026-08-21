@@ -116,7 +116,7 @@
     opacity var(--duration-normal);
 }
 
-.face > span {
+.face [data-card-face-text] {
   white-space: pre-line;
   overflow-wrap: anywhere;
   font-family: var(--font-display);
@@ -130,7 +130,7 @@
   rotate: y 180deg;
 }
 
-.back > span {
+.back [data-card-face-text] {
   font-family: var(--font-ui);
   font-size: var(--font-2xl);
   line-height: 1.5;
@@ -206,11 +206,6 @@
   border-radius: var(--radius-medium);
   font-size: 0.9375rem;
   font-weight: 800;
-  transition: scale var(--duration-fast);
-}
-
-.grades button:active {
-  scale: 0.98;
 }
 
 .grades button:first-of-type {
@@ -310,10 +305,6 @@
     opacity: 1;
   }
 
-  .grades button:active {
-    scale: 1;
-  }
-
   .grades {
     animation: none;
   }
@@ -321,4 +312,21 @@
   .confetti {
     display: none;
   }
+}
+
+.audioUnavailable {
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  border-radius: var(--radius-medium);
+  background: color-mix(in srgb, var(--color-warning) 28%, white);
+}
+
+.audioUnavailable button {
+  min-block-size: 44px;
+  border: 0;
+  border-radius: var(--radius-medium);
+  background: var(--color-primary);
+  color: var(--color-primary-text);
+  font-weight: 700;
 }

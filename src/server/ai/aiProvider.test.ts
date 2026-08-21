@@ -1,5 +1,4 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { Card } from "../../contracts/card.js";
 import { resetServerEnvironmentForTests } from "../config/environment.js";
 import { createOpenAiProvider } from "./aiProvider.js";
 
@@ -11,18 +10,7 @@ vi.mock("openai", () => ({
   },
 }));
 
-const card: Card = {
-  id: "019c52a9-50e8-7000-8000-000000000001",
-  collectionId: "019c52a9-50e8-7000-8000-0000000000c1",
-  front: "front",
-  back: "back",
-  box: 0,
-  dueAt: "2026-07-14T00:00:00.000Z",
-  lastReviewedAt: null,
-  createdAt: "2026-07-14T00:00:00.000Z",
-  updatedAt: "2026-07-14T00:00:00.000Z",
-  deletedAt: null,
-};
+const card = { front: "front", back: "back" };
 
 async function* stream(events: unknown[]) {
   yield* events;

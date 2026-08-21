@@ -14,10 +14,22 @@ describe("public contracts", () => {
     expect(
       createCardInputSchema.parse({
         collectionId,
-        front: "  Take   care ",
-        back: " Pass auf! ",
+        front: { text: "  Take   care ", audioId: null },
+        back: { text: " Pass auf! ", audioId: null },
       }),
-    ).toEqual({ collectionId, front: "Take care", back: "Pass auf!" });
+    ).toEqual({
+      collectionId,
+      front: { text: "Take care", audioId: null },
+      back: { text: "Pass auf!", audioId: null },
+    });
+
+    expect(
+      createCardInputSchema.safeParse({
+        collectionId,
+        front: { text: null, audioId: crypto.randomUUID() },
+        back: { text: "x".repeat(1_000), audioId: null },
+      }).success,
+    ).toBe(true);
   });
 
   it("normalizes a Collection name and keeps it within 60 characters", () => {
@@ -61,13 +73,16 @@ describe("public contracts", () => {
     expect(
       createCardInputSchema.safeParse({
         collectionId: crypto.randomUUID(),
-        front: "",
-        back: "Meaning",
+        front: { text: null, audioId: null },
+        back: { text: "Meaning", audioId: null },
       }).success,
     ).toBe(false);
-    expect(createCardInputSchema.safeParse({ front: "Take care", back: "Pass auf" }).success).toBe(
-      false,
-    );
+    expect(
+      createCardInputSchema.safeParse({
+        front: { text: "Take care", audioId: null },
+        back: { text: "Pass auf", audioId: null },
+      }).success,
+    ).toBe(false);
     expect(
       reviewSubmissionInputSchema.safeParse({
         id: "not-a-uuid",
@@ -90,8 +105,8 @@ describe("public contracts", () => {
       cardSchema.safeParse({
         id: crypto.randomUUID(),
         collectionId: crypto.randomUUID(),
-        front: "front",
-        back: "back",
+        front: { text: "front", audio: null },
+        back: { text: "back", audio: null },
         box: 0,
         dueAt: now,
         lastReviewedAt: null,

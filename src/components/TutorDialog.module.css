@@ -25,6 +25,20 @@
   box-shadow: var(--shadow-sheet);
 }
 
+.explanation {
+  block-size: auto;
+  grid-template-rows: auto auto auto;
+}
+
+.explanation > button {
+  min-block-size: 44px;
+  border: 0;
+  border-radius: var(--radius-medium);
+  background: var(--color-primary);
+  color: var(--color-primary-text);
+  font-weight: 700;
+}
+
 .sheet header {
   display: flex;
   align-items: center;

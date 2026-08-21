@@ -1,4 +1,5 @@
 import { createContext, type ReactNode, useContext, useReducer } from "react";
+import { apiPaths } from "../contracts/apiPaths";
 import type { Card } from "../contracts/card";
 import { problemTypes } from "../contracts/problem";
 import type { ReviewSubmissionInput } from "../contracts/review";
@@ -43,6 +44,7 @@ interface ReviewSessionContextValue {
   startReviewSession: (cards: Card[]) => void;
   revealAnswer: () => void;
   gradeCard: (grade: Grade) => void;
+  skipCard: () => void;
   repeatForgotten: () => void;
   leaveReviewSession: () => void;
 }
@@ -114,6 +116,21 @@ export function ReviewSessionProvider({ children }: { children: ReactNode }) {
       reviewSessionId: crypto.randomUUID(),
       cards: initialQueue,
     });
+    const audioIds = initialQueue.flatMap((card) =>
+      [card.front.audio?.id, card.back.audio?.id].filter((id): id is string => Boolean(id)),
+    );
+
+    for (const audioId of audioIds) {
+      const init: RequestInit & { priority: "low" } = {
+        credentials: "same-origin",
+        cache: "force-cache",
+        priority: "low",
+      };
+
+      void fetch(apiPaths.audio(audioId), init)
+        .then((response) => response.arrayBuffer())
+        .catch(() => undefined);
+    }
   };
 
   const revealAnswer = () => dispatch({ type: "answerRevealed" });
@@ -152,6 +169,7 @@ export function ReviewSessionProvider({ children }: { children: ReactNode }) {
   };
 
   const repeatForgotten = () => dispatch({ type: "forgottenRepeated" });
+  const skipCard = () => dispatch({ type: "cardSkipped" });
   const leaveReviewSession = () => dispatch({ type: "reviewSessionLeft" });
 
   const value: ReviewSessionContextValue = {
@@ -159,6 +177,7 @@ export function ReviewSessionProvider({ children }: { children: ReactNode }) {
     startReviewSession,
     revealAnswer,
     gradeCard,
+    skipCard,
     repeatForgotten,
     leaveReviewSession,
   };

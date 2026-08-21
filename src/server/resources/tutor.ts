@@ -79,13 +79,25 @@ export async function createTutorStream(
   requestSignal: AbortSignal,
 ): Promise<Response> {
   const card = await getCard(cardId);
+
+  if (!card.front.text || !card.back.text)
+    throw new AppProblem(
+      422,
+      problemTypes.tutorAudioUnsupported,
+      "Tutopher kann Audio nicht anhören",
+    );
   await consumeTutorAllowance(sessionHash);
 
-  return createTutorResponse(card, input, provider, requestSignal);
+  return createTutorResponse(
+    { front: card.front.text, back: card.back.text },
+    input,
+    provider,
+    requestSignal,
+  );
 }
 
 export function createTutorResponse(
-  card: Awaited<ReturnType<typeof getCard>>,
+  card: { front: string; back: string },
   input: TutorInput,
   provider: AiProvider,
   requestSignal: AbortSignal,

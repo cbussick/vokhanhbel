@@ -1,0 +1,6 @@
+.content {
+  display: grid;
+  justify-items: center;
+  gap: var(--space-5);
+  inline-size: 100%;
+}

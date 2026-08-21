@@ -1,5 +1,5 @@
-import { describe, expect, it } from "vitest";
-import { createCard, deleteCard, listCards } from "../../src/server/resources/cards.js";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { createCard, deleteCard, listCards, updateCard } from "../../src/server/resources/cards.js";
 import { getPool } from "../../src/server/database/client.js";
 import { encodePassword } from "../../src/server/auth/password.js";
 import { resetServerEnvironmentForTests } from "../../src/server/config/environment.js";
@@ -12,9 +12,18 @@ import {
 import { recordReview } from "../../src/server/resources/reviews.js";
 import { login } from "../../src/server/resources/sessions.js";
 import { getStats } from "../../src/server/resources/stats.js";
-import { consumeTutorAllowance } from "../../src/server/resources/tutor.js";
+import { consumeTutorAllowance, createTutorStream } from "../../src/server/resources/tutor.js";
+import { retryAudioCleanup, stageAudio } from "../../src/server/resources/audio.js";
+import {
+  FailingAudioObjectStore,
+  InMemoryAudioObjectStore,
+  setAudioObjectStoreForTests,
+} from "../../src/server/audio/audioObjectStore.js";
+import { createWavFixture } from "../../src/server/audio/audioFixture.test-helper.js";
 
 const inDefaultCollection = { collectionId: defaultCollectionId };
+
+afterEach(() => setAudioObjectStoreForTests(undefined));
 
 describe("PostgreSQL application behavior", () => {
   it("enforces active normalized-front uniqueness and releases it after soft deletion", async () => {
@@ -29,7 +38,7 @@ describe("PostgreSQL application behavior", () => {
     await deleteCard(card.id);
     await expect(
       createCard({ ...inDefaultCollection, front: "TAKE CARE", back: "Mach es gut" }),
-    ).resolves.toMatchObject({ front: "TAKE CARE" });
+    ).resolves.toMatchObject({ front: { text: "TAKE CARE", audio: null } });
     expect(await listCards()).toHaveLength(1);
   });
 
@@ -43,6 +52,96 @@ describe("PostgreSQL application behavior", () => {
     await expect(
       createCard({ collectionId: other.id, front: "take care", back: "Noch einmal" }),
     ).rejects.toMatchObject({ status: 409 });
+  });
+
+  it("allows duplicate audio-only fronts, preserves scheduling on edit, and removes live bytes", async () => {
+    const store = new InMemoryAudioObjectStore();
+    const sessionHash = "audio-session";
+    setAudioObjectStoreForTests(store);
+    const firstAudio = await stageAudio(sessionHash, createWavFixture(), "audio/wav");
+    const secondAudio = await stageAudio(sessionHash, createWavFixture(), "audio/wav");
+    const first = await createCard(
+      {
+        ...inDefaultCollection,
+        front: { text: null, audioId: firstAudio.id },
+        back: { text: "erste Antwort", audioId: null },
+      },
+      sessionHash,
+    );
+    await expect(
+      createCard(
+        {
+          ...inDefaultCollection,
+          front: { text: null, audioId: secondAudio.id },
+          back: { text: "zweite Antwort", audioId: null },
+        },
+        sessionHash,
+      ),
+    ).resolves.toMatchObject({ front: { text: null } });
+    const edited = await updateCard(first.id, {
+      back: { text: "geänderte Antwort" },
+    });
+
+    expect(edited).toMatchObject({ box: first.box, dueAt: first.dueAt });
+    await deleteCard(first.id);
+    expect(store.objects.size).toBe(1);
+  });
+
+  it("records obsolete-object deletion failures and resolves them idempotently", async () => {
+    const store = new FailingAudioObjectStore();
+    const sessionHash = "audio-cleanup-session";
+    setAudioObjectStoreForTests(store);
+    const audio = await stageAudio(sessionHash, createWavFixture(), "audio/wav");
+    const card = await createCard(
+      {
+        ...inDefaultCollection,
+        front: { text: null, audioId: audio.id },
+        back: { text: "Antwort", audioId: null },
+      },
+      sessionHash,
+    );
+    store.failures.add("delete");
+    await deleteCard(card.id);
+    expect(store.delegate.objects.size).toBe(1);
+    const pending = await getPool().query<{ attempts: number }>(
+      "SELECT attempts FROM audio_cleanup_jobs WHERE audio_id=$1 AND completed_at IS NULL",
+      [audio.id],
+    );
+    expect(pending.rows[0]?.attempts).toBe(1);
+
+    store.failures.delete("delete");
+    await expect(retryAudioCleanup()).resolves.toBe(1);
+    await expect(retryAudioCleanup()).resolves.toBe(0);
+    expect(store.delegate.objects.size).toBe(0);
+  });
+
+  it("rejects Tutor for an audio-only face before provider use or allowance consumption", async () => {
+    const store = new InMemoryAudioObjectStore();
+    const sessionHash = "audio-tutor-session";
+    setAudioObjectStoreForTests(store);
+    const audio = await stageAudio(sessionHash, createWavFixture(), "audio/wav");
+    const card = await createCard(
+      {
+        ...inDefaultCollection,
+        front: { text: null, audioId: audio.id },
+        back: { text: "Antwort", audioId: null },
+      },
+      sessionHash,
+    );
+    const streamTutorReply = vi.fn();
+
+    await expect(
+      createTutorStream(
+        card.id,
+        { message: "Hilf mir", messages: [] },
+        sessionHash,
+        { streamTutorReply },
+        new AbortController().signal,
+      ),
+    ).rejects.toMatchObject({ type: "/problems/tutor-audio-unsupported" });
+    expect(streamTutorReply).not.toHaveBeenCalled();
+    const usage = await getPool().query<{ count: string }>("SELECT count(*) FROM ai_usage");
+    expect(usage.rows[0]?.count).toBe("0");
   });
 
   it("rejects a Card written into an unknown Collection", async () => {
@@ -165,7 +264,7 @@ describe("PostgreSQL application behavior", () => {
     const [first, replay] = await Promise.all([recordReview(input), recordReview(input)]);
     expect(replay).toEqual(first);
 
-    await getPool().query("UPDATE cards SET front=$1, normalized_front=$1 WHERE id=$2", [
+    await getPool().query("UPDATE cards SET front_text=$1, normalized_front=$1 WHERE id=$2", [
       "changed later",
       card.id,
     ]);
@@ -225,36 +324,60 @@ describe("PostgreSQL application behavior", () => {
   it("rejects Card text that bypasses stored normalization", async () => {
     await expect(
       getPool().query(
-        `INSERT INTO cards (front, normalized_front, back) VALUES ('  spaced  ', '  spaced  ', 'valid')`,
+        `INSERT INTO cards (front_text, normalized_front, back_text) VALUES ('  spaced  ', '  spaced  ', 'valid')`,
       ),
     ).rejects.toThrow();
     await expect(
       getPool().query(
-        `INSERT INTO cards (front, normalized_front, back) VALUES ('valid', 'different', 'valid')`,
+        `INSERT INTO cards (front_text, normalized_front, back_text) VALUES ('valid', 'different', 'valid')`,
       ),
     ).rejects.toThrow();
     await expect(
       getPool().query(
-        `INSERT INTO cards (front, normalized_front, back) VALUES ('Café', 'Café', 'valid')`,
+        `INSERT INTO cards (front_text, normalized_front, back_text) VALUES ('Café', 'Café', 'valid')`,
       ),
     ).rejects.toThrow();
     await expect(
       getPool().query(
-        `INSERT INTO cards (front, normalized_front, back) VALUES ($1, $1, 'valid')`,
+        `INSERT INTO cards (front_text, normalized_front, back_text) VALUES ($1, $1, 'valid')`,
         ["multi\u00a0space"],
       ),
     ).rejects.toThrow();
     await expect(
       getPool().query(
-        `INSERT INTO cards (front, normalized_front, back) VALUES ($1, $1, 'valid')`,
+        `INSERT INTO cards (front_text, normalized_front, back_text) VALUES ($1, $1, 'valid')`,
         ["wide\u2003space"],
       ),
     ).rejects.toThrow();
     await expect(
       getPool().query(
-        `INSERT INTO cards (front, normalized_front, back) VALUES (E'\\nvalid\\n', E'\\nvalid\\n', 'valid')`,
+        `INSERT INTO cards (front_text, normalized_front, back_text) VALUES (E'\\nvalid\\n', E'\\nvalid\\n', 'valid')`,
       ),
     ).rejects.toThrow();
+  });
+
+  it("keeps legacy Card columns synchronized without repairing normalized text", async () => {
+    const inserted = await getPool().query(
+      `INSERT INTO cards (front, normalized_front, back)
+       VALUES ('legacy front', 'legacy front', 'legacy back')
+       RETURNING id, front_text, back_text`,
+    );
+
+    expect(inserted.rows[0]).toMatchObject({
+      front_text: "legacy front",
+      back_text: "legacy back",
+    });
+
+    const updated = await getPool().query(
+      `UPDATE cards SET front='updated front', normalized_front='updated front', back='updated back'
+       WHERE id=$1 RETURNING front_text, back_text`,
+      [inserted.rows[0]?.id],
+    );
+
+    expect(updated.rows[0]).toMatchObject({
+      front_text: "updated front",
+      back_text: "updated back",
+    });
   });
 
   it("keeps Reviews and Points after a Card is deleted", async () => {

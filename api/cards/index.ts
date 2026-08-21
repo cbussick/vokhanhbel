@@ -12,6 +12,7 @@ export async function POST(request: Request): Promise<Response> {
   return handleRequest(
     request,
     { unsafe: true, protected: true, bodySchema: createCardInputSchema },
-    async ({ body }) => Response.json(await createCard(body), { status: 201 }),
+    async ({ body, sessionHash }) =>
+      Response.json(await createCard(body, sessionHash), { status: 201 }),
   );
 }

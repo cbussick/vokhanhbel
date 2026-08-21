@@ -106,27 +106,10 @@
   color: var(--color-primary-text);
   font-size: 1.0625rem;
   font-weight: 600;
-  transition:
-    transform var(--duration-fast) var(--ease-standard),
-    filter var(--duration-fast) var(--ease-standard);
-}
-
-.account button:active:not(:disabled) {
-  transform: scale(0.97);
 }
 
 @media (width >= 64rem) {
   .stats {
     grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .account button {
-    transition: none;
-  }
-
-  .account button:active:not(:disabled) {
-    transform: none;
   }
 }

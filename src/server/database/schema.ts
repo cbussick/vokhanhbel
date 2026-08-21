@@ -43,6 +43,39 @@ export const collections = pgTable(
   ],
 );
 
+export const audioAssets = pgTable(
+  "audio_assets",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    objectKey: text("object_key").notNull().unique(),
+    ownerSessionHash: text("owner_session_hash").notNull(),
+    contentType: text("content_type").notNull(),
+    codec: text("codec").notNull(),
+    byteSize: integer("byte_size").notNull(),
+    durationMs: integer("duration_ms").notNull(),
+    checksum: text("checksum").notNull(),
+    stagedUntil: timestamp("staged_until", { withTimezone: true, mode: "date" }).notNull(),
+    claimedCardId: uuid("claimed_card_id"),
+    claimedFace: text("claimed_face"),
+    createdAt: timestamp("created_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
+    deletedAt: timestamp("deleted_at", { withTimezone: true, mode: "date" }),
+  },
+  (table) => [
+    check("audio_assets_byte_size", sql`${table.byteSize} between 1 and 2000000`),
+    check("audio_assets_duration", sql`${table.durationMs} between 1 and 7000`),
+    check(
+      "audio_assets_claim_shape",
+      sql`(${table.claimedCardId} is null and ${table.claimedFace} is null) or (${table.claimedCardId} is not null and ${table.claimedFace} in ('front', 'back'))`,
+    ),
+    uniqueIndex("audio_assets_claimed_face_unique")
+      .on(table.claimedCardId, table.claimedFace)
+      .where(sql`${table.claimedCardId} is not null and ${table.deletedAt} is null`),
+    index("audio_assets_staged_expiry_idx")
+      .on(table.stagedUntil)
+      .where(sql`${table.claimedCardId} is null and ${table.deletedAt} is null`),
+  ],
+);
+
 export const cards = pgTable(
   "cards",
   {
@@ -51,9 +84,17 @@ export const cards = pgTable(
       .notNull()
       .default(defaultCollectionId)
       .references(() => collections.id, { onDelete: "restrict", onUpdate: "restrict" }),
-    front: text("front").notNull(),
-    normalizedFront: text("normalized_front").notNull(),
-    back: text("back").notNull(),
+    frontText: text("front_text"),
+    normalizedFront: text("normalized_front"),
+    frontAudioId: uuid("front_audio_id").references(() => audioAssets.id, {
+      onDelete: "restrict",
+      onUpdate: "restrict",
+    }),
+    backText: text("back_text"),
+    backAudioId: uuid("back_audio_id").references(() => audioAssets.id, {
+      onDelete: "restrict",
+      onUpdate: "restrict",
+    }),
     box: integer("box").notNull().default(0),
     dueAt: timestamp("due_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
     lastReviewedAt: timestamp("last_reviewed_at", { withTimezone: true, mode: "date" }),
@@ -62,18 +103,88 @@ export const cards = pgTable(
     deletedAt: timestamp("deleted_at", { withTimezone: true, mode: "date" }),
   },
   (table) => [
-    check("cards_front_length", sql`char_length(${table.front}) between 1 and 200`),
-    check("cards_back_length", sql`char_length(${table.back}) between 1 and 1000`),
+    check(
+      "cards_front_length",
+      sql`${table.frontText} is null or char_length(${table.frontText}) between 1 and 1000`,
+    ),
+    check(
+      "cards_back_length",
+      sql`${table.backText} is null or char_length(${table.backText}) between 1 and 1000`,
+    ),
+    check(
+      "cards_front_present",
+      sql`${table.deletedAt} is not null or ${table.frontText} is not null or ${table.frontAudioId} is not null`,
+    ),
+    check(
+      "cards_back_present",
+      sql`${table.deletedAt} is not null or ${table.backText} is not null or ${table.backAudioId} is not null`,
+    ),
     check("cards_box_range", sql`${table.box} between 0 and 5`),
-    check("cards_front_normalized", sql`${table.front} = normalize_card_text(${table.front})`),
-    check("cards_back_normalized", sql`${table.back} = normalize_card_text(${table.back})`),
-    check("cards_normalized_front_matches", sql`${table.normalizedFront} = ${table.front}`),
+    check(
+      "cards_front_normalized",
+      sql`${table.frontText} is null or ${table.frontText} = normalize_card_text(${table.frontText})`,
+    ),
+    check(
+      "cards_back_normalized",
+      sql`${table.backText} is null or ${table.backText} = normalize_card_text(${table.backText})`,
+    ),
+    check(
+      "cards_normalized_front_matches",
+      sql`${table.normalizedFront} is not distinct from ${table.frontText}`,
+    ),
     uniqueIndex("cards_active_front_unique")
-      .on(table.collectionId, sql`lower(${table.normalizedFront})`)
-      .where(sql`${table.deletedAt} is null`),
+      .on(table.collectionId, sql`digest(lower(${table.normalizedFront}), 'sha256')`)
+      .where(sql`${table.deletedAt} is null and ${table.normalizedFront} is not null`),
     index("cards_collection_due_active_idx")
       .on(table.collectionId, table.dueAt)
       .where(sql`${table.deletedAt} is null`),
+  ],
+);
+
+export const audioCleanupJobs = pgTable(
+  "audio_cleanup_jobs",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    audioId: uuid("audio_id").notNull(),
+    objectKey: text("object_key").notNull(),
+    reason: text("reason").notNull(),
+    attempts: integer("attempts").notNull().default(0),
+    lastError: text("last_error"),
+    completedAt: timestamp("completed_at", { withTimezone: true, mode: "date" }),
+    createdAt: timestamp("created_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("audio_cleanup_jobs_pending_audio_unique")
+      .on(table.audioId)
+      .where(sql`${table.completedAt} is null`),
+  ],
+);
+
+export const audioUploadAttempts = pgTable(
+  "audio_upload_attempts",
+  {
+    id: bigserial("id", { mode: "number" }).primaryKey(),
+    sessionHash: text("session_hash").notNull(),
+    attemptedAt: timestamp("attempted_at", { withTimezone: true, mode: "date" })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    index("audio_upload_attempts_session_time_idx").on(table.sessionHash, table.attemptedAt),
+  ],
+);
+
+export const audioPlaybackAttempts = pgTable(
+  "audio_playback_attempts",
+  {
+    id: bigserial("id", { mode: "number" }).primaryKey(),
+    sessionHash: text("session_hash").notNull(),
+    attemptedAt: timestamp("attempted_at", { withTimezone: true, mode: "date" })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    index("audio_playback_attempts_session_time_idx").on(table.sessionHash, table.attemptedAt),
   ],
 );
 

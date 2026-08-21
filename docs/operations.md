@@ -24,6 +24,9 @@ OPENAI_API_KEY=<OPENAI API KEY>
 RATE_LIMIT_HMAC_SECRET=<output from openssl rand -hex 32>
 ```
 
+Audio development also needs a private Cloudflare R2 Standard bucket in the EU jurisdiction. Add
+the R2 values documented below.
+
 Start PostgreSQL and apply the schema:
 
 ```sh
@@ -56,6 +59,76 @@ Local development needs only `DATABASE_URL`; local migrations use it directly. P
 backup, and restore operations instead require `DATABASE_URL_UNPOOLED` so they bypass the runtime
 connection pool. `OPENAI_MODEL` is an optional deployment override: omit it to use the application
 default.
+
+## Preview migration
+
+Preview uses a separate Neon database branch. Copy the preview migration template to its ignored
+local file, then restrict it to its owner:
+
+```sh
+cp .env.preview-migration.example .env.preview-migration.local
+chmod 600 .env.preview-migration.local
+```
+
+Add the direct, unpooled connection string for the separate preview branch to
+`.env.preview-migration.local`, then run:
+
+```sh
+npm run db:migrate:preview
+```
+
+The command accepts only a direct PostgreSQL connection string and displays the host, database, and
+user without the password or connection options. If `.env.production-migration.local` exists, it
+refuses a preview target that points to the same host, port, and database as production. It then
+applies the committed Drizzle migrations. Preview data is disposable, so this command does not
+create the encrypted backup required by the production migration flow. Do not use
+`npm run db:migrate` for preview; that command loads `.env.local` and targets local development.
+
+## Private R2 audio storage
+
+Enable R2 in Cloudflare. Create two private Standard buckets in the EU jurisdiction: one for
+preview and one for production. Do not enable public access or a custom public domain. Create a
+separate API token for each environment. Restrict each token to object read, write, and delete
+operations on only its bucket. Store credentials only in the matching Vercel server environment.
+Never expose them through `VITE_*` variables.
+
+```dotenv
+R2_ENVIRONMENT=preview # or production
+R2_ACCOUNT_ID=<Cloudflare account ID>
+R2_BUCKET=<bucket for this environment>
+R2_ACCESS_KEY_ID=<bucket-scoped access key>
+R2_SECRET_ACCESS_KEY=<bucket-scoped secret>
+CRON_SECRET=<output from openssl rand -hex 32>
+```
+
+The adapter always uses the account's `.eu.r2.cloudflarestorage.com` S3 endpoint. Upload, range
+read, deletion, expiry, and retry logs contain the opaque application audio ID and outcome. They do
+not contain bytes, credentials, or R2 object keys. Search for `"area":"audio-storage"` in runtime
+logs.
+
+Staged uploads become eligible for deletion after one hour. Vercel calls the authenticated cleanup
+route once per day with `CRON_SECRET`; uploads also trigger opportunistic expiry. Upload and
+Card-save failures compensate immediately.
+Replacing or removing a recording and soft-deleting a Card clear the database reference before
+deleting the live object. A deletion failure creates an `audio_cleanup_jobs` row. Run the cleanup
+maintenance task that calls `retryAudioCleanup` until the row has `completed_at`. Each retry first
+checks that no active Card refers to the audio ID, so it is safe to repeat.
+
+Cloudflare lifecycle rules can remove abandoned temporary objects as a second hygiene layer. They
+are not a backup. R2 recordings have no backup, snapshot, replication, or restore path in this
+version. Deleted or lost recordings are not recoverable. The encrypted Postgres workflow below is
+unchanged. It backs up Card structure and audio metadata, not R2 bytes.
+
+Before release, use preview to upload, range-play, replace, remove, and delete a non-personal test
+recording. Confirm that direct public access and unauthenticated application playback fail. Confirm
+that preview credentials cannot list, read, write, or delete production objects. Record the EU
+endpoint, isolation result, lifecycle result, and accepted no-backup limitation without recording
+credentials, object keys, or audio content.
+
+The Card-face migration keeps the legacy `front` and `back` columns synchronized during the release
+window. This lets the migration run before the application deploy and keeps an application rollback
+readable. Remove those compatibility columns only in a later, separately reviewed migration after
+no deployed version depends on them.
 
 ## Troubleshooting application errors
 
