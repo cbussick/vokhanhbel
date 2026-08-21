@@ -109,7 +109,9 @@
 
 .faceEditor > legend {
   padding: 0;
-  font-weight: 700;
+  font-size: var(--font-lg);
+  font-weight: 800;
+  line-height: 1.3;
 }
 
 .faceControl {
@@ -127,9 +129,34 @@
 
 .textControl {
   display: grid;
-  gap: var(--space-1);
+  gap: var(--space-2);
   padding: var(--space-3);
   background: var(--color-surface);
+}
+
+.mediaLabel {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--color-primary-text);
+  font-size: var(--font-sm);
+  font-weight: 800;
+}
+
+.mediaIcon {
+  flex: none;
+  inline-size: 1.25rem;
+  block-size: 1.25rem;
+}
+
+.mediaIcon svg {
+  inline-size: 100%;
+  block-size: 100%;
+  fill: none;
+  stroke: currentcolor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2;
 }
 
 .textControl label {

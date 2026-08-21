@@ -93,20 +93,47 @@ describe("AudioInput microphone gate", () => {
     const input = screen.getByRole("group", { name: "Audio für Vorderseite" });
     const dataTransfer = { types: ["Files"], files: [], dropEffect: "none" };
     const recordButton = screen.getByRole("button", { name: "Audio aufnehmen" });
-    const fileButton = screen.getByRole("button", { name: /Audiodatei auswählen/ });
+    const fileInput = screen.getByLabelText(/Audiodatei auswählen/);
+    const dropZone = screen.getByText("Audiodatei hier ablegen oder auswählen").closest("label");
 
-    expect(screen.getByText("Audiodatei hier ablegen")).toBeVisible();
-    expect(
-      recordButton.compareDocumentPosition(fileButton) & Node.DOCUMENT_POSITION_FOLLOWING,
-    ).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+    expect(screen.getByText("Audiodatei hier ablegen oder auswählen")).toBeVisible();
+    expect(screen.queryByText("Datei wählen")).not.toBeInTheDocument();
+    expect(dropZone).not.toBeNull();
+    expect(recordButton.compareDocumentPosition(fileInput) & Node.DOCUMENT_POSITION_FOLLOWING).toBe(
+      Node.DOCUMENT_POSITION_FOLLOWING,
+    );
 
     fireEvent.dragEnter(input, { dataTransfer });
     expect(input).toHaveAttribute("data-dragging", "true");
-    expect(screen.getByText("Datei hier ablegen")).toBeVisible();
+    expect(screen.getByText("Audiodatei hier ablegen oder auswählen")).toBeVisible();
     fireEvent.dragOver(input, { dataTransfer });
     expect(dataTransfer.dropEffect).toBe("copy");
     fireEvent.dragLeave(input, { dataTransfer });
     expect(input).not.toHaveAttribute("data-dragging");
+  });
+
+  it("reveals the accepted formats only after an unsupported file is selected", async () => {
+    const view = render(
+      <AudioInput
+        face="front"
+        draft={null}
+        existing={null}
+        existingRemoved={false}
+        onDraftChange={() => undefined}
+        onExistingRemovedChange={() => undefined}
+      />,
+    );
+    const input = view.container.querySelector<HTMLInputElement>('input[type="file"]');
+
+    expect(screen.queryByText(/MP3, M4A/)).not.toBeInTheDocument();
+    expect(input).not.toBeNull();
+    fireEvent.change(input!, {
+      target: { files: [new File(["not audio"], "notes.txt", { type: "text/plain" })] },
+    });
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Verwende MP3, M4A, WebM, OGG oder WAV.",
+    );
   });
 
   it("selects Opus output, stops manually, releases tracks, and offers Record Again", async () => {

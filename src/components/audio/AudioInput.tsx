@@ -339,14 +339,6 @@ export function AudioInput({
             </button>
           </div>
         ) : null}
-        <input
-          ref={inputRef}
-          id={`audio-${face}`}
-          type="file"
-          hidden
-          accept="audio/mpeg,audio/mp4,audio/webm,audio/ogg,audio/wav,.mp3,.m4a,.mp4,.webm,.ogg,.wav"
-          onChange={(event) => void chooseFile(event.target.files?.[0])}
-        />
         <button
           type="button"
           className={`${styles.actionButton} ${isRecording ? styles.stopButton : styles.recordButton}`}
@@ -370,24 +362,22 @@ export function AudioInput({
         <div className={styles.separator}>
           <span>{t("audio.or")}</span>
         </div>
-        <div className={styles.dropZone}>
+        <input
+          ref={inputRef}
+          id={`audio-${face}`}
+          type="file"
+          className={`${styles.visuallyHidden} ${styles.fileInput}`}
+          aria-label={selectLabel}
+          disabled={isRecording || isRequesting}
+          accept="audio/mpeg,audio/mp4,audio/webm,audio/ogg,audio/wav,.mp3,.m4a,.mp4,.webm,.ogg,.wav"
+          onChange={(event) => void chooseFile(event.target.files?.[0])}
+        />
+        <label className={styles.dropZone} htmlFor={`audio-${face}`}>
           <span className={`${styles.icon} ${styles.dropIcon}`} aria-hidden="true">
             <UploadIcon />
           </span>
-          <span className={styles.dropCopy}>
-            <strong>{t(dragging ? "audio.drop" : "audio.dropIdle")}</strong>
-            <span>{t("audio.formats")}</span>
-          </span>
-          <button
-            type="button"
-            className={`${styles.actionButton} ${styles.fileButton}`}
-            aria-label={selectLabel}
-            disabled={isRecording || isRequesting}
-            onClick={() => inputRef.current?.click()}
-          >
-            <span>{visibleAudio ? t("audio.replaceFile") : t("audio.select")}</span>
-          </button>
-        </div>
+          <strong className={styles.dropCopy}>{t("audio.dropIdle")}</strong>
+        </label>
         <span className={styles.limits}>{t("audio.limits")}</span>
         <p className={isRecording ? styles.visuallyHidden : styles.status} aria-live="polite">
           {isRecording

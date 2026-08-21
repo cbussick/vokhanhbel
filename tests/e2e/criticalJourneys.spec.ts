@@ -196,6 +196,8 @@ test("creates, searches, and opens a Card accessibly", async ({ page }) => {
   await page.goto("/cards");
   await page.getByRole("link", { name: /Vietnamesisch/ }).click();
   await page.getByRole("button", { name: "Karte hinzufügen" }).first().click();
+  await expect(page.getByText("Text", { exact: true })).toHaveCount(2);
+  await expect(page.getByText("Audio", { exact: true })).toHaveCount(2);
   await expectNoSeriousAxeViolations(page);
   const frontText = page.getByRole("textbox", {
     name: "Vorderseite Text bis 1.000 Zeichen",
@@ -282,12 +284,16 @@ test("keeps the Card audio rail stable while dragging and recording", async ({ p
     return transfer;
   });
 
+  const fileChooserPromise = page.waitForEvent("filechooser");
+  await rail.getByText("Audiodatei hier ablegen oder auswählen").click();
+  await fileChooserPromise;
+
   await rail.dispatchEvent("dragenter", { dataTransfer });
   await expect(rail).toHaveAttribute("data-dragging", "true");
-  const dropCopy = rail.getByText("Datei hier ablegen");
+  const dropCopy = rail.getByText("Audiodatei hier ablegen oder auswählen");
   await expect(dropCopy).toBeVisible();
   const dropStyles = await dropCopy.evaluate((element) => {
-    const dropZone = element.parentElement?.parentElement;
+    const dropZone = element.parentElement;
     if (!dropZone) throw new Error("Audio drop zone not found");
     const browser = globalThis as unknown as {
       getComputedStyle: (target: unknown) => { borderRadius: string; cursor: string };
@@ -318,9 +324,7 @@ test("keeps the Card audio rail stable while dragging and recording", async ({ p
 
     return { fontSize: styles.fontSize, fontWeight: styles.fontWeight, scale: styles.scale };
   });
-  const recordBox = await recordButton.boundingBox();
-  if (!recordBox) throw new Error("Audio record button not found");
-  await page.mouse.move(recordBox.x + recordBox.width / 2, recordBox.y + recordBox.height / 2);
+  await recordButton.hover();
   await page.mouse.down();
   await page.waitForTimeout(150);
   const pressedButtonStyles = await recordButton.evaluate((element) => {

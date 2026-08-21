@@ -18,6 +18,14 @@ import { AudioInput, releaseAudioDraft, type AudioDraft } from "./audio/AudioInp
 import { stageAudioDraft } from "./audio/audioApi";
 import styles from "./Dialog.module.css";
 
+function TextIcon() {
+  return (
+    <svg viewBox="0 0 24 24" focusable="false">
+      <path d="M4 6h16M4 12h16M4 18h10" />
+    </svg>
+  );
+}
+
 export function CardFormDialog({
   card,
   defaultCollectionId,
@@ -216,6 +224,12 @@ export function CardFormDialog({
               </span>
               <div className={styles.faceControl}>
                 <div className={styles.textControl}>
+                  <div className={styles.mediaLabel}>
+                    <span className={styles.mediaIcon} aria-hidden="true">
+                      <TextIcon />
+                    </span>
+                    {t("cards.text")}
+                  </div>
                   <label id="front-text-label" htmlFor="card-front">
                     {t("cards.textLabel")}
                   </label>
@@ -248,6 +262,12 @@ export function CardFormDialog({
               </span>
               <div className={styles.faceControl}>
                 <div className={styles.textControl}>
+                  <div className={styles.mediaLabel}>
+                    <span className={styles.mediaIcon} aria-hidden="true">
+                      <TextIcon />
+                    </span>
+                    {t("cards.text")}
+                  </div>
                   <label id="back-text-label" htmlFor="card-back">
                     {t("cards.textLabel")}
                   </label>
