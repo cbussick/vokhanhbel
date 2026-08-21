@@ -123,38 +123,55 @@ function CollectionCardsRoute() {
           <ul className={styles.list}>
             {visible.map((card) => (
               <li key={card.id}>
-                <Link to="/cards/$collectionId/$cardId" params={{ collectionId, cardId: card.id }}>
-                  <span className={styles.rowText}>
-                    <strong>
-                      {card.front.text ??
-                        (card.front.audio
-                          ? t("audio.duration", {
-                              duration: formatAudioDuration(card.front.audio.durationMs),
-                            })
-                          : "")}
-                    </strong>
-                    <span className={styles.rowDetail}>
-                      {card.back.text ??
-                        (card.back.audio
-                          ? t("audio.duration", {
-                              duration: formatAudioDuration(card.back.audio.durationMs),
-                            })
-                          : "")}
+                <div className={styles.rowLayout}>
+                  <Link
+                    to="/cards/$collectionId/$cardId"
+                    params={{ collectionId, cardId: card.id }}
+                  >
+                    <span className={styles.rowText}>
+                      <strong>
+                        {card.front.text ??
+                          (card.front.audio
+                            ? t("audio.duration", {
+                                duration: formatAudioDuration(card.front.audio.durationMs),
+                              })
+                            : "")}
+                      </strong>
+                      <span className={styles.rowDetail}>
+                        {card.back.text ??
+                          (card.back.audio
+                            ? t("audio.duration", {
+                                duration: formatAudioDuration(card.back.audio.durationMs),
+                              })
+                            : "")}
+                      </span>
                     </span>
-                  </span>
-                </Link>
-                {card.front.audio ? (
-                  <div className={styles.rowAudio}>
-                    <span>{t("audio.front")}</span>
-                    <AudioPlayer audio={card.front.audio} label={t("audio.frontLabel")} compact />
-                  </div>
-                ) : null}
-                {card.back.audio ? (
-                  <div className={styles.rowAudio}>
-                    <span>{t("audio.back")}</span>
-                    <AudioPlayer audio={card.back.audio} label={t("audio.backLabel")} compact />
-                  </div>
-                ) : null}
+                  </Link>
+                  {card.front.audio || card.back.audio ? (
+                    <div className={styles.rowMedia}>
+                      {card.front.audio ? (
+                        <div className={styles.rowAudio}>
+                          <span>{t("audio.front")}</span>
+                          <AudioPlayer
+                            audio={card.front.audio}
+                            label={t("audio.frontLabel")}
+                            compact
+                          />
+                        </div>
+                      ) : null}
+                      {card.back.audio ? (
+                        <div className={styles.rowAudio}>
+                          <span>{t("audio.back")}</span>
+                          <AudioPlayer
+                            audio={card.back.audio}
+                            label={t("audio.backLabel")}
+                            compact
+                          />
+                        </div>
+                      ) : null}
+                    </div>
+                  ) : null}
+                </div>
               </li>
             ))}
           </ul>

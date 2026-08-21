@@ -45,7 +45,9 @@
 }
 
 .compact {
-  grid-template-columns: 44px minmax(3rem, 1fr) auto;
+  grid-template-columns: 44px minmax(2rem, 1fr) auto;
+  gap: var(--space-1);
+  inline-size: 100%;
 }
 
 @media (prefers-reduced-motion: reduce) {

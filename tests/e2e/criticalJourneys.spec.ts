@@ -600,6 +600,27 @@ test("uses desktop space for route content without overstretching focused work",
   expect(Math.abs(focusedMainBox!.x - (1440 - focusedMainBox!.width) / 2)).toBeLessThanOrEqual(1);
 });
 
+test("keeps audio controls compact in the collection overview", async ({ page }) => {
+  const state = await installMockApi(page);
+  state.cards = [
+    createCard("die Birne", "the pear"),
+    createCard(
+      { text: "die Pflaume", audio: audio("88888888-8888-4888-8888-888888888895") },
+      { text: "the plum", audio: audio("88888888-8888-4888-8888-888888888896") },
+    ),
+  ];
+  await page.setViewportSize({ width: 768, height: 900 });
+  await page.goto(`/cards/${mockCollection.id}`);
+
+  const cardItems = page.getByRole("listitem");
+  const textCardBox = await cardItems.nth(0).boundingBox();
+  const audioCardBox = await cardItems.nth(1).boundingBox();
+
+  expect(textCardBox).not.toBeNull();
+  expect(audioCardBox).not.toBeNull();
+  expect(audioCardBox!.height).toBeLessThanOrEqual(textCardBox!.height + 4);
+});
+
 for (const viewport of [
   { name: "mobile", width: 390, height: 844 },
   { name: "tablet", width: 768, height: 900 },

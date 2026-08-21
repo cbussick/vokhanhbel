@@ -356,6 +356,30 @@ describe("PostgreSQL application behavior", () => {
     ).rejects.toThrow();
   });
 
+  it("keeps legacy Card columns synchronized without repairing normalized text", async () => {
+    const inserted = await getPool().query(
+      `INSERT INTO cards (front, normalized_front, back)
+       VALUES ('legacy front', 'legacy front', 'legacy back')
+       RETURNING id, front_text, back_text`,
+    );
+
+    expect(inserted.rows[0]).toMatchObject({
+      front_text: "legacy front",
+      back_text: "legacy back",
+    });
+
+    const updated = await getPool().query(
+      `UPDATE cards SET front='updated front', normalized_front='updated front', back='updated back'
+       WHERE id=$1 RETURNING front_text, back_text`,
+      [inserted.rows[0]?.id],
+    );
+
+    expect(updated.rows[0]).toMatchObject({
+      front_text: "updated front",
+      back_text: "updated back",
+    });
+  });
+
   it("keeps Reviews and Points after a Card is deleted", async () => {
     const card = await createCard({
       ...inDefaultCollection,
