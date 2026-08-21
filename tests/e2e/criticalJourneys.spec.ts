@@ -231,6 +231,60 @@ test("creates, searches, and opens a Card accessibly", async ({ page }) => {
   await expectNoSeriousAxeViolations(page);
 });
 
+test("keeps the Card dialog locked while Save is pending", async ({ page }) => {
+  let saveRequests = 0;
+  let releaseSave: () => void = () => undefined;
+  const saveGate = new Promise<void>((resolve) => {
+    releaseSave = resolve;
+  });
+  await installMockApi(page);
+  await page.route("**/api/cards", async (route) => {
+    if (route.request().method() !== "POST") return route.fallback();
+    saveRequests += 1;
+
+    const input = route.request().postDataJSON() as {
+      front: { text: string | null };
+      back: { text: string | null };
+    };
+    await saveGate;
+    await json(
+      route,
+      createCard({ text: input.front.text, audio: null }, { text: input.back.text, audio: null }),
+      201,
+    );
+  });
+  await page.goto(`/cards/${mockCollection.id}`);
+  await page.getByRole("button", { name: "Karte hinzufügen" }).click();
+  const dialog = page.getByRole("dialog");
+  await dialog
+    .getByRole("textbox", { name: "Vorderseite Text bis 1.000 Zeichen" })
+    .fill("xin chào");
+  await dialog.getByRole("textbox", { name: "Rückseite Text bis 1.000 Zeichen" }).fill("hallo");
+  await dialog.getByRole("button", { name: "Speichern" }).click();
+
+  const pendingSave = dialog.getByRole("button", { name: "Wird gespeichert …" });
+  await expect(pendingSave).toHaveAttribute("aria-disabled", "true");
+  await expect(pendingSave.locator('[aria-hidden="true"]')).toBeVisible();
+  await expect(dialog.locator("section")).toHaveAttribute("aria-busy", "true");
+  await expect(dialog.getByRole("button", { name: "Schließen" })).toBeDisabled();
+  await expect(dialog.getByRole("button", { name: "Abbrechen" })).toBeDisabled();
+  const recordButtons = dialog.getByRole("button", { name: "Audio aufnehmen" });
+  await expect(recordButtons).toHaveCount(2);
+  await expect(recordButtons.nth(0)).toBeDisabled();
+  await expect(recordButtons.nth(1)).toBeDisabled();
+  await expect(dialog.getByRole("combobox", { name: "Sammlung" })).toBeDisabled();
+  await expectNoSeriousAxeViolations(page);
+
+  await pendingSave.dispatchEvent("click");
+  expect(saveRequests).toBe(1);
+
+  await page.keyboard.press("Escape");
+  await expect(dialog).toBeVisible();
+
+  releaseSave();
+  await expect(dialog).toBeHidden();
+});
+
 test("keeps the Card audio rail stable while dragging and recording", async ({ page }) => {
   await page.addInitScript(() => {
     Object.defineProperty(navigator, "mediaDevices", {

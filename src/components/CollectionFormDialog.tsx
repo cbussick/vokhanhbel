@@ -15,6 +15,7 @@ import { apiRequest, ApiError } from "../lib/apiClient";
 import { useOnlineStatus } from "../lib/browserState";
 import { queryKeys } from "../lib/queryKeys";
 import { CollectionIcon } from "./CollectionIcon";
+import { PendingActionContent } from "./PendingActionContent";
 import styles from "./Dialog.module.css";
 
 export function CollectionFormDialog({
@@ -45,11 +46,6 @@ export function CollectionFormDialog({
     dialog.showModal();
     requestAnimationFrame(() => nameRef.current?.focus());
   }, []);
-
-  const close = () => {
-    dialogRef.current?.close();
-    onClose();
-  };
 
   const describeError = (value: unknown, fallback: string) => {
     if (!(value instanceof ApiError)) return fallback;
@@ -102,8 +98,20 @@ export function CollectionFormDialog({
     },
   });
 
+  const isPending = save.isPending || remove.isPending;
+
+  const close = () => {
+    if (isPending) return;
+
+    dialogRef.current?.close();
+    onClose();
+  };
+
   const submit = (event: React.FormEvent) => {
     event.preventDefault();
+
+    if (isPending) return;
+
     setError(undefined);
 
     if (!online) {
@@ -122,6 +130,8 @@ export function CollectionFormDialog({
       onCancel={(event) => {
         event.preventDefault();
 
+        if (isPending) return;
+
         if (isConfirmingDelete) {
           setIsConfirmingDelete(false);
 
@@ -132,7 +142,7 @@ export function CollectionFormDialog({
       }}
       aria-labelledby="collection-dialog-title"
     >
-      <section className={styles.sheet}>
+      <section className={styles.sheet} aria-busy={isPending}>
         <header>
           <h2 id="collection-dialog-title">
             {t(collection ? "collections.renameTitle" : "collections.create")}
@@ -141,6 +151,7 @@ export function CollectionFormDialog({
             <button
               type="button"
               className={styles.iconButton}
+              disabled={isPending}
               onClick={close}
               aria-label={t("common.close")}
             >
@@ -155,6 +166,7 @@ export function CollectionFormDialog({
               <button
                 type="button"
                 className={styles.secondary}
+                disabled={remove.isPending}
                 onClick={() => setIsConfirmingDelete(false)}
               >
                 {t("common.cancel")}
@@ -162,10 +174,17 @@ export function CollectionFormDialog({
               <button
                 type="button"
                 className={styles.danger}
-                disabled={remove.isPending}
-                onClick={() => remove.mutate()}
+                aria-busy={remove.isPending}
+                aria-disabled={remove.isPending}
+                onClick={() => {
+                  if (!remove.isPending) remove.mutate();
+                }}
               >
-                {t("collections.delete")}
+                <PendingActionContent
+                  pending={remove.isPending}
+                  label={t("collections.delete")}
+                  pendingLabel={t("common.deleting")}
+                />
               </button>
             </div>
           </div>
@@ -182,9 +201,10 @@ export function CollectionFormDialog({
               required
               maxLength={60}
               value={name}
+              disabled={isPending}
               onChange={(event) => setName(event.target.value)}
             />
-            <fieldset className={styles.iconChoices}>
+            <fieldset className={styles.iconChoices} disabled={isPending}>
               <legend className={styles.fieldLabel}>{t("collections.icon")}</legend>
               {collectionIconKeys.map((key) => (
                 <div key={key}>
@@ -213,6 +233,7 @@ export function CollectionFormDialog({
                 <button
                   type="button"
                   className={styles.deleteLink}
+                  disabled={isPending}
                   onClick={() => {
                     setError(undefined);
                     setIsConfirmingDelete(true);
@@ -221,15 +242,26 @@ export function CollectionFormDialog({
                   {t("collections.delete")}
                 </button>
               )}
-              <button type="button" className={styles.secondary} onClick={close}>
+              <button
+                type="button"
+                className={styles.secondary}
+                disabled={isPending}
+                onClick={close}
+              >
                 {t("common.cancel")}
               </button>
               <button
                 type="submit"
                 className={styles.primary}
-                disabled={save.isPending || !name.trim()}
+                aria-busy={save.isPending}
+                aria-disabled={save.isPending}
+                disabled={!name.trim()}
               >
-                {t("common.save")}
+                <PendingActionContent
+                  pending={save.isPending}
+                  label={t("common.save")}
+                  pendingLabel={t("common.saving")}
+                />
               </button>
             </div>
           </form>

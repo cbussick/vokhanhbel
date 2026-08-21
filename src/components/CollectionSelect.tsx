@@ -11,24 +11,27 @@ export function CollectionSelect({
   value,
   onChange,
   required = false,
+  disabled = false,
 }: {
   id: string;
   collections: readonly Collection[];
   value: string;
   onChange: (collectionId: string) => void;
   required?: boolean;
+  disabled?: boolean;
 }) {
   const listboxId = useId();
   const rootRef = useRef<HTMLDivElement>(null);
   const optionRefs = useRef<(HTMLLIElement | null)[]>([]);
   const typeAhead = useRef({ query: "", lastKeyAt: 0 });
   const [isOpen, setIsOpen] = useState(false);
+  const isListboxOpen = isOpen && !disabled;
   const selectedIndex = collections.findIndex((collection) => collection.id === value);
   const [activeIndex, setActiveIndex] = useState(Math.max(selectedIndex, 0));
   const selectedCollection = collections[selectedIndex];
 
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isListboxOpen) return;
 
     const closeOnOutsidePointer = (event: PointerEvent) => {
       if (!rootRef.current?.contains(event.target as Node)) setIsOpen(false);
@@ -37,13 +40,13 @@ export function CollectionSelect({
     document.addEventListener("pointerdown", closeOnOutsidePointer);
 
     return () => document.removeEventListener("pointerdown", closeOnOutsidePointer);
-  }, [isOpen]);
+  }, [isListboxOpen]);
 
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isListboxOpen) return;
 
     optionRefs.current[activeIndex]?.scrollIntoView?.({ block: "nearest" });
-  }, [activeIndex, isOpen]);
+  }, [activeIndex, isListboxOpen]);
 
   const open = (index = selectedIndex >= 0 ? selectedIndex : 0) => {
     setActiveIndex(index);
@@ -166,10 +169,10 @@ export function CollectionSelect({
         role="combobox"
         className={styles.trigger}
         aria-controls={listboxId}
-        aria-expanded={isOpen}
+        aria-expanded={isListboxOpen}
         aria-required={required}
-        aria-activedescendant={isOpen ? `${listboxId}-${activeIndex}` : undefined}
-        disabled={collections.length === 0}
+        aria-activedescendant={isListboxOpen ? `${listboxId}-${activeIndex}` : undefined}
+        disabled={disabled || collections.length === 0}
         onClick={() => (isOpen ? setIsOpen(false) : open())}
         onKeyDown={handleKeyDown}
       >
@@ -177,7 +180,7 @@ export function CollectionSelect({
         <span className={styles.value}>{selectedCollection?.name}</span>
         <span className={styles.chevron} aria-hidden="true" />
       </button>
-      {isOpen && (
+      {isListboxOpen && (
         <ul id={listboxId} role="listbox" className={styles.listbox} aria-labelledby={id}>
           {collections.map((collection, index) => {
             const isActive = index === activeIndex;

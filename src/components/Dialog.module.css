@@ -292,6 +292,11 @@
   color: white;
 }
 
+.primary[aria-busy="true"],
+.danger[aria-busy="true"] {
+  cursor: wait;
+}
+
 .deleteLink {
   margin-inline-end: auto;
   border: 0;

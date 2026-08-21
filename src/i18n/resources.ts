@@ -20,6 +20,8 @@ export const de = {
       close: "Schließen",
       cancel: "Abbrechen",
       save: "Speichern",
+      saving: "Wird gespeichert …",
+      deleting: "Wird gelöscht …",
       retry: "Erneut versuchen",
       finish: "Fertig",
     },
