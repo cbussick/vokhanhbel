@@ -5,6 +5,7 @@
   max-block-size: calc(100dvh - var(--space-6));
   margin: auto auto 0;
   padding: 0;
+  overflow: visible;
   border: 0;
   border-radius: var(--radius-large) var(--radius-large) 0 0;
   background: transparent;
@@ -119,6 +120,11 @@
   background: var(--color-surface);
 }
 
+.faceControl:has(textarea:focus-visible) {
+  border-color: var(--color-primary-text);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 55%, transparent);
+}
+
 .textControl {
   display: grid;
   gap: var(--space-1);
@@ -216,11 +222,19 @@
 }
 
 .textControl textarea:focus-visible {
-  outline-offset: var(--space-1);
+  outline: none;
 }
 
 .audioAttachment {
   min-inline-size: 0;
+}
+
+@media (forced-colors: active) {
+  .faceControl:has(textarea:focus-visible) {
+    outline: 3px solid Highlight;
+    outline-offset: 2px;
+    box-shadow: none;
+  }
 }
 
 .actions {

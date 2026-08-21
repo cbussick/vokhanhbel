@@ -197,6 +197,24 @@ test("creates, searches, and opens a Card accessibly", async ({ page }) => {
   await page.getByRole("link", { name: /Vietnamesisch/ }).click();
   await page.getByRole("button", { name: "Karte hinzufügen" }).first().click();
   await expectNoSeriousAxeViolations(page);
+  const frontText = page.getByRole("textbox", {
+    name: "Vorderseite Text bis 1.000 Zeichen",
+  });
+  await frontText.focus();
+  const focusStyles = await page.evaluate<{
+    textareaOutline: string;
+    faceControlShadow: string;
+  }>(`(() => {
+    const textarea = document.querySelector("#card-front");
+    const faceControl = textarea?.closest("fieldset")?.querySelector(":scope > div");
+    if (!textarea || !faceControl) throw new Error("Card face control not found");
+    return {
+      textareaOutline: getComputedStyle(textarea).outlineStyle,
+      faceControlShadow: getComputedStyle(faceControl).boxShadow,
+    };
+  })()`);
+  expect(focusStyles.textareaOutline).toBe("none");
+  expect(focusStyles.faceControlShadow).not.toBe("none");
   const collection = page.getByRole("combobox", { name: "Sammlung" });
   await collection.click();
   await expect(page.getByRole("listbox")).toBeVisible();
@@ -279,6 +297,38 @@ test("keeps the Card audio rail stable while dragging and recording", async ({ p
   expect(idleBox).not.toBeNull();
   expect(recordingBox).not.toBeNull();
   expect(Math.abs(recordingBox!.height - idleBox!.height)).toBeLessThanOrEqual(1);
+});
+
+test("keeps one scroll container when a Card textarea is enlarged", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 700 });
+  await installMockApi(page);
+  await page.goto(`/cards/${mockCollection.id}`);
+  await page.getByRole("button", { name: "Karte hinzufügen" }).first().click();
+  const textarea = page.getByRole("textbox", {
+    name: "Vorderseite Text bis 1.000 Zeichen",
+  });
+
+  await textarea.evaluate((element) => {
+    element.style.height = "80rem";
+  });
+  const scrollState = await page.evaluate<{
+    dialogOverflow: string;
+    sheetOverflow: string;
+    sheetHasOverflow: boolean;
+  }>(`(() => {
+    const dialog = document.querySelector("dialog");
+    const sheet = dialog?.querySelector(":scope > section");
+    if (!dialog || !sheet) throw new Error("Card dialog sheet not found");
+    return {
+      dialogOverflow: getComputedStyle(dialog).overflowY,
+      sheetOverflow: getComputedStyle(sheet).overflowY,
+      sheetHasOverflow: sheet.scrollHeight > sheet.clientHeight,
+    };
+  })()`);
+
+  expect(scrollState.dialogOverflow).toBe("visible");
+  expect(scrollState.sheetOverflow).toBe("auto");
+  expect(scrollState.sheetHasOverflow).toBe(true);
 });
 
 test("completes Review, Tutor, repeat-ready summary, and Me", async ({ page }) => {
