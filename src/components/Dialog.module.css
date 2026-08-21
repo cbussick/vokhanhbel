@@ -252,10 +252,6 @@
   outline: none;
 }
 
-.audioAttachment {
-  min-inline-size: 0;
-}
-
 @media (forced-colors: active) {
   .faceControl:has(textarea:focus-visible) {
     outline: 3px solid Highlight;

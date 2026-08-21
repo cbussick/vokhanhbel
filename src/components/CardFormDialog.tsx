@@ -243,16 +243,14 @@ export function CardFormDialog({
                     onChange={(event) => setFront(event.target.value)}
                   />
                 </div>
-                <div className={styles.audioAttachment}>
-                  <AudioInput
-                    face="front"
-                    draft={frontDraft}
-                    existing={card?.front.audio ?? null}
-                    existingRemoved={frontAudioRemoved}
-                    onDraftChange={setFrontDraft}
-                    onExistingRemovedChange={setFrontAudioRemoved}
-                  />
-                </div>
+                <AudioInput
+                  face="front"
+                  draft={frontDraft}
+                  existing={card?.front.audio ?? null}
+                  existingRemoved={frontAudioRemoved}
+                  onDraftChange={setFrontDraft}
+                  onExistingRemovedChange={setFrontAudioRemoved}
+                />
               </div>
             </fieldset>
             <fieldset className={styles.faceEditor}>
@@ -280,16 +278,14 @@ export function CardFormDialog({
                     onChange={(event) => setBack(event.target.value)}
                   />
                 </div>
-                <div className={styles.audioAttachment}>
-                  <AudioInput
-                    face="back"
-                    draft={backDraft}
-                    existing={card?.back.audio ?? null}
-                    existingRemoved={backAudioRemoved}
-                    onDraftChange={setBackDraft}
-                    onExistingRemovedChange={setBackAudioRemoved}
-                  />
-                </div>
+                <AudioInput
+                  face="back"
+                  draft={backDraft}
+                  existing={card?.back.audio ?? null}
+                  existingRemoved={backAudioRemoved}
+                  onDraftChange={setBackDraft}
+                  onExistingRemovedChange={setBackAudioRemoved}
+                />
               </div>
             </fieldset>
             {error && (

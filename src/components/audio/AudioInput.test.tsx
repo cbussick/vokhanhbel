@@ -79,7 +79,7 @@ describe("AudioInput microphone gate", () => {
     expect(screen.getByLabelText(/Audiodatei auswählen/)).toBeEnabled();
   });
 
-  it("shows a copy affordance only while a file is dragged over the audio control", () => {
+  it("keeps the drop instruction stable and orders recording before file selection", () => {
     render(
       <AudioInput
         face="front"
@@ -94,18 +94,18 @@ describe("AudioInput microphone gate", () => {
     const dataTransfer = { types: ["Files"], files: [], dropEffect: "none" };
     const recordButton = screen.getByRole("button", { name: "Audio aufnehmen" });
     const fileInput = screen.getByLabelText(/Audiodatei auswählen/);
-    const dropZone = screen.getByText("Audiodatei hier ablegen oder auswählen").closest("label");
+    const dropCopy = screen.getByText("Audiodatei hier ablegen oder auswählen");
 
-    expect(screen.getByText("Audiodatei hier ablegen oder auswählen")).toBeVisible();
+    expect(dropCopy).toBeVisible();
     expect(screen.queryByText("Datei wählen")).not.toBeInTheDocument();
-    expect(dropZone).not.toBeNull();
+    expect(dropCopy.closest("label")).not.toBeNull();
     expect(recordButton.compareDocumentPosition(fileInput) & Node.DOCUMENT_POSITION_FOLLOWING).toBe(
       Node.DOCUMENT_POSITION_FOLLOWING,
     );
 
     fireEvent.dragEnter(input, { dataTransfer });
     expect(input).toHaveAttribute("data-dragging", "true");
-    expect(screen.getByText("Audiodatei hier ablegen oder auswählen")).toBeVisible();
+    expect(dropCopy).toBeVisible();
     fireEvent.dragOver(input, { dataTransfer });
     expect(dataTransfer.dropEffect).toBe("copy");
     fireEvent.dragLeave(input, { dataTransfer });
@@ -113,7 +113,7 @@ describe("AudioInput microphone gate", () => {
   });
 
   it("reveals the accepted formats only after an unsupported file is selected", async () => {
-    const view = render(
+    render(
       <AudioInput
         face="front"
         draft={null}
@@ -123,11 +123,10 @@ describe("AudioInput microphone gate", () => {
         onExistingRemovedChange={() => undefined}
       />,
     );
-    const input = view.container.querySelector<HTMLInputElement>('input[type="file"]');
+    const input = screen.getByLabelText(/Audiodatei auswählen/);
 
     expect(screen.queryByText(/MP3, M4A/)).not.toBeInTheDocument();
-    expect(input).not.toBeNull();
-    fireEvent.change(input!, {
+    fireEvent.change(input, {
       target: { files: [new File(["not audio"], "notes.txt", { type: "text/plain" })] },
     });
 
