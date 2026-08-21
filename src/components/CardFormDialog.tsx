@@ -14,6 +14,7 @@ import { useOnlineStatus } from "../lib/browserState";
 import { collectionsQuery } from "../lib/queries";
 import { queryKeys } from "../lib/queryKeys";
 import { CollectionSelect } from "./CollectionSelect";
+import { PendingActionContent } from "./PendingActionContent";
 import { AudioInput, releaseAudioDraft, type AudioDraft } from "./audio/AudioInput";
 import { stageAudioDraft } from "./audio/audioApi";
 import styles from "./Dialog.module.css";
@@ -62,13 +63,6 @@ export function CardFormDialog({
     dialog.showModal();
     requestAnimationFrame(() => frontRef.current?.focus());
   }, []);
-
-  const close = () => {
-    releaseAudioDraft(frontDraft);
-    releaseAudioDraft(backDraft);
-    dialogRef.current?.close();
-    onClose();
-  };
 
   const save = useMutation({
     mutationFn: async () => {
@@ -141,8 +135,22 @@ export function CardFormDialog({
     },
   });
 
+  const isPending = save.isPending || remove.isPending;
+
+  const close = () => {
+    if (isPending) return;
+
+    releaseAudioDraft(frontDraft);
+    releaseAudioDraft(backDraft);
+    dialogRef.current?.close();
+    onClose();
+  };
+
   const submit = (event: React.FormEvent) => {
     event.preventDefault();
+
+    if (isPending) return;
+
     setError(undefined);
 
     if (!online) {
@@ -162,6 +170,8 @@ export function CardFormDialog({
         if (event.target !== event.currentTarget) return;
         event.preventDefault();
 
+        if (isPending) return;
+
         if (isConfirmingDelete) {
           setIsConfirmingDelete(false);
 
@@ -172,13 +182,14 @@ export function CardFormDialog({
       }}
       aria-labelledby="card-dialog-title"
     >
-      <section className={styles.sheet}>
+      <section className={styles.sheet} aria-busy={isPending}>
         <header>
           <h2 id="card-dialog-title">{t(card ? "cards.edit" : "cards.create")}</h2>
           {!isConfirmingDelete && (
             <button
               type="button"
               className={styles.iconButton}
+              disabled={isPending}
               onClick={close}
               aria-label={t("common.close")}
             >
@@ -193,6 +204,7 @@ export function CardFormDialog({
               <button
                 type="button"
                 className={styles.secondary}
+                disabled={remove.isPending}
                 onClick={() => setIsConfirmingDelete(false)}
               >
                 {t("common.cancel")}
@@ -200,10 +212,17 @@ export function CardFormDialog({
               <button
                 type="button"
                 className={styles.danger}
-                disabled={remove.isPending}
-                onClick={() => remove.mutate()}
+                aria-busy={remove.isPending}
+                aria-disabled={remove.isPending}
+                onClick={() => {
+                  if (!remove.isPending) remove.mutate();
+                }}
               >
-                {t("cards.delete")}
+                <PendingActionContent
+                  pending={remove.isPending}
+                  label={t("cards.delete")}
+                  pendingLabel={t("common.deleting")}
+                />
               </button>
             </div>
           </div>
@@ -216,8 +235,9 @@ export function CardFormDialog({
               value={collectionId}
               onChange={setCollectionId}
               required
+              disabled={isPending}
             />
-            <fieldset className={styles.faceEditor}>
+            <fieldset className={styles.faceEditor} disabled={isPending}>
               <legend id="front-face-label">{t("cards.front")}</legend>
               <span id="front-media-hint" className={styles.hint}>
                 {t("cards.faceMediaHint")}
@@ -253,7 +273,7 @@ export function CardFormDialog({
                 />
               </div>
             </fieldset>
-            <fieldset className={styles.faceEditor}>
+            <fieldset className={styles.faceEditor} disabled={isPending}>
               <legend id="back-face-label">{t("cards.back")}</legend>
               <span id="back-media-hint" className={styles.hint}>
                 {t("cards.faceMediaHint")}
@@ -298,25 +318,36 @@ export function CardFormDialog({
                 <button
                   type="button"
                   className={styles.deleteLink}
+                  disabled={isPending}
                   onClick={() => setIsConfirmingDelete(true)}
                 >
                   {t("cards.delete")}
                 </button>
               )}
-              <button type="button" className={styles.secondary} onClick={close}>
+              <button
+                type="button"
+                className={styles.secondary}
+                disabled={isPending}
+                onClick={close}
+              >
                 {t("common.cancel")}
               </button>
               <button
                 type="submit"
                 className={styles.primary}
+                aria-busy={save.isPending}
+                aria-disabled={save.isPending}
                 disabled={
-                  save.isPending ||
                   !collectionId ||
                   (!front.trim() && !frontDraft && (frontAudioRemoved || !card?.front.audio)) ||
                   (!back.trim() && !backDraft && (backAudioRemoved || !card?.back.audio))
                 }
               >
-                {t("common.save")}
+                <PendingActionContent
+                  pending={save.isPending}
+                  label={t("common.save")}
+                  pendingLabel={t("common.saving")}
+                />
               </button>
             </div>
           </form>
