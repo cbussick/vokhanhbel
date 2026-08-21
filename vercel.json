@@ -4,7 +4,7 @@
   "functions": {
     "api/**/*.ts": { "maxDuration": 60 }
   },
-  "crons": [{ "path": "/api/internal/audio-cleanup", "schedule": "0 * * * *" }],
+  "crons": [{ "path": "/api/internal/audio-cleanup", "schedule": "0 3 * * *" }],
   "headers": [
     {
       "source": "/(.*)",

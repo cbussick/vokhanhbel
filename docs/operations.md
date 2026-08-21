@@ -25,8 +25,7 @@ RATE_LIMIT_HMAC_SECRET=<output from openssl rand -hex 32>
 ```
 
 Audio development also needs a private Cloudflare R2 Standard bucket in the EU jurisdiction. Add
-the R2 values documented below. Preview must name the production bucket in
-`R2_PRODUCTION_BUCKET` so the application can reject accidental reuse.
+the R2 values documented below.
 
 Start PostgreSQL and apply the schema:
 
@@ -75,7 +74,6 @@ R2_ACCOUNT_ID=<Cloudflare account ID>
 R2_BUCKET=<bucket for this environment>
 R2_ACCESS_KEY_ID=<bucket-scoped access key>
 R2_SECRET_ACCESS_KEY=<bucket-scoped secret>
-R2_PRODUCTION_BUCKET=<production bucket name; isolation guard for preview>
 CRON_SECRET=<output from openssl rand -hex 32>
 ```
 
@@ -84,8 +82,9 @@ read, deletion, expiry, and retry logs contain the opaque application audio ID a
 not contain bytes, credentials, or R2 object keys. Search for `"area":"audio-storage"` in runtime
 logs.
 
-Staged uploads expire after one hour. Vercel calls the authenticated cleanup route hourly with
-`CRON_SECRET`; uploads also trigger opportunistic expiry. Upload and Card-save failures compensate immediately.
+Staged uploads become eligible for deletion after one hour. Vercel calls the authenticated cleanup
+route once per day with `CRON_SECRET`; uploads also trigger opportunistic expiry. Upload and
+Card-save failures compensate immediately.
 Replacing or removing a recording and soft-deleting a Card clear the database reference before
 deleting the live object. A deletion failure creates an `audio_cleanup_jobs` row. Run the cleanup
 maintenance task that calls `retryAudioCleanup` until the row has `completed_at`. Each retry first

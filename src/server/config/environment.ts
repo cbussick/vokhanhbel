@@ -11,7 +11,6 @@ const serverEnvironmentSchema = z.object({
   R2_BUCKET: z.string().min(1).optional(),
   R2_ACCESS_KEY_ID: z.string().min(1).optional(),
   R2_SECRET_ACCESS_KEY: z.string().min(1).optional(),
-  R2_PRODUCTION_BUCKET: z.string().min(1).optional(),
   CRON_SECRET: z.string().min(32).optional(),
 });
 
@@ -48,14 +47,6 @@ export function getR2Environment(): R2Environment {
   ];
 
   if (required.some((value) => !value)) throw new Error("R2 configuration is incomplete");
-  if (environment.R2_ENVIRONMENT === "preview" && !environment.R2_PRODUCTION_BUCKET)
-    throw new Error("Preview R2 configuration must identify the production bucket");
-  if (
-    environment.R2_ENVIRONMENT === "preview" &&
-    environment.R2_PRODUCTION_BUCKET === environment.R2_BUCKET
-  ) {
-    throw new Error("Preview and production R2 buckets must be different");
-  }
 
   return {
     environment: environment.R2_ENVIRONMENT!,

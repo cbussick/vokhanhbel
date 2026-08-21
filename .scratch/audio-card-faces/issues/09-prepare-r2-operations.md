@@ -16,4 +16,4 @@
 
 ## Comments
 
-Implemented strict isolated R2 configuration, server-only SigV4 storage, structured lifecycle logs, hourly cleanup, and replaceable in-memory/failing test adapters. The operations runbook documents provisioning, isolation, credentials, expiry/retry, recovery limits, and the unchanged PostgreSQL backup path.
+Implemented strict isolated R2 configuration, server-only SigV4 storage, structured lifecycle logs, Hobby-compatible daily cleanup with opportunistic expiry on upload, and replaceable in-memory/failing test adapters. The operations runbook documents provisioning, isolation, credentials, expiry/retry, recovery limits, and the unchanged PostgreSQL backup path.
