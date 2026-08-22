@@ -143,7 +143,10 @@ export async function playAudio(
 
   if (stored.contentRange) headers.set("Content-Range", stored.contentRange);
 
-  return new Response(stored.bytes, { status: range ? 206 : 200, headers });
+  return new Response(new Blob([Uint8Array.from(stored.bytes)]), {
+    status: range ? 206 : 200,
+    headers,
+  });
 }
 
 export async function discardStagedAudio(
