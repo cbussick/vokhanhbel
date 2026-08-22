@@ -23,11 +23,13 @@ export function TopicFormDialog({
   collectionId,
   topic,
   onClose,
+  onCreated,
   onDeleted,
 }: {
   collectionId: string;
   topic?: Topic;
   onClose: () => void;
+  onCreated?: (topic: Topic) => void;
   onDeleted?: () => void;
 }) {
   const { t } = useTranslation();
@@ -73,8 +75,9 @@ export function TopicFormDialog({
             }),
       );
     },
-    onSuccess: async () => {
+    onSuccess: async (saved) => {
       await queryClient.invalidateQueries({ queryKey: queryKeys.topics });
+      if (!topic) onCreated?.(saved);
 
       dialogRef.current?.close();
       onClose();

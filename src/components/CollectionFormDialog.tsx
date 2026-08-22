@@ -21,10 +21,12 @@ import styles from "./Dialog.module.css";
 export function CollectionFormDialog({
   collection,
   onClose,
+  onCreated,
   onDeleted,
 }: {
   collection?: Collection;
   onClose: () => void;
+  onCreated?: (collection: Collection) => void;
   onDeleted?: () => void;
 }) {
   const { t } = useTranslation();
@@ -73,8 +75,9 @@ export function CollectionFormDialog({
             }),
       );
     },
-    onSuccess: async () => {
+    onSuccess: async (saved) => {
       await queryClient.invalidateQueries({ queryKey: queryKeys.collections });
+      if (!collection) onCreated?.(saved);
 
       dialogRef.current?.close();
       onClose();

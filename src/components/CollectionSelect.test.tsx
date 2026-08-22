@@ -1,7 +1,8 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+import "../i18n/config";
 import { collectionListSchema } from "../contracts/collection";
 import { testCollections } from "../test/server";
 import { CollectionSelect } from "./CollectionSelect";
@@ -70,5 +71,31 @@ describe("CollectionSelect", () => {
     expect(screen.queryByRole("listbox")).not.toBeInTheDocument();
     expect(combobox).toHaveTextContent("Englisch");
     expect(screen.getByRole("button", { name: "Danach" })).toHaveFocus();
+  });
+
+  it("offers Sammlung erstellen without changing the selected Collection", async () => {
+    const user = userEvent.setup();
+    const onCreate = vi.fn();
+    render(
+      <>
+        <label htmlFor="collection">Sammlung</label>
+        <CollectionSelect
+          id="collection"
+          collections={collections}
+          value={collections[0]!.id}
+          onChange={() => undefined}
+          onCreate={onCreate}
+          required
+        />
+      </>,
+    );
+    const combobox = screen.getByRole("combobox", { name: "Sammlung" });
+
+    await user.click(combobox);
+    await user.click(screen.getByRole("option", { name: "Sammlung erstellen" }));
+
+    expect(onCreate).toHaveBeenCalledOnce();
+    expect(combobox).toHaveTextContent("Vietnamesisch");
+    expect(screen.queryByRole("listbox")).not.toBeInTheDocument();
   });
 });

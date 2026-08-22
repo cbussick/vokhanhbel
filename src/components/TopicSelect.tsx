@@ -12,12 +12,14 @@ export function TopicSelect({
   topics,
   value,
   onChange,
+  onCreate,
   disabled = false,
 }: {
   id: string;
   topics: readonly Topic[];
   value: readonly string[];
   onChange: (topicIds: string[]) => void;
+  onCreate?: () => void;
   disabled?: boolean;
 }) {
   const { t } = useTranslation();
@@ -26,7 +28,10 @@ export function TopicSelect({
   const optionRefs = useRef<(HTMLLIElement | null)[]>([]);
   const typeAhead = useRef({ query: "", lastKeyAt: 0 });
   const [isOpen, setIsOpen] = useState(false);
-  const isListboxOpen = isOpen && !disabled && topics.length > 0;
+  const canCreate = Boolean(onCreate);
+  const createIndex = topics.length;
+  const lastIndex = canCreate ? createIndex : Math.max(topics.length - 1, 0);
+  const isListboxOpen = isOpen && !disabled && (topics.length > 0 || canCreate);
   const selected = new Set(value);
   const selectedTopics = topics.filter((topic) => selected.has(topic.id));
   const [activeIndex, setActiveIndex] = useState(0);
@@ -54,7 +59,18 @@ export function TopicSelect({
     setIsOpen(true);
   };
 
+  const chooseCreate = () => {
+    setIsOpen(false);
+    onCreate?.();
+  };
+
   const toggle = (index: number) => {
+    if (canCreate && index === createIndex) {
+      chooseCreate();
+
+      return;
+    }
+
     const topic = topics[index];
 
     if (!topic) return;
@@ -68,9 +84,9 @@ export function TopicSelect({
   };
 
   const moveActive = (offset: number) => {
-    if (topics.length === 0) return;
+    if (topics.length === 0 && !canCreate) return;
 
-    setActiveIndex((current) => Math.min(Math.max(current + offset, 0), topics.length - 1));
+    setActiveIndex((current) => Math.min(Math.max(current + offset, 0), lastIndex));
   };
 
   const matchTypeAhead = (key: string) => {
@@ -107,7 +123,7 @@ export function TopicSelect({
       case "ArrowUp":
         event.preventDefault();
         if (isOpen) moveActive(-1);
-        else open(topics.length - 1);
+        else open(lastIndex);
         break;
       case "Home":
         event.preventDefault();
@@ -116,8 +132,8 @@ export function TopicSelect({
         break;
       case "End":
         event.preventDefault();
-        if (isOpen) setActiveIndex(topics.length - 1);
-        else open(topics.length - 1);
+        if (isOpen) setActiveIndex(lastIndex);
+        else open(lastIndex);
         break;
       case "Enter":
       case " ":
@@ -157,7 +173,7 @@ export function TopicSelect({
         aria-expanded={isListboxOpen}
         aria-haspopup="listbox"
         aria-activedescendant={isListboxOpen ? `${listboxId}-${activeIndex}` : undefined}
-        disabled={disabled || topics.length === 0}
+        disabled={disabled || (topics.length === 0 && !canCreate)}
         onClick={() => (isOpen ? setIsOpen(false) : open())}
         onKeyDown={handleKeyDown}
       >
@@ -197,6 +213,25 @@ export function TopicSelect({
               </li>
             );
           })}
+          {canCreate && (
+            <li
+              ref={(element) => {
+                optionRefs.current[createIndex] = element;
+              }}
+              id={`${listboxId}-${createIndex}`}
+              role="option"
+              className={`${selectStyles.option} ${selectStyles.createOption}`}
+              aria-selected="false"
+              data-active={activeIndex === createIndex || undefined}
+              onPointerDown={(event) => {
+                event.preventDefault();
+                chooseCreate();
+              }}
+              onPointerMove={() => setActiveIndex(createIndex)}
+            >
+              <span>{t("topics.create")}</span>
+            </li>
+          )}
         </ul>
       )}
       {selectedTopics.length > 0 && (
