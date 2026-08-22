@@ -109,11 +109,7 @@ function CollectionCardsRoute() {
                 {t("topics.add")}
               </IconButton>
             </div>
-            <div
-              className={styles.topicChips}
-              role="group"
-              aria-labelledby="collection-topics-heading"
-            >
+            <div className={styles.topicChips}>
               <button
                 type="button"
                 className={styles.topicChip}

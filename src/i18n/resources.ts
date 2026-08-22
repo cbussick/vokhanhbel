@@ -138,7 +138,6 @@ export const de = {
       create: "Thema erstellen",
       add: "Thema hinzufügen",
       addExisting: "Thema hinzufügen",
-      edit: "Thema bearbeiten",
       editNamed: "{{name}} bearbeiten",
       renameTitle: "Thema umbenennen",
       delete: "Thema löschen",
