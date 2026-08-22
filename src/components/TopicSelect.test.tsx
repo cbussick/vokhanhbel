@@ -52,7 +52,10 @@ describe("TopicSelect", () => {
 
     expect(combobox).toBeEnabled();
     await user.click(combobox);
-    await user.click(screen.getByRole("option", { name: "Thema erstellen" }));
+    const createOption = screen.getByRole("option", { name: "Thema erstellen" });
+    expect(createOption.querySelector("svg")).not.toBeNull();
+    expect(createOption.querySelector("[aria-hidden='true']")).not.toBeNull();
+    await user.click(createOption);
 
     expect(onCreate).toHaveBeenCalledOnce();
     expect(screen.queryByRole("listbox")).not.toBeInTheDocument();

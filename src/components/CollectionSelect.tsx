@@ -1,6 +1,7 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { Collection } from "../contracts/collection";
+import { AddIcon } from "./AddIcon";
 import { CollectionIcon } from "./CollectionIcon";
 import styles from "./CollectionSelect.module.css";
 
@@ -236,6 +237,7 @@ export function CollectionSelect({
               }}
               onPointerMove={() => setActiveIndex(createIndex)}
             >
+              <AddIcon />
               <span>{t("collections.create")}</span>
             </li>
           )}
