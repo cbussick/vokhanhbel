@@ -1,6 +1,7 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { Topic } from "../contracts/topic";
+import { AddIcon } from "./AddIcon";
 import selectStyles from "./CollectionSelect.module.css";
 import { TopicIcon } from "./TopicIcon";
 import styles from "./TopicSelect.module.css";
@@ -225,6 +226,7 @@ export function TopicSelect({
               }}
               onPointerMove={() => setActiveIndex(createIndex)}
             >
+              <AddIcon />
               <span>{t("topics.create")}</span>
             </li>
           )}
