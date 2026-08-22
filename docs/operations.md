@@ -34,6 +34,10 @@ docker compose up -d postgres
 npm run db:migrate
 ```
 
+`DATABASE_URL` above is the development database. The database test suite never touches it:
+`npm run test:db` creates a separate `vokhanhbel_test` database in the same container, migrates it,
+and drops it again when the run ends. It only needs Docker Postgres to be running.
+
 Inspect the local database with Drizzle Studio. It starts Docker Postgres if needed, waits until
 it is healthy, then loads `DATABASE_URL` from `.env.local` the same way local generate and migrate
 do. It does not target production:

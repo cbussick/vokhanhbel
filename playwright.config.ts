@@ -7,7 +7,10 @@ const ciOutputDir = join(tmpdir(), "vokhanhbel-playwright-results");
 export default defineConfig({
   testDir: "./tests/e2e",
   outputDir: process.env.CI ? ciOutputDir : "test-results",
-  fullyParallel: false,
+  // Every test stubs the API with page.route, so no test shares state with another.
+  fullyParallel: true,
+  // Tuned by hand: WebKit starts timing out above this on a 12-core machine.
+  workers: process.env.CI ? 2 : 3,
   forbidOnly: Boolean(process.env.CI),
   retries: process.env.CI ? 2 : 0,
   reporter: process.env.CI ? "github" : "list",
@@ -17,9 +20,12 @@ export default defineConfig({
     screenshot: "only-on-failure",
   },
   webServer: {
-    command: "npm run dev:e2e",
+    // The built app, not the dev server: it serves a handful of bundles instead of every module
+    // separately, which is what makes the suite fast enough to run in parallel. Reuse stays off so
+    // a server left over from an earlier run can never serve stale code.
+    command: "npm run serve:e2e",
     url: "http://127.0.0.1:4173",
-    reuseExistingServer: !process.env.CI,
+    reuseExistingServer: false,
   },
   projects: [
     { name: "chromium", use: { ...devices["Desktop Chrome"] } },
