@@ -159,113 +159,117 @@ export function CollectionFormDialog({
             </button>
           )}
         </header>
-        {isConfirmingDelete ? (
-          <div className={styles.confirm}>
-            <p>{t("collections.deleteConfirm", { name: collection?.name ?? "" })}</p>
-            <div className={styles.actions}>
-              <button
-                type="button"
-                className={styles.secondary}
-                disabled={remove.isPending}
-                onClick={() => setIsConfirmingDelete(false)}
-              >
-                {t("common.cancel")}
-              </button>
-              <button
-                type="button"
-                className={styles.danger}
-                aria-busy={remove.isPending}
-                aria-disabled={remove.isPending}
-                onClick={() => {
-                  if (!remove.isPending) remove.mutate();
-                }}
-              >
-                <PendingActionContent
-                  pending={remove.isPending}
-                  label={t("collections.delete")}
-                  pendingLabel={t("common.deleting")}
-                />
-              </button>
-            </div>
-          </div>
-        ) : (
-          <form onSubmit={submit} noValidate>
-            <label htmlFor="collection-name">{t("collections.name")}</label>
-            <span id="collection-name-hint" className={styles.hint}>
-              {t("collections.nameHint")}
-            </span>
-            <input
-              ref={nameRef}
-              id="collection-name"
-              aria-describedby="collection-name-hint"
-              required
-              maxLength={60}
-              value={name}
-              disabled={isPending}
-              onChange={(event) => setName(event.target.value)}
-            />
-            <fieldset className={styles.iconChoices} disabled={isPending}>
-              <legend className={styles.fieldLabel}>{t("collections.icon")}</legend>
-              {collectionIconKeys.map((key) => (
-                <div key={key}>
-                  <input
-                    type="radio"
-                    id={`collection-icon-${key}`}
-                    name="collection-icon"
-                    value={key}
-                    checked={icon === key}
-                    onChange={() => setIcon(key)}
-                  />
-                  <label htmlFor={`collection-icon-${key}`}>
-                    <CollectionIcon icon={key} />
-                    {t(`collections.icons.${key}`)}
-                  </label>
-                </div>
-              ))}
-            </fieldset>
-            {error && (
-              <p role="alert" className={styles.error}>
-                {error}
-              </p>
-            )}
-            <div className={styles.actions}>
-              {collection && (
+        <div className={styles.body}>
+          {isConfirmingDelete ? (
+            <div className={styles.confirm}>
+              <p>{t("collections.deleteConfirm", { name: collection?.name ?? "" })}</p>
+              <div className={styles.actions}>
                 <button
                   type="button"
-                  className={styles.deleteLink}
-                  disabled={isPending}
+                  className={styles.secondary}
+                  disabled={remove.isPending}
+                  onClick={() => setIsConfirmingDelete(false)}
+                >
+                  {t("common.cancel")}
+                </button>
+                <button
+                  type="button"
+                  className={styles.danger}
+                  aria-busy={remove.isPending}
+                  aria-disabled={remove.isPending}
                   onClick={() => {
-                    setError(undefined);
-                    setIsConfirmingDelete(true);
+                    if (!remove.isPending) remove.mutate();
                   }}
                 >
-                  {t("collections.delete")}
+                  <PendingActionContent
+                    pending={remove.isPending}
+                    label={t("collections.delete")}
+                    pendingLabel={t("common.deleting")}
+                  />
                 </button>
-              )}
-              <button
-                type="button"
-                className={styles.secondary}
-                disabled={isPending}
-                onClick={close}
-              >
-                {t("common.cancel")}
-              </button>
-              <button
-                type="submit"
-                className={styles.primary}
-                aria-busy={save.isPending}
-                aria-disabled={save.isPending}
-                disabled={!name.trim()}
-              >
-                <PendingActionContent
-                  pending={save.isPending}
-                  label={t("common.save")}
-                  pendingLabel={t("common.saving")}
-                />
-              </button>
+              </div>
             </div>
-          </form>
-        )}
+          ) : (
+            <form onSubmit={submit} noValidate>
+              <label htmlFor="collection-name" className={styles.fieldHeading}>
+                {t("collections.name")}
+              </label>
+              <span id="collection-name-hint" className={styles.hint}>
+                {t("collections.nameHint")}
+              </span>
+              <input
+                ref={nameRef}
+                id="collection-name"
+                aria-describedby="collection-name-hint"
+                required
+                maxLength={60}
+                value={name}
+                disabled={isPending}
+                onChange={(event) => setName(event.target.value)}
+              />
+              <fieldset className={styles.iconChoices} disabled={isPending}>
+                <legend className={styles.fieldHeading}>{t("collections.icon")}</legend>
+                {collectionIconKeys.map((key) => (
+                  <div key={key}>
+                    <input
+                      type="radio"
+                      id={`collection-icon-${key}`}
+                      name="collection-icon"
+                      value={key}
+                      checked={icon === key}
+                      onChange={() => setIcon(key)}
+                    />
+                    <label htmlFor={`collection-icon-${key}`}>
+                      <CollectionIcon icon={key} />
+                      {t(`collections.icons.${key}`)}
+                    </label>
+                  </div>
+                ))}
+              </fieldset>
+              {error && (
+                <p role="alert" className={styles.error}>
+                  {error}
+                </p>
+              )}
+              <div className={styles.actions}>
+                {collection && (
+                  <button
+                    type="button"
+                    className={styles.deleteLink}
+                    disabled={isPending}
+                    onClick={() => {
+                      setError(undefined);
+                      setIsConfirmingDelete(true);
+                    }}
+                  >
+                    {t("collections.delete")}
+                  </button>
+                )}
+                <button
+                  type="button"
+                  className={styles.secondary}
+                  disabled={isPending}
+                  onClick={close}
+                >
+                  {t("common.cancel")}
+                </button>
+                <button
+                  type="submit"
+                  className={styles.primary}
+                  aria-busy={save.isPending}
+                  aria-disabled={save.isPending}
+                  disabled={!name.trim()}
+                >
+                  <PendingActionContent
+                    pending={save.isPending}
+                    label={t("common.save")}
+                    pendingLabel={t("common.saving")}
+                  />
+                </button>
+              </div>
+            </form>
+          )}
+        </div>
       </section>
     </dialog>
   );

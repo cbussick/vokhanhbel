@@ -200,7 +200,7 @@ test("creates, searches, and opens a Card accessibly", async ({ page }) => {
   await expect(page.getByText("Audio", { exact: true })).toHaveCount(2);
   await expectNoSeriousAxeViolations(page);
   const frontText = page.getByRole("textbox", {
-    name: "Vorderseite Text bis 1.000 Zeichen",
+    name: "Vorderseite Maximal 1.000 Zeichen",
   });
   await frontText.focus();
   const focusStyles = await page.evaluate<{
@@ -222,13 +222,48 @@ test("creates, searches, and opens a Card accessibly", async ({ page }) => {
   await expect(page.getByRole("listbox")).toBeVisible();
   await expectNoSeriousAxeViolations(page);
   await collection.press("Escape");
-  await page.getByRole("textbox", { name: "Vorderseite Text bis 1.000 Zeichen" }).fill("xin chào");
-  await page.getByRole("textbox", { name: "Rückseite Text bis 1.000 Zeichen" }).fill("hallo");
+  await page.getByRole("textbox", { name: "Vorderseite Maximal 1.000 Zeichen" }).fill("xin chào");
+  await page.getByRole("textbox", { name: "Rückseite Maximal 1.000 Zeichen" }).fill("hallo");
   await page.getByRole("button", { name: "Speichern" }).click();
   await expect(page.getByText("xin chào")).toBeVisible();
   await page.getByLabel("Karten durchsuchen").fill("CHÀO");
   await expect(page.getByText("xin chào")).toBeVisible();
   await expectNoSeriousAxeViolations(page);
+});
+
+test("gives primary, surface, and navigation controls a hover state", async ({ page }) => {
+  await installMockApi(page);
+  await page.goto(`/cards/${mockCollection.id}`);
+
+  const background = (locator: ReturnType<Page["locator"]>) =>
+    locator.evaluate((element) => {
+      const browser = globalThis as unknown as {
+        getComputedStyle: (target: unknown) => { backgroundColor: string };
+      };
+
+      return browser.getComputedStyle(element).backgroundColor;
+    });
+
+  const addCard = page.getByRole("button", { name: "Karte hinzufügen" }).first();
+  const cardRow = page.getByRole("listitem").filter({ hasText: "der Apfel" });
+  const navLink = page.getByRole("link", { name: /Ich/ });
+
+  for (const control of [addCard, cardRow, navLink]) {
+    const idle = await background(control);
+    await control.hover();
+    expect(
+      await background(control),
+      `${await control.textContent()} must react to hover`,
+    ).not.toBe(idle);
+    await page.mouse.move(0, 0);
+  }
+
+  await addCard.click();
+  const cancel = page.getByRole("button", { name: "Abbrechen" });
+  const idleCancel = await background(cancel);
+
+  await cancel.hover();
+  expect(await background(cancel)).not.toBe(idleCancel);
 });
 
 test("keeps the Card dialog locked while Save is pending", async ({ page }) => {
@@ -256,10 +291,8 @@ test("keeps the Card dialog locked while Save is pending", async ({ page }) => {
   await page.goto(`/cards/${mockCollection.id}`);
   await page.getByRole("button", { name: "Karte hinzufügen" }).click();
   const dialog = page.getByRole("dialog");
-  await dialog
-    .getByRole("textbox", { name: "Vorderseite Text bis 1.000 Zeichen" })
-    .fill("xin chào");
-  await dialog.getByRole("textbox", { name: "Rückseite Text bis 1.000 Zeichen" }).fill("hallo");
+  await dialog.getByRole("textbox", { name: "Vorderseite Maximal 1.000 Zeichen" }).fill("xin chào");
+  await dialog.getByRole("textbox", { name: "Rückseite Maximal 1.000 Zeichen" }).fill("hallo");
   await dialog.getByRole("button", { name: "Speichern" }).click();
 
   const pendingSave = dialog.getByRole("button", { name: "Wird gespeichert …" });
@@ -284,6 +317,7 @@ test("keeps the Card dialog locked while Save is pending", async ({ page }) => {
   await page.mouse.down();
   await page.waitForTimeout(200);
   await expect(pendingSave).toHaveCSS("translate", "none");
+  await expect(pendingSave).toHaveCSS("filter", "none");
   await page.mouse.up();
 
   await pendingSave.dispatchEvent("click");
@@ -411,7 +445,10 @@ test("keeps the Card audio rail stable while dragging and recording", async ({ p
     };
   });
   expect(pressedButtonStyles).toMatchObject(idleButtonStyles);
-  expect(pressedButtonStyles.translate).toBe("0px 1px");
+  // Pressing darkens the control; it must not move or resize it. The filter is read with a
+  // retrying assertion because the press transition may still be interpolating.
+  expect(pressedButtonStyles.translate).toBe("none");
+  await expect(recordButton).toHaveCSS("filter", "brightness(0.94)");
   await page.mouse.up();
   await expect(rail.getByRole("button", { name: "Aufnahme stoppen" })).toBeVisible();
   await expect(rail.getByText(/Aufnahme · \d\.\d s/)).toBeVisible();
@@ -422,39 +459,58 @@ test("keeps the Card audio rail stable while dragging and recording", async ({ p
   expect(Math.abs(recordingBox!.height - idleBox!.height)).toBeLessThanOrEqual(1);
 });
 
-test("keeps one scroll container when a Card textarea is enlarged", async ({ page }) => {
+test("scrolls the Card dialog body below a fixed top bar and locks the page behind", async ({
+  page,
+}) => {
   await page.setViewportSize({ width: 390, height: 700 });
   await installMockApi(page);
   await page.goto(`/cards/${mockCollection.id}`);
   await page.getByRole("button", { name: "Karte hinzufügen" }).first().click();
   const textarea = page.getByRole("textbox", {
-    name: "Vorderseite Text bis 1.000 Zeichen",
+    name: "Vorderseite Maximal 1.000 Zeichen",
   });
 
   await textarea.evaluate((element) => {
     element.style.height = "80rem";
   });
   const scrollState = await page.evaluate<{
+    rootOverflow: string;
     dialogOverflow: string;
     sheetOverflow: string;
     sheetHasOverflow: boolean;
+    bodyOverflow: string;
+    bodyHasOverflow: boolean;
+    headerMoved: boolean;
     textareaResize: string;
   }>(`(() => {
     const dialog = document.querySelector("dialog");
     const sheet = dialog?.querySelector(":scope > section");
+    const header = sheet?.querySelector(":scope > header");
+    const body = sheet?.querySelector(":scope > div");
     const textarea = document.querySelector("#card-front");
-    if (!dialog || !sheet || !textarea) throw new Error("Card dialog sheet not found");
+    if (!dialog || !sheet || !header || !body || !textarea)
+      throw new Error("Card dialog sheet not found");
+    const headerTop = header.getBoundingClientRect().top;
+    body.scrollTop = body.scrollHeight;
     return {
+      rootOverflow: getComputedStyle(document.documentElement).overflowY,
       dialogOverflow: getComputedStyle(dialog).overflowY,
       sheetOverflow: getComputedStyle(sheet).overflowY,
       sheetHasOverflow: sheet.scrollHeight > sheet.clientHeight,
+      bodyOverflow: getComputedStyle(body).overflowY,
+      bodyHasOverflow: body.scrollHeight > body.clientHeight,
+      headerMoved: Math.abs(header.getBoundingClientRect().top - headerTop) > 0.5,
       textareaResize: getComputedStyle(textarea).resize,
     };
   })()`);
 
+  expect(scrollState.rootOverflow).toBe("hidden");
   expect(scrollState.dialogOverflow).toBe("visible");
-  expect(scrollState.sheetOverflow).toBe("auto");
-  expect(scrollState.sheetHasOverflow).toBe(true);
+  expect(scrollState.sheetOverflow).toBe("hidden");
+  expect(scrollState.sheetHasOverflow).toBe(false);
+  expect(scrollState.bodyOverflow).toBe("auto");
+  expect(scrollState.bodyHasOverflow).toBe(true);
+  expect(scrollState.headerMoved).toBe(false);
   expect(scrollState.textareaResize).toBe("none");
 });
 
@@ -592,11 +648,13 @@ test("adapts the app shell between tablet and desktop widths", async ({ page }) 
     .getByRole("navigation", { name: "Hauptnavigation" })
     .boundingBox();
   const mediumMainBox = await page.locator("main").boundingBox();
+  // The root reserves a scrollbar gutter, so the layout width is narrower than the viewport.
+  const mediumLayoutWidth = await page.evaluate<number>("document.body.clientWidth");
 
   expect(mediumNavBox).not.toBeNull();
   expect(mediumMainBox).not.toBeNull();
   expect(mediumNavBox!.x).toBe(0);
-  expect(mediumNavBox!.width).toBe(900);
+  expect(mediumNavBox!.width).toBe(mediumLayoutWidth);
   expect(mediumMainBox!.width).toBeLessThanOrEqual(768);
 
   await page.setViewportSize({ width: 1024, height: 900 });
@@ -658,11 +716,14 @@ test("uses desktop space for route content without overstretching focused work",
   await expect(page.getByRole("button", { name: "Antwort zeigen" })).toBeVisible();
 
   const focusedMainBox = await page.locator("main").boundingBox();
+  const layoutWidth = await page.evaluate<number>("document.body.clientWidth");
 
   expect(focusedMainBox).not.toBeNull();
   expect(focusedMainBox!.width).toBeGreaterThan(700);
   expect(focusedMainBox!.width).toBeLessThanOrEqual(768);
-  expect(Math.abs(focusedMainBox!.x - (1440 - focusedMainBox!.width) / 2)).toBeLessThanOrEqual(1);
+  expect(
+    Math.abs(focusedMainBox!.x - (layoutWidth - focusedMainBox!.width) / 2),
+  ).toBeLessThanOrEqual(1);
 });
 
 test("keeps audio controls compact in the collection overview", async ({ page }) => {

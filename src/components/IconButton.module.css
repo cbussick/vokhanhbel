@@ -45,3 +45,13 @@
   stroke-linejoin: round;
   stroke-width: 2;
 }
+
+@media (hover: hover) and (pointer: fine) {
+  .primary:hover:not(:disabled, [aria-disabled="true"]) {
+    background: var(--color-primary-hover);
+  }
+
+  .secondary:hover:not(:disabled, [aria-disabled="true"]) {
+    background: var(--color-surface-hover);
+  }
+}

@@ -36,3 +36,10 @@
     animation: none;
   }
 }
+
+@media (hover: hover) and (pointer: fine) {
+  /* The bar is already coloured, so the button lightens with a translucent wash. */
+  .banner button:hover:not(:disabled) {
+    background: color-mix(in srgb, white 35%, transparent);
+  }
+}

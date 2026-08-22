@@ -166,8 +166,9 @@
   align-items: center;
   justify-content: center;
   gap: var(--space-2);
-  padding-inline: var(--space-2);
+  padding-inline: var(--space-3);
   border: 0;
+  border-radius: var(--radius-full);
   background: transparent;
   color: var(--color-primary-text);
   font-size: var(--font-sm);
@@ -204,21 +205,23 @@
   padding: var(--space-1);
   border: 0;
   border-radius: var(--radius-medium);
+  background: var(--grade-background);
   font-size: 0.9375rem;
   font-weight: 800;
 }
 
 .grades button:first-of-type {
-  background: #e7edf1;
+  --grade-background: #e7edf1;
 }
 
 .grades button:nth-of-type(2) {
-  background: var(--color-warning);
+  --grade-background: var(--color-warning);
+
   color: var(--color-warning-text);
 }
 
 .grades button:last-of-type {
-  background: var(--color-success);
+  --grade-background: var(--color-success);
 }
 
 .issue {
@@ -329,4 +332,24 @@
   background: var(--color-primary);
   color: var(--color-primary-text);
   font-weight: 700;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .sessionHeader button:hover:not(:disabled) {
+    color: var(--color-text);
+  }
+
+  .revealButton:hover:not(:disabled),
+  .summary button:hover:not(:disabled),
+  .audioUnavailable button:hover:not(:disabled) {
+    background: var(--color-primary-hover);
+  }
+
+  .tutorButton:hover:not(:disabled) {
+    background: var(--color-surface-hover);
+  }
+
+  .grades button:hover:not(:disabled) {
+    background: color-mix(in srgb, var(--grade-background) 80%, white);
+  }
 }

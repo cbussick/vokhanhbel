@@ -41,3 +41,9 @@
   color: var(--color-primary-text);
   font-weight: 800;
 }
+
+@media (hover: hover) and (pointer: fine) {
+  .card button:hover:not(:disabled) {
+    background: var(--color-primary-hover);
+  }
+}

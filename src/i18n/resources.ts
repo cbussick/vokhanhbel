@@ -85,7 +85,7 @@ export const de = {
       back: "Rückseite",
       faceMediaHint: "Text, Audio oder beides",
       text: "Text",
-      textLabel: "Text bis 1.000 Zeichen",
+      textLabel: "Maximal 1.000 Zeichen",
       create: "Karte erstellen",
       edit: "Karte bearbeiten",
       delete: "Karte löschen",
