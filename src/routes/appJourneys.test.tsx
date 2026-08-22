@@ -5,6 +5,24 @@ import { describe, expect, it, vi } from "vitest";
 import { renderApp } from "../test/renderApp";
 import { mockServer, testCards, testCollections, testTopics } from "../test/server";
 
+function dialogByHeading(name: string) {
+  const dialog = screen.getByRole("heading", { name }).closest("dialog");
+
+  if (!dialog) throw new Error(`dialog ${name} missing`);
+
+  return dialog;
+}
+
+async function cardDialogReady() {
+  const dialog = dialogByHeading("Karte erstellen");
+
+  await waitFor(() =>
+    expect(within(dialog).getByLabelText("Vorderseite Maximal 1.000 Zeichen")).toHaveFocus(),
+  );
+
+  return dialog;
+}
+
 describe("rendered app journeys", () => {
   it("logs in without trimming the shared password", async () => {
     const user = userEvent.setup();
@@ -188,16 +206,15 @@ describe("rendered app journeys", () => {
     await renderApp(`/cards/${testCollections[1]!.id}`);
 
     await user.click(await screen.findByRole("button", { name: "Karte hinzufügen" }));
-    expect(screen.getByRole("heading", { name: "Karte erstellen" })).toBeVisible();
-    await user.click(screen.getByRole("combobox", { name: "Themen" }));
-    await user.click(screen.getByRole("option", { name: "Thema erstellen" }));
+    const cardDialog = await cardDialogReady();
+    await user.click(within(cardDialog).getByRole("combobox", { name: "Themen" }));
+    await user.click(within(cardDialog).getByRole("option", { name: "Thema erstellen" }));
 
     expect(await screen.findByRole("heading", { name: "Thema erstellen" })).toBeVisible();
     expect(screen.getByRole("heading", { name: "Karte erstellen" })).toBeVisible();
-    const topicDialog = screen.getByRole("heading", { name: "Thema erstellen" }).closest("dialog");
-    expect(topicDialog).not.toBeNull();
-    await user.type(within(topicDialog!).getByLabelText("Name des Themas"), "Essen");
-    await user.click(within(topicDialog!).getByRole("button", { name: "Speichern" }));
+    const topicDialog = dialogByHeading("Thema erstellen");
+    await user.type(within(topicDialog).getByLabelText("Name des Themas"), "Essen");
+    await user.click(within(topicDialog).getByRole("button", { name: "Speichern" }));
 
     await waitFor(() =>
       expect(screen.queryByRole("heading", { name: "Thema erstellen" })).not.toBeInTheDocument(),
@@ -226,20 +243,18 @@ describe("rendered app journeys", () => {
     await renderApp(`/cards/${testCollections[0]!.id}`);
 
     await user.click(await screen.findByRole("button", { name: "Karte hinzufügen" }));
-    await user.click(screen.getByRole("combobox", { name: "Themen" }));
-    await user.click(screen.getByRole("option", { name: "Tiere" }));
-    expect(screen.getByLabelText("Tiere entfernen")).toBeVisible();
+    const cardDialog = await cardDialogReady();
+    await user.click(within(cardDialog).getByRole("combobox", { name: "Themen" }));
+    await user.click(within(cardDialog).getByRole("option", { name: "Tiere" }));
+    expect(within(cardDialog).getByLabelText("Tiere entfernen")).toBeVisible();
 
-    await user.click(screen.getByRole("combobox", { name: "Sammlung" }));
-    await user.click(screen.getByRole("option", { name: "Sammlung erstellen" }));
+    await user.click(within(cardDialog).getByRole("combobox", { name: "Sammlung" }));
+    await user.click(within(cardDialog).getByRole("option", { name: "Sammlung erstellen" }));
 
     expect(await screen.findByRole("heading", { name: "Sammlung erstellen" })).toBeVisible();
-    const collectionDialog = screen
-      .getByRole("heading", { name: "Sammlung erstellen" })
-      .closest("dialog");
-    expect(collectionDialog).not.toBeNull();
-    await user.type(within(collectionDialog!).getByLabelText("Name der Sammlung"), "Französisch");
-    await user.click(within(collectionDialog!).getByRole("button", { name: "Speichern" }));
+    const collectionDialog = dialogByHeading("Sammlung erstellen");
+    await user.type(within(collectionDialog).getByLabelText("Name der Sammlung"), "Französisch");
+    await user.click(within(collectionDialog).getByRole("button", { name: "Speichern" }));
 
     await waitFor(() =>
       expect(screen.queryByRole("heading", { name: "Sammlung erstellen" })).not.toBeInTheDocument(),

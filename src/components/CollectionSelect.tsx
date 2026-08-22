@@ -60,14 +60,10 @@ export function CollectionSelect({
     setIsOpen(true);
   };
 
-  const chooseCreate = () => {
-    setIsOpen(false);
-    onCreate?.();
-  };
-
   const select = (index: number) => {
     if (canCreate && index === createIndex) {
-      chooseCreate();
+      setIsOpen(false);
+      onCreate?.();
 
       return;
     }
@@ -236,7 +232,7 @@ export function CollectionSelect({
               data-active={activeIndex === createIndex || undefined}
               onPointerDown={(event) => {
                 event.preventDefault();
-                chooseCreate();
+                select(createIndex);
               }}
               onPointerMove={() => setActiveIndex(createIndex)}
             >

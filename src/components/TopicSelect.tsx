@@ -59,14 +59,10 @@ export function TopicSelect({
     setIsOpen(true);
   };
 
-  const chooseCreate = () => {
-    setIsOpen(false);
-    onCreate?.();
-  };
-
   const toggle = (index: number) => {
     if (canCreate && index === createIndex) {
-      chooseCreate();
+      setIsOpen(false);
+      onCreate?.();
 
       return;
     }
@@ -225,7 +221,7 @@ export function TopicSelect({
               data-active={activeIndex === createIndex || undefined}
               onPointerDown={(event) => {
                 event.preventDefault();
-                chooseCreate();
+                toggle(createIndex);
               }}
               onPointerMove={() => setActiveIndex(createIndex)}
             >

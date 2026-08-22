@@ -172,6 +172,11 @@ export function CardFormDialog({
     save.mutate();
   };
 
+  const selectCollection = (nextCollectionId: string) => {
+    setCollectionId(nextCollectionId);
+    setTopicIds([]);
+  };
+
   return (
     <>
       <dialog
@@ -247,10 +252,7 @@ export function CardFormDialog({
                   id="card-collection"
                   collections={collections.data ?? []}
                   value={collectionId}
-                  onChange={(nextCollectionId) => {
-                    setCollectionId(nextCollectionId);
-                    setTopicIds([]);
-                  }}
+                  onChange={selectCollection}
                   onCreate={() => setCreatingCollection(true)}
                   required
                   disabled={isPending}
@@ -265,9 +267,7 @@ export function CardFormDialog({
                   )}
                   value={topicIds}
                   onChange={setTopicIds}
-                  onCreate={() => {
-                    if (collectionId) setCreatingTopic(true);
-                  }}
+                  onCreate={() => setCreatingTopic(true)}
                   disabled={isPending}
                 />
                 <fieldset className={styles.faceEditor} disabled={isPending}>
@@ -395,21 +395,14 @@ export function CardFormDialog({
       {creatingCollection && (
         <CollectionFormDialog
           onClose={() => setCreatingCollection(false)}
-          onCreated={(collection) => {
-            setCollectionId(collection.id);
-            setTopicIds([]);
-          }}
+          onCreated={(collection) => selectCollection(collection.id)}
         />
       )}
       {creatingTopic && collectionId && (
         <TopicFormDialog
           collectionId={collectionId}
           onClose={() => setCreatingTopic(false)}
-          onCreated={(topic) => {
-            setTopicIds((current) =>
-              current.includes(topic.id) ? current : [...current, topic.id],
-            );
-          }}
+          onCreated={(topic) => setTopicIds((current) => [...current, topic.id])}
         />
       )}
     </>
