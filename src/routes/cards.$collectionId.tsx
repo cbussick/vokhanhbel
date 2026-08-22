@@ -46,13 +46,14 @@ function CollectionCardsRoute() {
   const [creating, setCreating] = useState(false);
   const [editingCollection, setEditingCollection] = useState(false);
   const [creatingTopic, setCreatingTopic] = useState(false);
-  const [editingTopic, setEditingTopic] = useState(false);
+  const [editingTopicId, setEditingTopicId] = useState<string | null>(null);
 
   const collection = collections.data?.find((entry) => entry.id === collectionId);
   const collectionTopics = (topics.data ?? []).filter(
     (topic) => topic.collectionId === collectionId,
   );
   const selectedTopic = collectionTopics.find((topic) => topic.id === topicFilter);
+  const topicBeingEdited = collectionTopics.find((topic) => topic.id === editingTopicId);
 
   useEffect(() => {
     document.title = `${collection?.name ?? t("cards.title")} | ${t("appName")}`;
@@ -95,6 +96,56 @@ function CollectionCardsRoute() {
     content = (
       <>
         <div className={styles.toolbar}>
+          <section className={styles.topicSection} aria-labelledby="collection-topics-heading">
+            <div className={styles.sectionHeader}>
+              <h2 id="collection-topics-heading">{t("topics.label")}</h2>
+              <IconButton
+                icon={<AddIcon />}
+                size="compact"
+                variant="secondary"
+                onClick={() => setCreatingTopic(true)}
+                disabled={!online}
+              >
+                {t("topics.add")}
+              </IconButton>
+            </div>
+            <div
+              className={styles.topicChips}
+              role="group"
+              aria-labelledby="collection-topics-heading"
+            >
+              <button
+                type="button"
+                className={styles.topicChip}
+                aria-pressed={!selectedTopic}
+                onClick={() => setTopicFilter(null)}
+              >
+                {t("topics.all")}
+              </button>
+              {collectionTopics.map((topic) => (
+                <div key={topic.id} className={styles.topicCluster}>
+                  <button
+                    type="button"
+                    className={styles.topicChip}
+                    aria-pressed={topicFilter === topic.id}
+                    onClick={() => setTopicFilter(topic.id)}
+                  >
+                    <TopicIcon icon={topic.icon} size="compact" />
+                    {topic.name}
+                  </button>
+                  <button
+                    type="button"
+                    className={styles.topicEdit}
+                    disabled={!online}
+                    aria-label={t("topics.editNamed", { name: topic.name })}
+                    onClick={() => setEditingTopicId(topic.id)}
+                  >
+                    <EditIcon />
+                  </button>
+                </div>
+              ))}
+            </div>
+          </section>
           <div className={styles.sectionHeader}>
             <h2>{t("cards.title")}</h2>
             {collectionHasCards ? (
@@ -102,48 +153,6 @@ function CollectionCardsRoute() {
                 {t("cards.add")}
               </IconButton>
             ) : null}
-          </div>
-          <div className={styles.topicChips} role="group" aria-label={t("topics.label")}>
-            <button
-              type="button"
-              className={styles.topicChip}
-              aria-pressed={!selectedTopic}
-              onClick={() => setTopicFilter(null)}
-            >
-              {t("topics.all")}
-            </button>
-            {collectionTopics.map((topic) => (
-              <button
-                key={topic.id}
-                type="button"
-                className={styles.topicChip}
-                aria-pressed={topicFilter === topic.id}
-                onClick={() => setTopicFilter(topic.id)}
-              >
-                <TopicIcon icon={topic.icon} size="compact" />
-                {topic.name}
-              </button>
-            ))}
-            <IconButton
-              icon={<AddIcon />}
-              size="compact"
-              variant="secondary"
-              onClick={() => setCreatingTopic(true)}
-              disabled={!online}
-            >
-              {t("topics.add")}
-            </IconButton>
-            {selectedTopic && (
-              <IconButton
-                icon={<EditIcon />}
-                size="compact"
-                variant="secondary"
-                onClick={() => setEditingTopic(true)}
-                disabled={!online}
-              >
-                {t("topics.edit")}
-              </IconButton>
-            )}
           </div>
           <label htmlFor="card-search">{t("cards.search")}</label>
           <input
@@ -245,12 +254,14 @@ function CollectionCardsRoute() {
         {creatingTopic && (
           <TopicFormDialog collectionId={collectionId} onClose={() => setCreatingTopic(false)} />
         )}
-        {editingTopic && selectedTopic && (
+        {topicBeingEdited && (
           <TopicFormDialog
             collectionId={collectionId}
-            topic={selectedTopic}
-            onClose={() => setEditingTopic(false)}
-            onDeleted={() => setTopicFilter(null)}
+            topic={topicBeingEdited}
+            onClose={() => setEditingTopicId(null)}
+            onDeleted={() => {
+              if (topicFilter === topicBeingEdited.id) setTopicFilter(null);
+            }}
           />
         )}
         <Outlet />

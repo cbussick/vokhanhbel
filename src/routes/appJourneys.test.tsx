@@ -158,11 +158,30 @@ describe("rendered app journeys", () => {
 
     expect(await screen.findByText("Take care")).toBeVisible();
     expect(screen.getByText("Hanoi")).toBeVisible();
-    await user.click(screen.getByRole("button", { name: "Tiere" }));
+    await user.click(screen.getByRole("button", { name: /^Tiere$/ }));
     expect(screen.getByText("Take care")).toBeVisible();
     expect(screen.queryByText("Hanoi")).not.toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Alle" }));
     expect(screen.getByText("Hanoi")).toBeVisible();
+  });
+
+  it("lets the Learner edit a Topic without filtering first", async () => {
+    const user = userEvent.setup();
+    await renderApp(`/cards/${testCollections[0]!.id}`);
+
+    expect(await screen.findByRole("heading", { name: "Themen" })).toBeVisible();
+    expect(screen.getByRole("button", { name: "Tiere bearbeiten" })).toBeVisible();
+    expect(screen.getByRole("button", { name: /^Tiere$/ })).toHaveAttribute(
+      "aria-pressed",
+      "false",
+    );
+
+    await user.click(screen.getByRole("button", { name: "Tiere bearbeiten" }));
+    expect(await screen.findByRole("heading", { name: "Thema umbenennen" })).toBeVisible();
+    expect(screen.getByRole("button", { name: /^Tiere$/ })).toHaveAttribute(
+      "aria-pressed",
+      "false",
+    );
   });
 
   it("creates a Card in the open Collection", async () => {

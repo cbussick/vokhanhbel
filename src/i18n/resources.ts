@@ -139,6 +139,7 @@ export const de = {
       add: "Thema hinzufügen",
       addExisting: "Thema hinzufügen",
       edit: "Thema bearbeiten",
+      editNamed: "{{name}} bearbeiten",
       renameTitle: "Thema umbenennen",
       delete: "Thema löschen",
       deleteConfirm: "Das Thema „{{name}}“ löschen? Die Karten bleiben in der Sammlung.",
