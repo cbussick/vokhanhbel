@@ -92,7 +92,10 @@ describe("CollectionSelect", () => {
     const combobox = screen.getByRole("combobox", { name: "Sammlung" });
 
     await user.click(combobox);
-    await user.click(screen.getByRole("option", { name: "Sammlung erstellen" }));
+    const createOption = screen.getByRole("option", { name: "Sammlung erstellen" });
+    expect(createOption.querySelector("svg")).not.toBeNull();
+    expect(createOption.querySelector("[aria-hidden='true']")).not.toBeNull();
+    await user.click(createOption);
 
     expect(onCreate).toHaveBeenCalledOnce();
     expect(combobox).toHaveTextContent("Vietnamesisch");
