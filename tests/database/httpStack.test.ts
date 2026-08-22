@@ -3,6 +3,7 @@ import { POST as createCard } from "../../api/cards/index.js";
 import { GET as playAudio } from "../../api/audio/[audioId].js";
 import { POST as uploadAudio } from "../../api/audio/index.js";
 import { POST as createCollection } from "../../api/collections/index.js";
+import { POST as createTopic } from "../../api/topics/index.js";
 import { POST as createReview } from "../../api/reviews.js";
 import { POST as createSession } from "../../api/session.js";
 import { GET as readStats } from "../../api/stats.js";
@@ -47,6 +48,16 @@ describe("real API handler stack", () => {
     );
     expect(collectionResponse.status).toBe(201);
     const collection = (await collectionResponse.json()) as { id: string };
+    const topicResponse = await createTopic(
+      request(
+        "/api/topics",
+        "POST",
+        { collectionId: collection.id, name: "Stack", icon: "shapes" },
+        cookie,
+      ),
+    );
+    expect(topicResponse.status).toBe(201);
+    const topic = (await topicResponse.json()) as { id: string };
 
     const cardResponse = await createCard(
       request(
@@ -54,6 +65,7 @@ describe("real API handler stack", () => {
         "POST",
         {
           collectionId: collection.id,
+          topicIds: [topic.id],
           front: { text: "real stack", audioId: null },
           back: { text: "echter Stack", audioId: null },
         },
@@ -61,7 +73,8 @@ describe("real API handler stack", () => {
       ),
     );
     expect(cardResponse.status).toBe(201);
-    const card = (await cardResponse.json()) as { id: string };
+    const card = (await cardResponse.json()) as { id: string; topicIds: string[] };
+    expect(card.topicIds).toEqual([topic.id]);
 
     const reviewResponse = await createReview(
       request(

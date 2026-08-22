@@ -3,7 +3,7 @@ import type { CollectionInput } from "../../contracts/collection.js";
 import { problemTypes } from "../../contracts/problem.js";
 import { getDatabase } from "../database/client.js";
 import { isUniqueViolation } from "../database/errors.js";
-import { cards, collections } from "../database/schema.js";
+import { cards, collections, topics } from "../database/schema.js";
 import { AppProblem } from "../http/problem.js";
 import { mapCollection } from "./collectionMapper.js";
 
@@ -90,4 +90,9 @@ export async function deleteCollection(collectionId: string): Promise<void> {
 
   if (!rows[0])
     throw new AppProblem(404, problemTypes.collectionNotFound, "Sammlung nicht gefunden");
+
+  await database
+    .update(topics)
+    .set({ deletedAt: new Date(), updatedAt: new Date() })
+    .where(and(eq(topics.collectionId, collectionId), isNull(topics.deletedAt)));
 }

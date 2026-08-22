@@ -8,6 +8,7 @@ function card(id: string): Card {
   return {
     id,
     collectionId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+    topicIds: [],
     front: { text: null, audio: null },
     back: { text: null, audio: null },
     box: 0,

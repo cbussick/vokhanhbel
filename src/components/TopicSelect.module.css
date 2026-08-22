@@ -1,0 +1,42 @@
+.root {
+  position: relative;
+  display: grid;
+  gap: var(--space-2);
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  list-style: none;
+}
+
+.chip {
+  min-block-size: 36px;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-full);
+  background: var(--color-surface);
+  color: inherit;
+  font: inherit;
+}
+
+.chipRemove {
+  inline-size: 1.5rem;
+  block-size: 1.5rem;
+  border: 0;
+  border-radius: var(--radius-full);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  line-height: 1;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .chipRemove:hover:not(:disabled) {
+    background: var(--color-surface-hover);
+  }
+}

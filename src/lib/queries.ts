@@ -1,6 +1,7 @@
 import { queryOptions } from "@tanstack/react-query";
 import { cardListSchema } from "../contracts/card";
 import { collectionListSchema } from "../contracts/collection";
+import { topicListSchema } from "../contracts/topic";
 import { apiPaths } from "../contracts/apiPaths";
 import { sessionStatusSchema } from "../contracts/session";
 import { statsSchema } from "../contracts/stats";
@@ -26,6 +27,12 @@ export const cardsQuery = queryOptions({
 export const collectionsQuery = queryOptions({
   queryKey: queryKeys.collections,
   queryFn: async () => collectionListSchema.parse(await apiRequest(apiPaths.collections)),
+  retry: retryRead,
+  staleTime: 30_000,
+});
+export const topicsQuery = queryOptions({
+  queryKey: queryKeys.topics,
+  queryFn: async () => topicListSchema.parse(await apiRequest(apiPaths.topics)),
   retry: retryRead,
   staleTime: 30_000,
 });

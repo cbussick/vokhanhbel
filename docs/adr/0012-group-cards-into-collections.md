@@ -5,10 +5,11 @@ use demonstrated the need. The app now holds Vietnamese and English Cards, so th
 demonstrated: Review Sessions mixed both languages, and the global front-uniqueness index refused the
 same German prompt for two different languages.
 
-Every Card belongs to exactly one Collection (`cards.collection_id`, `NOT NULL`). Sub-grouping is
-another Collection rather than a nested or multi-valued relationship: a single membership keeps front
-uniqueness, Review queues, and deletion unambiguous, and the household can create as many Collections
-as it wants.
+Every Card belongs to exactly one Collection (`cards.collection_id`, `NOT NULL`). Sub-grouping
+_across_ languages is another Collection rather than a nested Collection: a single membership keeps
+front uniqueness, Review queues, and deletion unambiguous, and the household can create as many
+Collections as it wants. Overlapping subsets _inside_ a Collection are Topics
+([ADR-0013](0013-group-cards-with-topics-inside-a-collection.md)).
 
 Front uniqueness moved from global to per-Collection. Deleting a Collection is a soft delete, refused
 while it still holds active Cards and refused for the last remaining Collection, so no Card can lose

@@ -2,28 +2,31 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { apiPaths } from "../contracts/apiPaths";
-import {
-  collectionIconKeys,
-  collectionInputSchema,
-  collectionSchema,
-  defaultCollectionIcon,
-  type Collection,
-  type CollectionIconKey,
-} from "../contracts/collection";
 import { problemTypes } from "../contracts/problem";
+import {
+  createTopicInputSchema,
+  defaultTopicIcon,
+  topicIconKeys,
+  topicInputSchema,
+  topicSchema,
+  type Topic,
+  type TopicIconKey,
+} from "../contracts/topic";
 import { apiRequest, ApiError } from "../lib/apiClient";
 import { useOnlineStatus } from "../lib/browserState";
 import { queryKeys } from "../lib/queryKeys";
-import { CollectionIcon } from "./CollectionIcon";
 import { PendingActionContent } from "./PendingActionContent";
+import { TopicIcon } from "./TopicIcon";
 import styles from "./Dialog.module.css";
 
-export function CollectionFormDialog({
-  collection,
+export function TopicFormDialog({
+  collectionId,
+  topic,
   onClose,
   onDeleted,
 }: {
-  collection?: Collection;
+  collectionId: string;
+  topic?: Topic;
   onClose: () => void;
   onDeleted?: () => void;
 }) {
@@ -34,8 +37,8 @@ export function CollectionFormDialog({
   const dialogRef = useRef<HTMLDialogElement>(null);
   const nameRef = useRef<HTMLInputElement>(null);
 
-  const [name, setName] = useState(collection?.name ?? "");
-  const [icon, setIcon] = useState<CollectionIconKey>(collection?.icon ?? defaultCollectionIcon);
+  const [name, setName] = useState(topic?.name ?? "");
+  const [icon, setIcon] = useState<TopicIconKey>(topic?.icon ?? defaultTopicIcon);
   const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
   const [error, setError] = useState<string>();
 
@@ -49,47 +52,41 @@ export function CollectionFormDialog({
 
   const describeError = (value: unknown, fallback: string) => {
     if (!(value instanceof ApiError)) return fallback;
-    if (value.problem.type === problemTypes.collectionNameConflict)
-      return t("collections.nameConflict");
-    if (value.problem.type === problemTypes.collectionNotEmpty) return t("collections.notEmpty");
-    if (value.problem.type === problemTypes.lastCollection) return t("collections.lastCollection");
+    if (value.problem.type === problemTypes.topicNameConflict) return t("topics.nameConflict");
 
     return fallback;
   };
 
   const save = useMutation({
     mutationFn: async () => {
-      const input = collectionInputSchema.parse({ name, icon });
+      const input = topicInputSchema.parse({ name, icon });
 
-      return collectionSchema.parse(
-        collection
-          ? await apiRequest(apiPaths.collection(collection.id), {
+      return topicSchema.parse(
+        topic
+          ? await apiRequest(apiPaths.topic(topic.id), {
               method: "PATCH",
               body: JSON.stringify(input),
             })
-          : await apiRequest(apiPaths.collections, {
+          : await apiRequest(apiPaths.topics, {
               method: "POST",
-              body: JSON.stringify(input),
+              body: JSON.stringify(createTopicInputSchema.parse({ collectionId, ...input })),
             }),
       );
     },
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: queryKeys.collections });
+      await queryClient.invalidateQueries({ queryKey: queryKeys.topics });
 
       dialogRef.current?.close();
       onClose();
     },
-    onError: (value) => setError(describeError(value, t("collections.saveFailed"))),
+    onError: (value) => setError(describeError(value, t("topics.saveFailed"))),
   });
 
   const remove = useMutation({
-    mutationFn: async () =>
-      apiRequest<void>(apiPaths.collection(collection!.id), { method: "DELETE" }),
+    mutationFn: async () => apiRequest<void>(apiPaths.topic(topic!.id), { method: "DELETE" }),
     onSuccess: async () => {
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: queryKeys.collections }),
-        queryClient.invalidateQueries({ queryKey: queryKeys.topics }),
-      ]);
+      await queryClient.invalidateQueries({ queryKey: queryKeys.topics });
+      await queryClient.invalidateQueries({ queryKey: queryKeys.cards });
 
       dialogRef.current?.close();
       onDeleted?.();
@@ -97,7 +94,7 @@ export function CollectionFormDialog({
     },
     onError: (value) => {
       setIsConfirmingDelete(false);
-      setError(describeError(value, t("collections.deleteFailed")));
+      setError(describeError(value, t("topics.deleteFailed")));
     },
   });
 
@@ -118,7 +115,7 @@ export function CollectionFormDialog({
     setError(undefined);
 
     if (!online) {
-      setError(t("collections.offline"));
+      setError(t("topics.offline"));
 
       return;
     }
@@ -143,13 +140,11 @@ export function CollectionFormDialog({
 
         close();
       }}
-      aria-labelledby="collection-dialog-title"
+      aria-labelledby="topic-dialog-title"
     >
       <section className={styles.sheet} aria-busy={isPending}>
         <header>
-          <h2 id="collection-dialog-title">
-            {t(collection ? "collections.renameTitle" : "collections.create")}
-          </h2>
+          <h2 id="topic-dialog-title">{t(topic ? "topics.renameTitle" : "topics.create")}</h2>
           {!isConfirmingDelete && (
             <button
               type="button"
@@ -165,7 +160,7 @@ export function CollectionFormDialog({
         <div className={styles.body}>
           {isConfirmingDelete ? (
             <div className={styles.confirm}>
-              <p>{t("collections.deleteConfirm", { name: collection?.name ?? "" })}</p>
+              <p>{t("topics.deleteConfirm", { name: topic?.name ?? "" })}</p>
               <div className={styles.actions}>
                 <button
                   type="button"
@@ -186,7 +181,7 @@ export function CollectionFormDialog({
                 >
                   <PendingActionContent
                     pending={remove.isPending}
-                    label={t("collections.delete")}
+                    label={t("topics.delete")}
                     pendingLabel={t("common.deleting")}
                   />
                 </button>
@@ -194,16 +189,16 @@ export function CollectionFormDialog({
             </div>
           ) : (
             <form onSubmit={submit} noValidate>
-              <label htmlFor="collection-name" className={styles.fieldHeading}>
-                {t("collections.name")}
+              <label htmlFor="topic-name" className={styles.fieldHeading}>
+                {t("topics.name")}
               </label>
-              <span id="collection-name-hint" className={styles.hint}>
-                {t("collections.nameHint")}
+              <span id="topic-name-hint" className={styles.hint}>
+                {t("topics.nameHint")}
               </span>
               <input
                 ref={nameRef}
-                id="collection-name"
-                aria-describedby="collection-name-hint"
+                id="topic-name"
+                aria-describedby="topic-name-hint"
                 required
                 maxLength={60}
                 value={name}
@@ -211,20 +206,20 @@ export function CollectionFormDialog({
                 onChange={(event) => setName(event.target.value)}
               />
               <fieldset className={styles.iconChoices} disabled={isPending}>
-                <legend className={styles.fieldHeading}>{t("collections.icon")}</legend>
-                {collectionIconKeys.map((key) => (
+                <legend className={styles.fieldHeading}>{t("topics.icon")}</legend>
+                {topicIconKeys.map((key) => (
                   <div key={key}>
                     <input
                       type="radio"
-                      id={`collection-icon-${key}`}
-                      name="collection-icon"
+                      id={`topic-icon-${key}`}
+                      name="topic-icon"
                       value={key}
                       checked={icon === key}
                       onChange={() => setIcon(key)}
                     />
-                    <label htmlFor={`collection-icon-${key}`}>
-                      <CollectionIcon icon={key} />
-                      {t(`collections.icons.${key}`)}
+                    <label htmlFor={`topic-icon-${key}`}>
+                      <TopicIcon icon={key} />
+                      {t(`topics.icons.${key}`)}
                     </label>
                   </div>
                 ))}
@@ -235,7 +230,7 @@ export function CollectionFormDialog({
                 </p>
               )}
               <div className={styles.actions}>
-                {collection && (
+                {topic && (
                   <button
                     type="button"
                     className={styles.deleteLink}
@@ -245,7 +240,7 @@ export function CollectionFormDialog({
                       setIsConfirmingDelete(true);
                     }}
                   >
-                    {t("collections.delete")}
+                    {t("topics.delete")}
                   </button>
                 )}
                 <button

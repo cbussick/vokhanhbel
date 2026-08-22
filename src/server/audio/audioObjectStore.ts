@@ -196,8 +196,10 @@ export class R2AudioObjectStore implements AudioObjectStore {
   }
 
   async read(objectKey: string, range?: AudioObjectRange): Promise<StoredAudioObject | null> {
-    const rangeHeader = range ? { range: `bytes=${range.start}-${range.end ?? ""}` } : {};
-    const response = await this.request("GET", objectKey, undefined, rangeHeader);
+    const extraHeaders: Record<string, string> = {};
+
+    if (range) extraHeaders.range = `bytes=${range.start}-${range.end ?? ""}`;
+    const response = await this.request("GET", objectKey, undefined, extraHeaders);
 
     if (response.status === 404) return null;
     if (!response.ok) throw new Error(`R2 read failed (${response.status})`);

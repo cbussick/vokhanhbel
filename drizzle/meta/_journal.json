@@ -57,6 +57,13 @@
       "when": 1787323093170,
       "tag": "0007_preserve-card-normalization-check",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1787421279346,
+      "tag": "0008_add-topics",
+      "breakpoints": true
     }
   ]
 }

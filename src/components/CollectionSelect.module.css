@@ -63,7 +63,8 @@
   cursor: pointer;
 }
 
-.option[aria-selected="true"] {
+.option[aria-selected="true"],
+.option[data-active="true"] {
   background: var(--color-divider);
   color: var(--color-primary-text);
 }

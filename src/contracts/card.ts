@@ -38,6 +38,7 @@ export type UpdateCardFaceInput = z.infer<typeof updateCardFaceInputSchema>;
 const structuredCardSchema = z.object({
   id: uuidSchema,
   collectionId: uuidSchema,
+  topicIds: z.array(uuidSchema),
   front: cardFaceSchema,
   back: cardFaceSchema,
   box: boxSchema,
@@ -54,6 +55,7 @@ export const cardSchema = z.preprocess((value) => {
 
   return {
     ...candidate,
+    topicIds: Array.isArray(candidate.topicIds) ? candidate.topicIds : [],
     front:
       typeof candidate.front === "string"
         ? { text: candidate.front, audio: null }
@@ -67,20 +69,25 @@ export type Card = z.infer<typeof cardSchema>;
 
 export const createCardInputSchema = z.object({
   collectionId: uuidSchema,
+  topicIds: z.array(uuidSchema).default([]),
   front: createCardFaceInputSchema,
   back: createCardFaceInputSchema,
 });
-export type CreateCardInput = z.infer<typeof createCardInputSchema>;
+export type CreateCardInput = z.input<typeof createCardInputSchema>;
 
 export const updateCardInputSchema = z
   .object({
     collectionId: uuidSchema.optional(),
+    topicIds: z.array(uuidSchema).optional(),
     front: updateCardFaceInputSchema.optional(),
     back: updateCardFaceInputSchema.optional(),
   })
   .refine(
     (value) =>
-      value.collectionId !== undefined || value.front !== undefined || value.back !== undefined,
+      value.collectionId !== undefined ||
+      value.topicIds !== undefined ||
+      value.front !== undefined ||
+      value.back !== undefined,
     { message: "empty-update" },
   );
 export type UpdateCardInput = z.infer<typeof updateCardInputSchema>;

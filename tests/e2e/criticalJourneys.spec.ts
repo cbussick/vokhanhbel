@@ -80,6 +80,7 @@ async function installMockApi(page: Page, authenticated = true) {
     }
     if (pathname === "/api/collections" && request.method() === "GET")
       return json(route, [mockCollection]);
+    if (pathname === "/api/topics" && request.method() === "GET") return json(route, []);
     if (pathname === "/api/cards" && request.method() === "GET") return json(route, state.cards);
     if (pathname === "/api/cards" && request.method() === "POST") {
       const input = request.postDataJSON() as {

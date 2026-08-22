@@ -59,41 +59,44 @@ const dueRowSchema = z.object({ due_at: z.date() });
 const maximumReviewAgeMilliseconds = 7 * 24 * 60 * 60 * 1_000;
 const maximumClockSkewMilliseconds = 5 * 60 * 1_000;
 
-function mapDatabaseCard(value: unknown) {
+function mapDatabaseCard(value: unknown, topicIds: string[]) {
   const row = databaseCardRowSchema.parse(value);
 
-  return mapCard({
-    card: {
-      id: row.id,
-      collectionId: row.collection_id,
-      frontText: row.front_text,
-      backText: row.back_text,
-      box: row.box,
-      dueAt: row.due_at,
-      lastReviewedAt: row.last_reviewed_at,
-      createdAt: row.created_at,
-      updatedAt: row.updated_at,
-      deletedAt: row.deleted_at,
+  return mapCard(
+    {
+      card: {
+        id: row.id,
+        collectionId: row.collection_id,
+        frontText: row.front_text,
+        backText: row.back_text,
+        box: row.box,
+        dueAt: row.due_at,
+        lastReviewedAt: row.last_reviewed_at,
+        createdAt: row.created_at,
+        updatedAt: row.updated_at,
+        deletedAt: row.deleted_at,
+      },
+      frontAudio: row.front_audio_id
+        ? {
+            id: row.front_audio_id,
+            durationMs: row.front_audio_duration_ms,
+            contentType: row.front_audio_content_type,
+            byteSize: row.front_audio_byte_size,
+            deletedAt: row.front_audio_deleted_at,
+          }
+        : null,
+      backAudio: row.back_audio_id
+        ? {
+            id: row.back_audio_id,
+            durationMs: row.back_audio_duration_ms,
+            contentType: row.back_audio_content_type,
+            byteSize: row.back_audio_byte_size,
+            deletedAt: row.back_audio_deleted_at,
+          }
+        : null,
     },
-    frontAudio: row.front_audio_id
-      ? {
-          id: row.front_audio_id,
-          durationMs: row.front_audio_duration_ms,
-          contentType: row.front_audio_content_type,
-          byteSize: row.front_audio_byte_size,
-          deletedAt: row.front_audio_deleted_at,
-        }
-      : null,
-    backAudio: row.back_audio_id
-      ? {
-          id: row.back_audio_id,
-          durationMs: row.back_audio_duration_ms,
-          contentType: row.back_audio_content_type,
-          byteSize: row.back_audio_byte_size,
-          deletedAt: row.back_audio_deleted_at,
-        }
-      : null,
-  });
+    topicIds,
+  );
 }
 
 const cardSelectSql = `
@@ -183,7 +186,14 @@ export async function recordReview(input: ReviewSubmissionInput): Promise<Review
       [boxAfter, dueAt, reviewedAt, input.cardId],
     );
     const updated = await client.query(cardSelectSql, [input.cardId]);
-    const resultingCard = mapDatabaseCard(updated.rows[0]);
+    const memberships = await client.query<{ topic_id: string }>(
+      "SELECT topic_id FROM card_topics WHERE card_id=$1",
+      [input.cardId],
+    );
+    const resultingCard = mapDatabaseCard(
+      updated.rows[0],
+      memberships.rows.map((row) => row.topic_id),
+    );
     const inserted = await client.query(
       "INSERT INTO reviews (id, card_id, grade, points_awarded, box_before, box_after, reviewed_at, result_card) VALUES ($1,$2,$3,$4,$5,$6,$7,$8::jsonb) RETURNING *",
       [

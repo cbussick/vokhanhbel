@@ -30,6 +30,10 @@
   ],
   "rewrites": [
     {
+      "source": "/api/topics/:topicId",
+      "destination": "/api/topics?topicId=:topicId"
+    },
+    {
       "source": "/((?!api/|src/|assets/|node_modules/|@).*)",
       "destination": "/index.html"
     }

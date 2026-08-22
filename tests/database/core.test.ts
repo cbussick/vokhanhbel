@@ -9,6 +9,7 @@ import {
   deleteCollection,
   listCollections,
 } from "../../src/server/resources/collections.js";
+import { createTopic, deleteTopic, listTopics } from "../../src/server/resources/topics.js";
 import { recordReview } from "../../src/server/resources/reviews.js";
 import { login } from "../../src/server/resources/sessions.js";
 import { getStats } from "../../src/server/resources/stats.js";
@@ -189,6 +190,63 @@ describe("PostgreSQL application behavior", () => {
       status: 409,
       type: "/problems/last-collection",
     });
+  });
+
+  it("keeps Cards when a Topic is deleted and drops Topics when a Card moves Collection", async () => {
+    const english = await createCollection({ name: "Englisch", icon: "flag-gb" });
+    const animals = await createTopic({
+      collectionId: defaultCollectionId,
+      name: "Tiere",
+      icon: "animal",
+    });
+    const food = await createTopic({
+      collectionId: defaultCollectionId,
+      name: "Essen",
+      icon: "food",
+    });
+    await createTopic({ collectionId: english.id, name: "Tiere", icon: "animal" });
+    const card = await createCard({
+      collectionId: defaultCollectionId,
+      topicIds: [animals.id, food.id],
+      front: { text: "con gà", audioId: null },
+      back: { text: "Huhn", audioId: null },
+    });
+
+    expect(card.topicIds).toEqual(expect.arrayContaining([animals.id, food.id]));
+    await expect(
+      createTopic({ collectionId: defaultCollectionId, name: "tiere", icon: "animal" }),
+    ).rejects.toMatchObject({ status: 409, type: "/problems/topic-name-conflict" });
+
+    await deleteTopic(animals.id);
+    expect(await listTopics()).toHaveLength(2);
+    expect((await listCards())[0]?.topicIds).toEqual([food.id]);
+
+    const moved = await updateCard(card.id, { collectionId: english.id });
+    expect(moved.topicIds).toEqual([]);
+
+    await deleteCard(card.id);
+    await deleteCollection(english.id);
+    expect(await listTopics()).toEqual([
+      expect.objectContaining({ id: food.id, collectionId: defaultCollectionId }),
+    ]);
+  });
+
+  it("refuses a Topic from another Collection on a Card", async () => {
+    const english = await createCollection({ name: "Englisch", icon: "flag-gb" });
+    const englishTopic = await createTopic({
+      collectionId: english.id,
+      name: "Food",
+      icon: "food",
+    });
+
+    await expect(
+      createCard({
+        collectionId: defaultCollectionId,
+        topicIds: [englishTopic.id],
+        front: { text: "mèo", audioId: null },
+        back: { text: "Katze", audioId: null },
+      }),
+    ).rejects.toMatchObject({ status: 404, type: "/problems/topic-not-found" });
   });
 
   it("stores the Collection in the Review snapshot the replay path reads back", async () => {

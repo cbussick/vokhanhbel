@@ -17,7 +17,7 @@ describe("rendered app journeys", () => {
         return new HttpResponse(null, { status: 204 });
       }),
     );
-    renderApp("/login");
+    await renderApp("/login");
     const input = await screen.findByLabelText("Passwort");
     await user.type(input, "  genau sechzehn+  ");
     await user.click(screen.getByRole("button", { name: "App öffnen" }));
@@ -41,7 +41,7 @@ describe("rendered app journeys", () => {
         ),
       ),
     );
-    renderApp("/login");
+    await renderApp("/login");
     await user.type(await screen.findByLabelText("Passwort"), "richtiges Passwort");
     await user.click(screen.getByRole("button", { name: "App öffnen" }));
 
@@ -56,7 +56,7 @@ describe("rendered app journeys", () => {
       http.get("/api/session", () => HttpResponse.json({ authenticated: false })),
       http.post("/api/session", () => HttpResponse.error()),
     );
-    renderApp("/login");
+    await renderApp("/login");
     await user.type(await screen.findByLabelText("Passwort"), "richtiges Passwort");
     await user.click(screen.getByRole("button", { name: "App öffnen" }));
 
@@ -84,7 +84,7 @@ describe("rendered app journeys", () => {
       ),
     );
 
-    renderApp("/");
+    await renderApp("/");
     expect(await screen.findByRole("heading")).toHaveTextContent(
       "Die App konnte nicht geladen werden",
     );
@@ -99,7 +99,7 @@ describe("rendered app journeys", () => {
 
   it("finds Cards by either side while preserving diacritics", async () => {
     const user = userEvent.setup();
-    renderApp(`/cards/${testCollections[1]!.id}`);
+    await renderApp(`/cards/${testCollections[1]!.id}`);
     const search = await screen.findByLabelText("Karten durchsuchen");
     expect(screen.getByText("Café")).toBeVisible();
     await user.type(search, "kaffee");
@@ -114,7 +114,7 @@ describe("rendered app journeys", () => {
 
   it("opens a Collection from the overview and shows only its Cards", async () => {
     const user = userEvent.setup();
-    renderApp("/cards");
+    await renderApp("/cards");
 
     expect(await screen.findByRole("link", { name: /Vietnamesisch/ })).toBeVisible();
     await user.click(screen.getByRole("link", { name: /Englisch/ }));
@@ -124,6 +124,27 @@ describe("rendered app journeys", () => {
 
     await user.click(screen.getByRole("link", { name: /Alle Sammlungen/ }));
     expect(await screen.findByRole("link", { name: /Vietnamesisch/ })).toBeVisible();
+  });
+
+  it("filters Cards in a Collection by Topic", async () => {
+    const user = userEvent.setup();
+    const withoutTopic = {
+      ...testCards[0]!,
+      id: "33333333-3333-4333-8333-333333333333",
+      topicIds: [],
+      front: "Hanoi",
+      back: "Hà Nội",
+    };
+    mockServer.use(http.get("/api/cards", () => HttpResponse.json([testCards[0], withoutTopic])));
+    await renderApp(`/cards/${testCollections[0]!.id}`);
+
+    expect(await screen.findByText("Take care")).toBeVisible();
+    expect(screen.getByText("Hanoi")).toBeVisible();
+    await user.click(screen.getByRole("button", { name: "Tiere" }));
+    expect(screen.getByText("Take care")).toBeVisible();
+    expect(screen.queryByText("Hanoi")).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Alle" }));
+    expect(screen.getByText("Hanoi")).toBeVisible();
   });
 
   it("creates a Card in the open Collection", async () => {
@@ -136,7 +157,7 @@ describe("rendered app journeys", () => {
         return HttpResponse.json({ ...testCards[1]!, front: "Schnee" }, { status: 201 });
       }),
     );
-    renderApp(`/cards/${testCollections[1]!.id}`);
+    await renderApp(`/cards/${testCollections[1]!.id}`);
 
     await user.click(await screen.findByRole("button", { name: "Karte hinzufügen" }));
     await user.type(await screen.findByLabelText("Vorderseite Maximal 1.000 Zeichen"), "Schnee");
@@ -148,7 +169,7 @@ describe("rendered app journeys", () => {
 
   it("keeps the Card dialog open when the file picker is cancelled", async () => {
     const user = userEvent.setup();
-    renderApp(`/cards/${testCollections[1]!.id}`);
+    await renderApp(`/cards/${testCollections[1]!.id}`);
 
     await user.click(await screen.findByRole("button", { name: "Karte hinzufügen" }));
     const dialog = screen.getByRole("dialog");
@@ -171,7 +192,7 @@ describe("rendered app journeys", () => {
         return HttpResponse.json({ ...testCollections[0]!, ...created }, { status: 201 });
       }),
     );
-    renderApp("/cards");
+    await renderApp("/cards");
 
     await user.click(await screen.findByRole("button", { name: "Sammlung hinzufügen" }));
     await user.type(await screen.findByLabelText("Name der Sammlung"), "Französisch");
@@ -185,7 +206,7 @@ describe("rendered app journeys", () => {
 
   it("closes an edited Collection without asking, and only confirms deletion", async () => {
     const user = userEvent.setup();
-    renderApp(`/cards/${testCollections[1]!.id}`);
+    await renderApp(`/cards/${testCollections[1]!.id}`);
 
     await user.click(await screen.findByRole("button", { name: "Sammlung bearbeiten" }));
     await user.type(await screen.findByLabelText("Name der Sammlung"), " B1");
@@ -216,7 +237,7 @@ describe("rendered app journeys", () => {
         return HttpResponse.json({ ...testCollections[1]!, name: renamed });
       }),
     );
-    renderApp(`/cards/${testCollections[1]!.id}`);
+    await renderApp(`/cards/${testCollections[1]!.id}`);
 
     await user.click(await screen.findByRole("button", { name: "Sammlung bearbeiten" }));
     const name = await screen.findByLabelText("Name der Sammlung");
@@ -229,7 +250,7 @@ describe("rendered app journeys", () => {
 
   it("reviews only the Cards of the started Collection", async () => {
     const user = userEvent.setup();
-    renderApp("/review");
+    await renderApp("/review");
 
     expect(await screen.findByRole("button", { name: /Englisch/ })).toBeVisible();
     await user.click(screen.getByRole("button", { name: /Vietnamesisch/ }));
@@ -238,10 +259,19 @@ describe("rendered app journeys", () => {
     expect(screen.getByText("1 / 1")).toBeVisible();
   });
 
+  it("reviews only the Cards of the started Topic", async () => {
+    const user = userEvent.setup();
+    await renderApp("/review");
+
+    await user.click(await screen.findByRole("button", { name: /Tiere/ }));
+    expect(await screen.findByText("Take care")).toBeVisible();
+    expect(screen.getByText("1 / 1")).toBeVisible();
+  });
+
   it("shows one add Card action when a Collection has no saved Cards", async () => {
     mockServer.use(http.get("/api/cards", () => HttpResponse.json([])));
 
-    renderApp(`/cards/${testCollections[0]!.id}`);
+    await renderApp(`/cards/${testCollections[0]!.id}`);
 
     await screen.findByText("Noch keine Karten. Füge deine erste Karte hinzu.");
     expect(screen.getAllByRole("button", { name: "Karte hinzufügen" })).toHaveLength(1);
@@ -271,7 +301,7 @@ describe("rendered app journeys", () => {
         });
       }),
     );
-    renderApp("/review");
+    await renderApp("/review");
     await user.click(await screen.findByRole("button", { name: "Review starten" }));
     expect(await screen.findByText("Take care")).toBeVisible();
     await user.click(screen.getByRole("button", { name: "Antwort zeigen" }));
@@ -308,7 +338,7 @@ describe("rendered app journeys", () => {
         return HttpResponse.json({});
       }),
     );
-    renderApp("/review");
+    await renderApp("/review");
     await user.click(await screen.findByRole("button", { name: "Review starten" }));
     await waitFor(() => expect(prefetched).toBe(1));
     const audio = document.querySelector("audio")!;
@@ -347,7 +377,7 @@ describe("rendered app journeys", () => {
     );
 
     try {
-      renderApp("/review");
+      await renderApp("/review");
       await user.click(await screen.findByRole("button", { name: "Review starten" }));
       await user.click(screen.getByRole("button", { name: "Antwort zeigen" }));
       const tutor = await screen.findByRole("button", { name: "Tutopher fragen" });
@@ -395,7 +425,7 @@ describe("rendered app journeys", () => {
         });
       }),
     );
-    renderApp("/review");
+    await renderApp("/review");
     await user.click(await screen.findByRole("button", { name: "Review starten" }));
     const optionalAudio = document.querySelector("audio")!;
 
@@ -421,7 +451,7 @@ describe("rendered app journeys", () => {
 
   it("discards active Review state after leaving the Review routes", async () => {
     const user = userEvent.setup();
-    const { router } = renderApp("/review");
+    const { router } = await renderApp("/review");
 
     await user.click(await screen.findByRole("button", { name: "Review starten" }));
     expect(await screen.findByRole("button", { name: "Antwort zeigen" })).toBeVisible();
@@ -453,7 +483,7 @@ describe("rendered app journeys", () => {
         ),
       ),
     );
-    renderApp("/review");
+    await renderApp("/review");
     await user.click(await screen.findByRole("button", { name: "Review starten" }));
     await user.click(screen.getByRole("button", { name: "Antwort zeigen" }));
     await user.click(await screen.findByRole("button", { name: /Gewusst/ }));
@@ -482,7 +512,7 @@ describe("rendered app journeys", () => {
         ),
       ),
     );
-    renderApp("/review");
+    await renderApp("/review");
     await user.click(await screen.findByRole("button", { name: "Review starten" }));
     await user.click(screen.getByRole("button", { name: "Antwort zeigen" }));
     await user.click(await screen.findByRole("button", { name: /Gewusst/ }));
@@ -513,7 +543,7 @@ describe("rendered app journeys", () => {
         ),
       ),
     );
-    renderApp("/review");
+    await renderApp("/review");
     await user.click(await screen.findByRole("button", { name: "Review starten" }));
     await user.click(screen.getByRole("button", { name: "Antwort zeigen" }));
     await user.click(await screen.findByRole("button", { name: /Gewusst/ }));
@@ -562,7 +592,7 @@ describe("rendered app journeys", () => {
         return HttpResponse.json({});
       }),
     );
-    renderApp("/review");
+    await renderApp("/review");
     await user.click(await screen.findByRole("button", { name: "Review starten" }));
     await user.click(screen.getByRole("button", { name: "Antwort zeigen" }));
     await user.click(await screen.findByRole("button", { name: /Gewusst/ }));
@@ -618,7 +648,7 @@ describe("rendered app journeys", () => {
         return HttpResponse.json({});
       }),
     );
-    renderApp("/review");
+    await renderApp("/review");
     await user.click(await screen.findByRole("button", { name: "Review starten" }));
     await user.click(screen.getByRole("button", { name: "Antwort zeigen" }));
     await user.click(await screen.findByRole("button", { name: /Gewusst/ }));
@@ -651,7 +681,7 @@ describe("rendered app journeys", () => {
         ),
       ),
     );
-    renderApp("/review");
+    await renderApp("/review");
     await user.click(await screen.findByRole("button", { name: "Review starten" }));
     await user.click(screen.getByRole("button", { name: "Antwort zeigen" }));
     await user.click(await screen.findByRole("button", { name: /Gewusst/ }));
@@ -693,7 +723,7 @@ describe("rendered app journeys", () => {
         );
       }),
     );
-    renderApp("/review");
+    await renderApp("/review");
     await user.click(await screen.findByRole("button", { name: "Review starten" }));
     await user.click(screen.getByRole("button", { name: "Antwort zeigen" }));
     await user.click(await screen.findByRole("button", { name: /Gewusst/ }));
@@ -729,7 +759,7 @@ describe("rendered app journeys", () => {
       }),
       http.delete("/api/session", () => new HttpResponse(null, { status: 204 })),
     );
-    renderApp("/review");
+    await renderApp("/review");
     await user.click(await screen.findByRole("button", { name: "Review starten" }));
     await user.click(screen.getByRole("button", { name: "Antwort zeigen" }));
     await user.click(await screen.findByRole("button", { name: /Gewusst/ }));
@@ -759,7 +789,7 @@ describe("rendered app journeys", () => {
         ),
       ),
     );
-    renderApp("/review");
+    await renderApp("/review");
     await user.click(await screen.findByRole("button", { name: "Review starten" }));
     await user.click(screen.getByRole("button", { name: "Antwort zeigen" }));
     await user.click(await screen.findByRole("button", { name: /Gewusst/ }));
@@ -780,7 +810,7 @@ describe("rendered app journeys", () => {
           ),
       ),
     );
-    renderApp("/review");
+    await renderApp("/review");
     await user.click(await screen.findByRole("button", { name: "Review starten" }));
     await user.click(screen.getByRole("button", { name: "Antwort zeigen" }));
     await user.click(await screen.findByRole("button", { name: "Tutopher fragen" }));
@@ -809,7 +839,7 @@ describe("rendered app journeys", () => {
         ),
       ),
     );
-    renderApp("/review");
+    await renderApp("/review");
     await user.click(await screen.findByRole("button", { name: "Review starten" }));
     await user.click(screen.getByRole("button", { name: "Antwort zeigen" }));
     await user.click(await screen.findByRole("button", { name: "Tutopher fragen" }));
@@ -835,7 +865,7 @@ describe("rendered app journeys", () => {
         ),
       ),
     );
-    renderApp("/review");
+    await renderApp("/review");
     await user.click(await screen.findByRole("button", { name: "Review starten" }));
     await user.click(screen.getByRole("button", { name: "Antwort zeigen" }));
     await user.click(await screen.findByRole("button", { name: "Tutopher fragen" }));
@@ -856,7 +886,7 @@ describe("rendered app journeys", () => {
         ]),
       ),
     );
-    renderApp("/review");
+    await renderApp("/review");
     expect(await screen.findByText("Heute ist nichts fällig.")).toBeVisible();
 
     currentTime += 60_001;

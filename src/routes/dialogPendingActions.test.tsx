@@ -81,7 +81,7 @@ describe("form dialog pending actions", () => {
         return HttpResponse.json({}, { status: 500 });
       }),
     );
-    renderApp(`/cards/${testCollections[1]!.id}`);
+    await renderApp(`/cards/${testCollections[1]!.id}`);
 
     await user.click(await screen.findByRole("button", { name: "Sammlung bearbeiten" }));
     const dialog = screen.getByRole("dialog");
@@ -118,7 +118,7 @@ describe("form dialog pending actions", () => {
         return new HttpResponse(null, { status: 204 });
       }),
     );
-    renderApp(`/cards/${testCollections[1]!.id}`);
+    await renderApp(`/cards/${testCollections[1]!.id}`);
 
     await user.click(await screen.findByRole("button", { name: "Sammlung bearbeiten" }));
     await user.click(screen.getByRole("button", { name: "Sammlung löschen" }));

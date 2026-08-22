@@ -16,3 +16,4 @@ in a new ADR rather than by deleting the old one.
 - [Use Baloo 2 and Be Vietnam Pro for typography](0010-use-baloo-2-and-be-vietnam-pro-typography.md)
 - [Keep Reviews when a Card is deleted](0011-keep-reviews-when-a-card-is-deleted.md)
 - [Group Cards into Collections](0012-group-cards-into-collections.md)
+- [Group Cards with Topics inside a Collection](0013-group-cards-with-topics-inside-a-collection.md)

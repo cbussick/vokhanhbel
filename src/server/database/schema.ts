@@ -6,6 +6,7 @@ import {
   integer,
   jsonb,
   pgTable,
+  primaryKey,
   text,
   timestamp,
   uniqueIndex,
@@ -13,6 +14,7 @@ import {
 } from "drizzle-orm/pg-core";
 import type { Card } from "../../contracts/card.js";
 import { defaultCollectionIcon } from "../../contracts/collection.js";
+import { defaultTopicIcon } from "../../contracts/topic.js";
 
 /**
  * Every Card created before Collections existed belongs here, and the column default keeps the
@@ -39,6 +41,34 @@ export const collections = pgTable(
     check("collections_normalized_name_matches", sql`${table.normalizedName} = ${table.name}`),
     uniqueIndex("collections_active_name_unique")
       .on(sql`lower(${table.normalizedName})`)
+      .where(sql`${table.deletedAt} is null`),
+  ],
+);
+
+export const topics = pgTable(
+  "topics",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    collectionId: uuid("collection_id")
+      .notNull()
+      .references(() => collections.id, { onDelete: "restrict", onUpdate: "restrict" }),
+    name: text("name").notNull(),
+    normalizedName: text("normalized_name").notNull(),
+    icon: text("icon").notNull().default(defaultTopicIcon),
+    createdAt: timestamp("created_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
+    deletedAt: timestamp("deleted_at", { withTimezone: true, mode: "date" }),
+  },
+  (table) => [
+    check("topics_name_length", sql`char_length(${table.name}) between 1 and 60`),
+    check("topics_icon_length", sql`char_length(${table.icon}) between 1 and 40`),
+    check("topics_name_normalized", sql`${table.name} = normalize_card_text(${table.name})`),
+    check("topics_normalized_name_matches", sql`${table.normalizedName} = ${table.name}`),
+    uniqueIndex("topics_active_name_unique")
+      .on(table.collectionId, sql`lower(${table.normalizedName})`)
+      .where(sql`${table.deletedAt} is null`),
+    index("topics_collection_active_idx")
+      .on(table.collectionId)
       .where(sql`${table.deletedAt} is null`),
   ],
 );
@@ -138,6 +168,22 @@ export const cards = pgTable(
     index("cards_collection_due_active_idx")
       .on(table.collectionId, table.dueAt)
       .where(sql`${table.deletedAt} is null`),
+  ],
+);
+
+export const cardTopics = pgTable(
+  "card_topics",
+  {
+    cardId: uuid("card_id")
+      .notNull()
+      .references(() => cards.id, { onDelete: "cascade", onUpdate: "restrict" }),
+    topicId: uuid("topic_id")
+      .notNull()
+      .references(() => topics.id, { onDelete: "cascade", onUpdate: "restrict" }),
+  },
+  (table) => [
+    primaryKey({ columns: [table.cardId, table.topicId] }),
+    index("card_topics_topic_idx").on(table.topicId),
   ],
 );
 

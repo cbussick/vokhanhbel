@@ -13,9 +13,15 @@ A fixed-direction pair of faces to be learned. Each face contains normalized tex
 _Avoid_: Flashcard, word
 
 **Collection**:
-A named group of Cards. Every Card belongs to exactly one Collection, which scopes the Card list and
-a Review Session. Usually one Collection per learned language, but any grouping the Learner wants.
+A named group of Cards. Every Card belongs to exactly one Collection, which scopes the Card list,
+front uniqueness, and a Review Session. Usually one Collection per learned language, but any grouping
+the Learner wants.
 _Avoid_: Deck, set, category, folder
+
+**Topic**:
+A named grouping of Cards inside one Collection. A Card may belong to many Topics in its Collection,
+or to none. A Topic never spans Collections. German UI: Thema.
+_Avoid_: Playlist, folder, tag, category, set, subcollection
 
 **Box**:
 A card's current position (0–5) in the Leitner scheduling ladder, determining how soon it becomes due again.
@@ -44,7 +50,8 @@ A server-side authentication record created after the shared password is accepte
 _Avoid_: JWT, access token, signed session
 
 **Review Session**:
-The client-side, non-persisted queue of due cards being studied in one sitting, ending at a session summary. Covers either one Collection or all of them.
+The client-side, non-persisted queue of due cards being studied in one sitting, ending at a session
+summary. Covers one Collection, one Topic, or all Collections.
 _Avoid_: Session (reserved for the auth session), study session
 
 **Points**:
