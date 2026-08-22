@@ -1,10 +1,14 @@
 # Deployment strategy
 
-This project uses a lightweight, human-enforced deployment process:
+This project deploys through pull requests that GitHub enforces on `main`:
 
-1. Open a pull request from your feature branch and wait for the GitHub Actions CI workflow to pass.
-2. Merge the pull request into `main` only when CI is green.
+1. Open a pull request from your feature branch and wait for the Quality workflow's `verify` job to pass.
+2. Merge the pull request after GitHub allows it: `verify` is green and the branch is up to date with `main`.
 3. Vercel automatically builds and deploys the commit on `main` to production.
+
+The `main-no-direct-push` ruleset blocks direct pushes, force-pushes, and deletion of `main`. It requires a pull request, the `verify` status check, and that the branch is up to date with `main`.
+
+Vercel Deployment Checks are not required. Merging still starts the production deployment immediately.
 
 ## Releasing a database migration
 
@@ -46,11 +50,3 @@ Do not automatically reverse the associated database migration. Production
 migrations are designed to remain compatible with both the old and new
 application versions, so rolling back the application should be sufficient.
 Any database reversal requires its own reviewed migration and a fresh backup.
-
-GitHub branch protection and Vercel Deployment Checks are intentionally not
-required. The repository is private and uses a free GitHub account, so the
-workflow is a documented convention rather than a platform-enforced rule.
-
-An accidental direct push or a merge with failing checks can therefore reach
-production. The maintainer accepts this risk and will correct or roll back the
-deployment manually if it occurs.
