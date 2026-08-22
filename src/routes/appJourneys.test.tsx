@@ -1,9 +1,27 @@
-import { act, fireEvent, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
 import { describe, expect, it, vi } from "vitest";
 import { renderApp } from "../test/renderApp";
-import { mockServer, testCards, testCollections } from "../test/server";
+import { mockServer, testCards, testCollections, testTopics } from "../test/server";
+
+function dialogByHeading(name: string) {
+  const dialog = screen.getByRole("heading", { name }).closest("dialog");
+
+  if (!dialog) throw new Error(`dialog ${name} missing`);
+
+  return dialog;
+}
+
+async function cardDialogReady() {
+  const dialog = dialogByHeading("Karte erstellen");
+
+  await waitFor(() =>
+    expect(within(dialog).getByLabelText("Vorderseite Maximal 1.000 Zeichen")).toHaveFocus(),
+  );
+
+  return dialog;
+}
 
 describe("rendered app journeys", () => {
   it("logs in without trimming the shared password", async () => {
@@ -165,6 +183,85 @@ describe("rendered app journeys", () => {
     await user.click(screen.getByRole("button", { name: "Speichern" }));
 
     await waitFor(() => expect(created.collectionId).toBe(testCollections[1]!.id));
+  });
+
+  it("creates a Topic from the Card dialog and keeps the Card dialog open", async () => {
+    const user = userEvent.setup();
+    const created = {
+      id: "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
+      collectionId: testCollections[1]!.id,
+      name: "Essen",
+      icon: "food",
+      createdAt: testTopics[0]!.createdAt,
+      updatedAt: testTopics[0]!.updatedAt,
+      deletedAt: null,
+    };
+    mockServer.use(
+      http.post("/api/topics", async () => {
+        mockServer.use(http.get("/api/topics", () => HttpResponse.json([created])));
+
+        return HttpResponse.json(created, { status: 201 });
+      }),
+    );
+    await renderApp(`/cards/${testCollections[1]!.id}`);
+
+    await user.click(await screen.findByRole("button", { name: "Karte hinzufügen" }));
+    const cardDialog = await cardDialogReady();
+    await user.click(within(cardDialog).getByRole("combobox", { name: "Themen" }));
+    await user.click(within(cardDialog).getByRole("option", { name: "Thema erstellen" }));
+
+    expect(await screen.findByRole("heading", { name: "Thema erstellen" })).toBeVisible();
+    expect(screen.getByRole("heading", { name: "Karte erstellen" })).toBeVisible();
+    const topicDialog = dialogByHeading("Thema erstellen");
+    await user.type(within(topicDialog).getByLabelText("Name des Themas"), "Essen");
+    await user.click(within(topicDialog).getByRole("button", { name: "Speichern" }));
+
+    await waitFor(() =>
+      expect(screen.queryByRole("heading", { name: "Thema erstellen" })).not.toBeInTheDocument(),
+    );
+    expect(screen.getByRole("heading", { name: "Karte erstellen" })).toBeVisible();
+    expect(screen.getByLabelText("Essen entfernen")).toBeVisible();
+  });
+
+  it("creates a Collection from the Card dialog and selects it", async () => {
+    const user = userEvent.setup();
+    const created = {
+      ...testCollections[0]!,
+      id: "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee",
+      name: "Französisch",
+      icon: "flag-vn",
+    };
+    mockServer.use(
+      http.post("/api/collections", async () => {
+        mockServer.use(
+          http.get("/api/collections", () => HttpResponse.json([...testCollections, created])),
+        );
+
+        return HttpResponse.json(created, { status: 201 });
+      }),
+    );
+    await renderApp(`/cards/${testCollections[0]!.id}`);
+
+    await user.click(await screen.findByRole("button", { name: "Karte hinzufügen" }));
+    const cardDialog = await cardDialogReady();
+    await user.click(within(cardDialog).getByRole("combobox", { name: "Themen" }));
+    await user.click(within(cardDialog).getByRole("option", { name: "Tiere" }));
+    expect(within(cardDialog).getByLabelText("Tiere entfernen")).toBeVisible();
+
+    await user.click(within(cardDialog).getByRole("combobox", { name: "Sammlung" }));
+    await user.click(within(cardDialog).getByRole("option", { name: "Sammlung erstellen" }));
+
+    expect(await screen.findByRole("heading", { name: "Sammlung erstellen" })).toBeVisible();
+    const collectionDialog = dialogByHeading("Sammlung erstellen");
+    await user.type(within(collectionDialog).getByLabelText("Name der Sammlung"), "Französisch");
+    await user.click(within(collectionDialog).getByRole("button", { name: "Speichern" }));
+
+    await waitFor(() =>
+      expect(screen.queryByRole("heading", { name: "Sammlung erstellen" })).not.toBeInTheDocument(),
+    );
+    expect(screen.getByRole("combobox", { name: "Sammlung" })).toHaveTextContent("Französisch");
+    expect(screen.queryByLabelText("Tiere entfernen")).not.toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Karte erstellen" })).toBeVisible();
   });
 
   it("keeps the Card dialog open when the file picker is cancelled", async () => {

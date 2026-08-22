@@ -1,4 +1,5 @@
 import { useEffect, useId, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import type { Collection } from "../contracts/collection";
 import { CollectionIcon } from "./CollectionIcon";
 import styles from "./CollectionSelect.module.css";
@@ -10,6 +11,7 @@ export function CollectionSelect({
   collections,
   value,
   onChange,
+  onCreate,
   required = false,
   disabled = false,
 }: {
@@ -17,15 +19,20 @@ export function CollectionSelect({
   collections: readonly Collection[];
   value: string;
   onChange: (collectionId: string) => void;
+  onCreate?: () => void;
   required?: boolean;
   disabled?: boolean;
 }) {
+  const { t } = useTranslation();
   const listboxId = useId();
   const rootRef = useRef<HTMLDivElement>(null);
   const optionRefs = useRef<(HTMLLIElement | null)[]>([]);
   const typeAhead = useRef({ query: "", lastKeyAt: 0 });
   const [isOpen, setIsOpen] = useState(false);
-  const isListboxOpen = isOpen && !disabled;
+  const canCreate = Boolean(onCreate);
+  const createIndex = collections.length;
+  const lastIndex = canCreate ? createIndex : Math.max(collections.length - 1, 0);
+  const isListboxOpen = isOpen && !disabled && (collections.length > 0 || canCreate);
   const selectedIndex = collections.findIndex((collection) => collection.id === value);
   const [activeIndex, setActiveIndex] = useState(Math.max(selectedIndex, 0));
   const selectedCollection = collections[selectedIndex];
@@ -54,6 +61,13 @@ export function CollectionSelect({
   };
 
   const select = (index: number) => {
+    if (canCreate && index === createIndex) {
+      setIsOpen(false);
+      onCreate?.();
+
+      return;
+    }
+
     const collection = collections[index];
 
     if (!collection) return;
@@ -64,9 +78,9 @@ export function CollectionSelect({
   };
 
   const moveActive = (offset: number) => {
-    if (collections.length === 0) return;
+    if (collections.length === 0 && !canCreate) return;
 
-    setActiveIndex((current) => Math.min(Math.max(current + offset, 0), collections.length - 1));
+    setActiveIndex((current) => Math.min(Math.max(current + offset, 0), lastIndex));
   };
 
   const matchTypeAhead = (key: string) => {
@@ -112,7 +126,7 @@ export function CollectionSelect({
       case "ArrowUp":
         event.preventDefault();
         if (isOpen) moveActive(-1);
-        else open(selectedIndex >= 0 ? selectedIndex : collections.length - 1);
+        else open(selectedIndex >= 0 ? selectedIndex : lastIndex);
         break;
       case "Home":
         event.preventDefault();
@@ -121,8 +135,8 @@ export function CollectionSelect({
         break;
       case "End":
         event.preventDefault();
-        if (isOpen) setActiveIndex(collections.length - 1);
-        else open(collections.length - 1);
+        if (isOpen) setActiveIndex(lastIndex);
+        else open(lastIndex);
         break;
       case "PageUp":
         if (!isOpen) break;
@@ -172,7 +186,7 @@ export function CollectionSelect({
         aria-expanded={isListboxOpen}
         aria-required={required}
         aria-activedescendant={isListboxOpen ? `${listboxId}-${activeIndex}` : undefined}
-        disabled={disabled || collections.length === 0}
+        disabled={disabled || (collections.length === 0 && !canCreate)}
         onClick={() => (isOpen ? setIsOpen(false) : open())}
         onKeyDown={handleKeyDown}
       >
@@ -206,6 +220,25 @@ export function CollectionSelect({
               </li>
             );
           })}
+          {canCreate && (
+            <li
+              ref={(element) => {
+                optionRefs.current[createIndex] = element;
+              }}
+              id={`${listboxId}-${createIndex}`}
+              role="option"
+              className={`${styles.option} ${styles.createOption}`}
+              aria-selected="false"
+              data-active={activeIndex === createIndex || undefined}
+              onPointerDown={(event) => {
+                event.preventDefault();
+                select(createIndex);
+              }}
+              onPointerMove={() => setActiveIndex(createIndex)}
+            >
+              <span>{t("collections.create")}</span>
+            </li>
+          )}
         </ul>
       )}
     </div>

@@ -1,7 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import "../i18n/config";
 import { topicListSchema } from "../contracts/topic";
 import { testTopics } from "../test/server";
@@ -31,5 +31,30 @@ describe("TopicSelect", () => {
 
     expect(screen.getByRole("option", { name: "Tiere" })).toHaveAttribute("aria-selected", "true");
     expect(screen.getByLabelText("Tiere entfernen")).toBeVisible();
+  });
+
+  it("offers Thema erstellen when there are no Topics", async () => {
+    const user = userEvent.setup();
+    const onCreate = vi.fn();
+    render(
+      <>
+        <label htmlFor="topics">Themen</label>
+        <TopicSelect
+          id="topics"
+          topics={[]}
+          value={[]}
+          onChange={() => undefined}
+          onCreate={onCreate}
+        />
+      </>,
+    );
+    const combobox = screen.getByRole("combobox", { name: "Themen" });
+
+    expect(combobox).toBeEnabled();
+    await user.click(combobox);
+    await user.click(screen.getByRole("option", { name: "Thema erstellen" }));
+
+    expect(onCreate).toHaveBeenCalledOnce();
+    expect(screen.queryByRole("listbox")).not.toBeInTheDocument();
   });
 });
