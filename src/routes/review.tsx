@@ -6,9 +6,10 @@ import { AppShell } from "../components/AppShell";
 import { CollectionIcon } from "../components/CollectionIcon";
 import { DelayedSkeleton } from "../components/DelayedSkeleton";
 import { RequireSession } from "../components/RequireSession";
+import { TopicIcon } from "../components/TopicIcon";
 import type { Card } from "../contracts/card";
 import { useDueTime } from "../lib/browserState";
-import { cardsQuery, collectionsQuery } from "../lib/queries";
+import { cardsQuery, collectionsQuery, topicsQuery } from "../lib/queries";
 import { ReviewSessionProvider, useReviewSession } from "../state/ReviewSessionContext";
 import styles from "./review.module.css";
 
@@ -43,6 +44,7 @@ function ReviewRoute() {
   const navigate = useNavigate();
   const cards = useQuery(cardsQuery);
   const collections = useQuery(collectionsQuery);
+  const topics = useQuery(topicsQuery);
   const reviewSession = useReviewSession();
   const pathname = useRouterState({ select: (state) => state.location.pathname });
   const now = useDueTime((cards.data ?? []).map((card) => card.dueAt));
@@ -60,7 +62,7 @@ function ReviewRoute() {
 
   let content;
 
-  if (cards.isPending) content = <DelayedSkeleton />;
+  if (cards.isPending || collections.isPending || topics.isPending) content = <DelayedSkeleton />;
   else if (cards.isError && !cards.data)
     content = (
       <div className={styles.landing}>
@@ -73,7 +75,9 @@ function ReviewRoute() {
   else {
     const active = cards.data ?? [];
     const collectionList = collections.data ?? [];
+    const topicList = topics.data ?? [];
     const dueCount = countDue(active, now);
+    const showGroups = collectionList.length > 1 || topicList.length > 0;
 
     content = (
       <div className={styles.landing}>
@@ -104,14 +108,17 @@ function ReviewRoute() {
                 </button>
               </>
             )}
-            {collectionList.length > 1 && (
+            {showGroups && (
               <ul className={styles.collections}>
                 {collectionList.map((collection) => {
                   const own = active.filter((card) => card.collectionId === collection.id);
                   const ownDueCount = countDue(own, now);
+                  const ownTopics = topicList.filter(
+                    (topic) => topic.collectionId === collection.id,
+                  );
 
                   return (
-                    <li key={collection.id}>
+                    <li key={collection.id} className={styles.collectionGroup}>
                       <button
                         type="button"
                         disabled={own.length === 0}
@@ -125,6 +132,32 @@ function ReviewRoute() {
                             : t("review.collectionNoneDue")}
                         </span>
                       </button>
+                      {ownTopics.length > 0 && (
+                        <ul className={styles.topicRows}>
+                          {ownTopics.map((topic) => {
+                            const inTopic = own.filter((card) => card.topicIds.includes(topic.id));
+                            const topicDueCount = countDue(inTopic, now);
+
+                            return (
+                              <li key={topic.id}>
+                                <button
+                                  type="button"
+                                  disabled={inTopic.length === 0}
+                                  onClick={() => begin(selectQueue(inTopic, now))}
+                                >
+                                  <TopicIcon icon={topic.icon} />
+                                  <strong>{topic.name}</strong>
+                                  <span className={styles.rowDetail}>
+                                    {topicDueCount > 0
+                                      ? t("review.due", { count: topicDueCount })
+                                      : t("review.collectionNoneDue")}
+                                  </span>
+                                </button>
+                              </li>
+                            );
+                          })}
+                        </ul>
+                      )}
                     </li>
                   );
                 })}

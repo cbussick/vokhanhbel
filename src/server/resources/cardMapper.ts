@@ -25,7 +25,7 @@ const joinedCardRowSchema = z.object({
 
 export type CardRow = z.input<typeof joinedCardRowSchema>;
 
-export function mapCard(value: unknown): Card {
+export function mapCard(value: unknown, topicIds: string[] = []): Card {
   const row = joinedCardRowSchema.parse(value);
   const frontAudio = row.frontAudio?.deletedAt ? null : row.frontAudio;
   const backAudio = row.backAudio?.deletedAt ? null : row.backAudio;
@@ -33,6 +33,7 @@ export function mapCard(value: unknown): Card {
   return cardSchema.parse({
     id: row.card.id,
     collectionId: row.card.collectionId,
+    topicIds,
     front: {
       text: row.card.frontText,
       audio: frontAudio

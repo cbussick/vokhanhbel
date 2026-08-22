@@ -8,9 +8,11 @@ import { CollectionFormDialog } from "../components/CollectionFormDialog";
 import { CollectionIcon } from "../components/CollectionIcon";
 import { DelayedSkeleton } from "../components/DelayedSkeleton";
 import { IconButton } from "../components/IconButton";
+import { TopicFormDialog } from "../components/TopicFormDialog";
+import { TopicIcon } from "../components/TopicIcon";
 import { AudioPlayer, formatAudioDuration } from "../components/audio/AudioPlayer";
 import { useOnlineStatus } from "../lib/browserState";
-import { cardsQuery, collectionsQuery } from "../lib/queries";
+import { cardsQuery, collectionsQuery, topicsQuery } from "../lib/queries";
 import styles from "./cards.module.css";
 
 export const Route = createFileRoute("/cards/$collectionId")({ component: CollectionCardsRoute });
@@ -37,12 +39,20 @@ function CollectionCardsRoute() {
   const { collectionId } = Route.useParams();
   const cards = useQuery(cardsQuery);
   const collections = useQuery(collectionsQuery);
+  const topics = useQuery(topicsQuery);
   const online = useOnlineStatus();
   const [query, setQuery] = useState("");
+  const [topicFilter, setTopicFilter] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
   const [editingCollection, setEditingCollection] = useState(false);
+  const [creatingTopic, setCreatingTopic] = useState(false);
+  const [editingTopic, setEditingTopic] = useState(false);
 
   const collection = collections.data?.find((entry) => entry.id === collectionId);
+  const collectionTopics = (topics.data ?? []).filter(
+    (topic) => topic.collectionId === collectionId,
+  );
+  const selectedTopic = collectionTopics.find((topic) => topic.id === topicFilter);
 
   useEffect(() => {
     document.title = `${collection?.name ?? t("cards.title")} | ${t("appName")}`;
@@ -50,14 +60,17 @@ function CollectionCardsRoute() {
 
   const normalizedQuery = query.trim().toLocaleLowerCase("de");
   const inCollection = (cards.data ?? []).filter((card) => card.collectionId === collectionId);
+  const inTopic = selectedTopic
+    ? inCollection.filter((card) => card.topicIds.includes(selectedTopic.id))
+    : inCollection;
   const visible = normalizedQuery
-    ? inCollection.filter(
+    ? inTopic.filter(
         (card) =>
           (card.front.text?.toLocaleLowerCase("de").includes(normalizedQuery) ?? false) ||
           (card.back.text?.toLocaleLowerCase("de").includes(normalizedQuery) ?? false),
       )
-    : inCollection;
-  const hasCards = inCollection.length > 0;
+    : inTopic;
+  const collectionHasCards = inCollection.length > 0;
 
   let content;
 
@@ -84,11 +97,53 @@ function CollectionCardsRoute() {
         <div className={styles.toolbar}>
           <div className={styles.sectionHeader}>
             <h2>{t("cards.title")}</h2>
-            {hasCards ? (
+            {collectionHasCards ? (
               <IconButton icon={<AddIcon />} onClick={() => setCreating(true)} disabled={!online}>
                 {t("cards.add")}
               </IconButton>
             ) : null}
+          </div>
+          <div className={styles.topicChips} role="group" aria-label={t("topics.label")}>
+            <button
+              type="button"
+              className={styles.topicChip}
+              aria-pressed={!selectedTopic}
+              onClick={() => setTopicFilter(null)}
+            >
+              {t("topics.all")}
+            </button>
+            {collectionTopics.map((topic) => (
+              <button
+                key={topic.id}
+                type="button"
+                className={styles.topicChip}
+                aria-pressed={topicFilter === topic.id}
+                onClick={() => setTopicFilter(topic.id)}
+              >
+                <TopicIcon icon={topic.icon} size="compact" />
+                {topic.name}
+              </button>
+            ))}
+            <IconButton
+              icon={<AddIcon />}
+              size="compact"
+              variant="secondary"
+              onClick={() => setCreatingTopic(true)}
+              disabled={!online}
+            >
+              {t("topics.add")}
+            </IconButton>
+            {selectedTopic && (
+              <IconButton
+                icon={<EditIcon />}
+                size="compact"
+                variant="secondary"
+                onClick={() => setEditingTopic(true)}
+                disabled={!online}
+              >
+                {t("topics.edit")}
+              </IconButton>
+            )}
           </div>
           <label htmlFor="card-search">{t("cards.search")}</label>
           <input
@@ -105,7 +160,7 @@ function CollectionCardsRoute() {
             {t("errors.stale")}
           </p>
         )}
-        {!hasCards ? (
+        {!collectionHasCards ? (
           <div className={styles.center}>
             <p>{t("cards.empty")}</p>
             <IconButton icon={<AddIcon />} onClick={() => setCreating(true)} disabled={!online}>
@@ -114,10 +169,16 @@ function CollectionCardsRoute() {
           </div>
         ) : visible.length === 0 ? (
           <div className={styles.center}>
-            <p>{t("cards.noResults", { query: query.trim() })}</p>
-            <button type="button" onClick={() => setQuery("")}>
-              {t("cards.resetSearch")}
-            </button>
+            <p>
+              {normalizedQuery
+                ? t("cards.noResults", { query: query.trim() })
+                : t("topics.noneInFilter")}
+            </p>
+            {normalizedQuery ? (
+              <button type="button" onClick={() => setQuery("")}>
+                {t("cards.resetSearch")}
+              </button>
+            ) : null}
           </div>
         ) : (
           <ul className={styles.list}>
@@ -168,13 +229,31 @@ function CollectionCardsRoute() {
           </ul>
         )}
         {creating && (
-          <CardFormDialog defaultCollectionId={collectionId} onClose={() => setCreating(false)} />
+          <CardFormDialog
+            defaultCollectionId={collectionId}
+            defaultTopicIds={selectedTopic ? [selectedTopic.id] : []}
+            onClose={() => setCreating(false)}
+          />
         )}
         {editingCollection && (
           <CollectionFormDialog
             collection={collection}
             onClose={() => setEditingCollection(false)}
             onDeleted={() => void navigate({ to: "/cards" })}
+          />
+        )}
+        {creatingTopic && (
+          <TopicFormDialog collectionId={collectionId} onClose={() => setCreatingTopic(false)} />
+        )}
+        {editingTopic && selectedTopic && (
+          <TopicFormDialog
+            collectionId={collectionId}
+            topic={selectedTopic}
+            onClose={() => setEditingTopic(false)}
+            onDeleted={() => {
+              setTopicFilter(null);
+              setEditingTopic(false);
+            }}
           />
         )}
         <Outlet />

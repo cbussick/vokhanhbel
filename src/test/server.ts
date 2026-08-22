@@ -20,10 +20,22 @@ export const testCollections = [
     deletedAt: null,
   },
 ];
+export const testTopics = [
+  {
+    id: "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+    collectionId: testCollections[0]!.id,
+    name: "Tiere",
+    icon: "animal" as const,
+    createdAt: now,
+    updatedAt: now,
+    deletedAt: null,
+  },
+];
 export const testCards = [
   {
     id: "11111111-1111-4111-8111-111111111111",
     collectionId: testCollections[0]!.id,
+    topicIds: ["cccccccc-cccc-4ccc-8ccc-cccccccccccc"],
     front: "Take care",
     back: "Pass auf",
     box: 0,
@@ -36,6 +48,7 @@ export const testCards = [
   {
     id: "22222222-2222-4222-8222-222222222222",
     collectionId: testCollections[1]!.id,
+    topicIds: [],
     front: "Café",
     back: "Kaffeehaus",
     box: 1,
@@ -51,6 +64,7 @@ export const mockServer = setupServer(
   http.get("/api/session", () => HttpResponse.json({ authenticated: true })),
   http.get("/api/cards", () => HttpResponse.json(testCards)),
   http.get("/api/collections", () => HttpResponse.json(testCollections)),
+  http.get("/api/topics", () => HttpResponse.json(testTopics)),
   http.get("/api/stats", () =>
     HttpResponse.json({
       totalPoints: 0,

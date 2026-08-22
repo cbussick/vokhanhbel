@@ -11,10 +11,11 @@ import { apiPaths } from "../contracts/apiPaths";
 import { problemTypes } from "../contracts/problem";
 import { ApiError, apiRequest } from "../lib/apiClient";
 import { useOnlineStatus } from "../lib/browserState";
-import { collectionsQuery } from "../lib/queries";
+import { collectionsQuery, topicsQuery } from "../lib/queries";
 import { queryKeys } from "../lib/queryKeys";
 import { CollectionSelect } from "./CollectionSelect";
 import { PendingActionContent } from "./PendingActionContent";
+import { TopicSelect } from "./TopicSelect";
 import { AudioInput, releaseAudioDraft, type AudioDraft } from "./audio/AudioInput";
 import { stageAudioDraft } from "./audio/audioApi";
 import styles from "./Dialog.module.css";
@@ -30,11 +31,13 @@ function TextIcon() {
 export function CardFormDialog({
   card,
   defaultCollectionId,
+  defaultTopicIds,
   onClose,
   onDeleted,
 }: {
   card?: Card;
   defaultCollectionId?: string | undefined;
+  defaultTopicIds?: string[] | undefined;
   onClose: () => void;
   onDeleted?: () => void;
 }) {
@@ -42,11 +45,13 @@ export function CardFormDialog({
   const queryClient = useQueryClient();
   const online = useOnlineStatus();
   const collections = useQuery(collectionsQuery);
+  const topics = useQuery(topicsQuery);
 
   const dialogRef = useRef<HTMLDialogElement>(null);
   const frontRef = useRef<HTMLTextAreaElement>(null);
 
   const [collectionId, setCollectionId] = useState(card?.collectionId ?? defaultCollectionId ?? "");
+  const [topicIds, setTopicIds] = useState(card?.topicIds ?? defaultTopicIds ?? []);
   const [front, setFront] = useState(card?.front.text ?? "");
   const [back, setBack] = useState(card?.back.text ?? "");
   const [frontDraft, setFrontDraft] = useState<AudioDraft | null>(null);
@@ -77,6 +82,7 @@ export function CardFormDialog({
         if (stagedBack) stagedIds.push(stagedBack.id);
         const value = {
           collectionId,
+          topicIds,
           front: {
             text: front.trim() ? front : null,
             audioId:
@@ -236,8 +242,21 @@ export function CardFormDialog({
                 id="card-collection"
                 collections={collections.data ?? []}
                 value={collectionId}
-                onChange={setCollectionId}
+                onChange={(nextCollectionId) => {
+                  setCollectionId(nextCollectionId);
+                  setTopicIds([]);
+                }}
                 required
+                disabled={isPending}
+              />
+              <label htmlFor="card-topics" className={styles.fieldHeading}>
+                {t("cards.topics")}
+              </label>
+              <TopicSelect
+                id="card-topics"
+                topics={(topics.data ?? []).filter((topic) => topic.collectionId === collectionId)}
+                value={topicIds}
+                onChange={setTopicIds}
                 disabled={isPending}
               />
               <fieldset className={styles.faceEditor} disabled={isPending}>

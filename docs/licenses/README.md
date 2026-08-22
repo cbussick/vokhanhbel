@@ -22,6 +22,8 @@ their notices live here.
 - The default open-book glyph is the `book-open` icon from [Lucide](https://lucide.dev), used under
   the ISC license. See `ISC-Lucide.txt`, which is Lucide's complete upstream license file: it also
   carries the MIT notice covering the icons Lucide inherited from Feather.
+- Topic icons (`shapes`, `paw-print`, `utensils`, `plane`, `users`) are also from Lucide under the
+  same ISC license and the same notice file.
 - The Vietnamese and British flags come from [flag-icons](https://github.com/lipis/flag-icons),
   Copyright 2013 Panayiotis Lipiridis, used under the MIT license. See `MIT-flag-icons.txt`. The
   British flag is the upstream 1x1 artwork; the Vietnamese one is redrawn from the upstream 1x1

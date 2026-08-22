@@ -100,8 +100,8 @@ describe("rendered app journeys", () => {
   it("finds Cards by either side while preserving diacritics", async () => {
     const user = userEvent.setup();
     renderApp(`/cards/${testCollections[1]!.id}`);
-    const search = await screen.findByLabelText("Karten durchsuchen");
-    expect(screen.getByText("Café")).toBeVisible();
+    expect(await screen.findByText("Café", {}, { timeout: 4_000 })).toBeVisible();
+    const search = screen.getByLabelText("Karten durchsuchen");
     await user.type(search, "kaffee");
     expect(screen.getByText("Café")).toBeVisible();
     await user.clear(search);
@@ -124,6 +124,27 @@ describe("rendered app journeys", () => {
 
     await user.click(screen.getByRole("link", { name: /Alle Sammlungen/ }));
     expect(await screen.findByRole("link", { name: /Vietnamesisch/ })).toBeVisible();
+  });
+
+  it("filters Cards in a Collection by Topic", async () => {
+    const user = userEvent.setup();
+    const withoutTopic = {
+      ...testCards[0]!,
+      id: "33333333-3333-4333-8333-333333333333",
+      topicIds: [],
+      front: "Hanoi",
+      back: "Hà Nội",
+    };
+    mockServer.use(http.get("/api/cards", () => HttpResponse.json([testCards[0], withoutTopic])));
+    renderApp(`/cards/${testCollections[0]!.id}`);
+
+    expect(await screen.findByText("Take care")).toBeVisible();
+    expect(screen.getByText("Hanoi")).toBeVisible();
+    await user.click(screen.getByRole("button", { name: "Tiere" }));
+    expect(screen.getByText("Take care")).toBeVisible();
+    expect(screen.queryByText("Hanoi")).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Alle" }));
+    expect(screen.getByText("Hanoi")).toBeVisible();
   });
 
   it("creates a Card in the open Collection", async () => {
@@ -234,6 +255,15 @@ describe("rendered app journeys", () => {
     expect(await screen.findByRole("button", { name: /Englisch/ })).toBeVisible();
     await user.click(screen.getByRole("button", { name: /Vietnamesisch/ }));
 
+    expect(await screen.findByText("Take care")).toBeVisible();
+    expect(screen.getByText("1 / 1")).toBeVisible();
+  });
+
+  it("reviews only the Cards of the started Topic", async () => {
+    const user = userEvent.setup();
+    renderApp("/review");
+
+    await user.click(await screen.findByRole("button", { name: /Tiere/ }));
     expect(await screen.findByText("Take care")).toBeVisible();
     expect(screen.getByText("1 / 1")).toBeVisible();
   });

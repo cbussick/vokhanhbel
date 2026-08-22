@@ -1,4 +1,4 @@
-import { and, desc, eq, isNull } from "drizzle-orm";
+import { and, desc, eq, inArray, isNull } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import type { PoolClient } from "pg";
 import { z } from "zod";
@@ -6,7 +6,7 @@ import type { CreateCardInput, UpdateCardInput } from "../../contracts/card.js";
 import { problemTypes } from "../../contracts/problem.js";
 import { getDatabase, getPool } from "../database/client.js";
 import { isForeignKeyViolation, isUniqueViolation } from "../database/errors.js";
-import { audioAssets, cards } from "../database/schema.js";
+import { audioAssets, cardTopics, cards, topics } from "../database/schema.js";
 import { AppProblem } from "../http/problem.js";
 import { deleteAudioObject } from "./audio.js";
 import { mapCard } from "./cardMapper.js";
@@ -48,6 +48,7 @@ function structuredInput(input: CreateCardInput | LegacyCreateCardInput): Create
 
   return {
     collectionId: legacy.collectionId,
+    topicIds: [],
     front: { text: legacy.front, audioId: null },
     back: { text: legacy.back, audioId: null },
   };
@@ -80,10 +81,67 @@ function selectCards() {
     .leftJoin(backAudio, eq(cards.backAudioId, backAudio.id));
 }
 
+async function topicIdsByCard(cardIds: string[]): Promise<Map<string, string[]>> {
+  const memberships = new Map<string, string[]>();
+
+  if (cardIds.length === 0) return memberships;
+
+  const rows = await getDatabase()
+    .select({ cardId: cardTopics.cardId, topicId: cardTopics.topicId })
+    .from(cardTopics)
+    .innerJoin(topics, eq(cardTopics.topicId, topics.id))
+    .where(and(inArray(cardTopics.cardId, cardIds), isNull(topics.deletedAt)));
+
+  for (const row of rows) {
+    const list = memberships.get(row.cardId) ?? [];
+    list.push(row.topicId);
+    memberships.set(row.cardId, list);
+  }
+
+  return memberships;
+}
+
+async function uniqueTopicIdsForCollection(
+  client: PoolClient,
+  collectionId: string,
+  topicIds: string[],
+): Promise<string[]> {
+  const unique = [...new Set(topicIds)];
+
+  if (unique.length === 0) return unique;
+
+  const result = await client.query<{ id: string }>(
+    `SELECT id FROM topics
+     WHERE id = ANY($1::uuid[]) AND collection_id=$2 AND deleted_at IS NULL`,
+    [unique, collectionId],
+  );
+
+  if (result.rows.length !== unique.length)
+    throw new AppProblem(404, problemTypes.topicNotFound, "Thema nicht gefunden");
+
+  return unique;
+}
+
+async function replaceCardTopics(
+  client: PoolClient,
+  cardId: string,
+  topicIds: string[],
+): Promise<void> {
+  await client.query("DELETE FROM card_topics WHERE card_id=$1", [cardId]);
+
+  for (const topicId of topicIds) {
+    await client.query("INSERT INTO card_topics (card_id, topic_id) VALUES ($1,$2)", [
+      cardId,
+      topicId,
+    ]);
+  }
+}
+
 export async function listCards() {
   const rows = await selectCards().where(isNull(cards.deletedAt)).orderBy(desc(cards.createdAt));
+  const memberships = await topicIdsByCard(rows.map((row) => row.card.id));
 
-  return rows.map(mapCard);
+  return rows.map((row) => mapCard(row, memberships.get(row.card.id) ?? []));
 }
 
 export async function getCard(cardId: string) {
@@ -92,8 +150,9 @@ export async function getCard(cardId: string) {
     .limit(1);
 
   if (!rows[0]) throw new AppProblem(404, problemTypes.cardNotFound, "Karte nicht gefunden");
+  const memberships = await topicIdsByCard([cardId]);
 
-  return mapCard(rows[0]);
+  return mapCard(rows[0], memberships.get(cardId) ?? []);
 }
 
 async function lockStagedAudio(
@@ -149,6 +208,11 @@ export async function createCard(
     await client.query("BEGIN");
     await lockStagedAudio(client, input.front.audioId, sessionHash);
     await lockStagedAudio(client, input.back.audioId, sessionHash);
+    const topicIds = await uniqueTopicIdsForCollection(
+      client,
+      input.collectionId,
+      input.topicIds ?? [],
+    );
     await client.query(
       `INSERT INTO cards
        (id, collection_id, front_text, normalized_front, front_audio_id, back_text, back_audio_id)
@@ -162,6 +226,7 @@ export async function createCard(
         input.back.audioId,
       ],
     );
+    await replaceCardTopics(client, cardId, topicIds);
     await claimAudio(client, input.front.audioId, cardId, "front");
     await claimAudio(client, input.back.audioId, cardId, "back");
     await client.query("COMMIT");
@@ -222,6 +287,14 @@ export async function updateCard(
        front_audio_id=$3, back_text=$4, back_audio_id=$5, updated_at=now() WHERE id=$6`,
       [collectionId, frontText, frontAudioId, backText, backAudioId, cardId],
     );
+    const nextTopicIds =
+      input.topicIds !== undefined
+        ? await uniqueTopicIdsForCollection(client, collectionId, input.topicIds)
+        : collectionId === current.collection_id
+          ? undefined
+          : [];
+
+    if (nextTopicIds) await replaceCardTopics(client, cardId, nextTopicIds);
     if (frontAudioId !== current.front_audio_id)
       await claimAudio(client, frontAudioId, cardId, "front");
     if (backAudioId !== current.back_audio_id)
@@ -278,6 +351,7 @@ export async function deleteCard(cardId: string, requestId?: string): Promise<vo
        WHERE id=$1`,
       [cardId],
     );
+    await client.query("DELETE FROM card_topics WHERE card_id=$1", [cardId]);
 
     for (const audioId of [selectedCard.data.front_audio_id, selectedCard.data.back_audio_id]) {
       if (!audioId) continue;

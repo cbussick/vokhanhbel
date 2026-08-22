@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { cardSchema, createCardInputSchema, updateCardInputSchema } from "./card.js";
 import { collectionInputSchema, collectionSchema, defaultCollectionIcon } from "./collection.js";
+import {
+  createTopicInputSchema,
+  defaultTopicIcon,
+  topicInputSchema,
+  topicSchema,
+} from "./topic.js";
 import { tutorStreamEventSchema } from "./tutor.js";
 import { problemSchema } from "./problem.js";
 import { reviewSubmissionInputSchema } from "./review.js";
@@ -19,6 +25,7 @@ describe("public contracts", () => {
       }),
     ).toEqual({
       collectionId,
+      topicIds: [],
       front: { text: "Take care", audioId: null },
       back: { text: "Pass auf!", audioId: null },
     });
@@ -67,6 +74,74 @@ describe("public contracts", () => {
       true,
     );
     expect(updateCardInputSchema.safeParse({}).success).toBe(false);
+  });
+
+  it("normalizes a Topic name and keeps it inside one Collection", () => {
+    const collectionId = crypto.randomUUID();
+
+    expect(
+      createTopicInputSchema.parse({
+        collectionId,
+        name: "  Tie   re ",
+        icon: "animal",
+      }),
+    ).toEqual({ collectionId, name: "Tie re", icon: "animal" });
+    expect(topicInputSchema.safeParse({ name: "  ", icon: "shapes" }).success).toBe(false);
+    expect(createTopicInputSchema.safeParse({ name: "Tiere", icon: "animal" }).success).toBe(false);
+  });
+
+  it("rejects an unknown Topic icon on write but degrades it on read", () => {
+    expect(topicInputSchema.safeParse({ name: "Tiere", icon: "flag-vn" }).success).toBe(false);
+
+    const now = new Date().toISOString();
+    expect(
+      topicSchema.parse({
+        id: crypto.randomUUID(),
+        collectionId: crypto.randomUUID(),
+        name: "Tiere",
+        icon: "flag-vn",
+        createdAt: now,
+        updatedAt: now,
+        deletedAt: null,
+      }).icon,
+    ).toBe(defaultTopicIcon);
+  });
+
+  it("defaults omitted Card Topics and accepts Topic-only updates", () => {
+    const collectionId = crypto.randomUUID();
+    const now = new Date().toISOString();
+    const topicId = crypto.randomUUID();
+
+    expect(
+      cardSchema.parse({
+        id: crypto.randomUUID(),
+        collectionId,
+        front: { text: "front", audio: null },
+        back: { text: "back", audio: null },
+        box: 0,
+        dueAt: now,
+        lastReviewedAt: null,
+        createdAt: now,
+        updatedAt: now,
+        deletedAt: null,
+      }).topicIds,
+    ).toEqual([]);
+    expect(
+      createCardInputSchema.parse({
+        collectionId,
+        front: { text: "mèo", audioId: null },
+        back: { text: "Katze", audioId: null },
+      }).topicIds,
+    ).toEqual([]);
+    expect(updateCardInputSchema.safeParse({ topicIds: [topicId] }).success).toBe(true);
+    expect(
+      createCardInputSchema.parse({
+        collectionId,
+        topicIds: [topicId],
+        front: { text: "mèo", audioId: null },
+        back: { text: "Katze", audioId: null },
+      }).topicIds,
+    ).toEqual([topicId]);
   });
 
   it("rejects invalid Card and Review shapes", () => {

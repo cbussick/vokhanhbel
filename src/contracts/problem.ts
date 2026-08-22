@@ -16,6 +16,8 @@ export const problemTypes = {
   audioPlaybackRateLimit: "/problems/audio-playback-rate-limit",
   invalidRequest: "/problems/invalid-request",
   lastCollection: "/problems/last-collection",
+  topicNameConflict: "/problems/topic-name-conflict",
+  topicNotFound: "/problems/topic-not-found",
   loginRateLimit: "/problems/login-rate-limit",
   requestTooLarge: "/problems/request-too-large",
   reviewReplayConflict: "/problems/review-replay-conflict",
