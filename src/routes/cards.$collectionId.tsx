@@ -250,10 +250,7 @@ function CollectionCardsRoute() {
             collectionId={collectionId}
             topic={selectedTopic}
             onClose={() => setEditingTopic(false)}
-            onDeleted={() => {
-              setTopicFilter(null);
-              setEditingTopic(false);
-            }}
+            onDeleted={() => setTopicFilter(null)}
           />
         )}
         <Outlet />

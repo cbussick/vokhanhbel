@@ -129,12 +129,12 @@ async function replaceCardTopics(
 ): Promise<void> {
   await client.query("DELETE FROM card_topics WHERE card_id=$1", [cardId]);
 
-  for (const topicId of topicIds) {
-    await client.query("INSERT INTO card_topics (card_id, topic_id) VALUES ($1,$2)", [
-      cardId,
-      topicId,
-    ]);
-  }
+  if (topicIds.length === 0) return;
+
+  await client.query("INSERT INTO card_topics (card_id, topic_id) SELECT $1, unnest($2::uuid[])", [
+    cardId,
+    topicIds,
+  ]);
 }
 
 export async function listCards() {
@@ -287,14 +287,13 @@ export async function updateCard(
        front_audio_id=$3, back_text=$4, back_audio_id=$5, updated_at=now() WHERE id=$6`,
       [collectionId, frontText, frontAudioId, backText, backAudioId, cardId],
     );
-    const nextTopicIds =
-      input.topicIds !== undefined
-        ? await uniqueTopicIdsForCollection(client, collectionId, input.topicIds)
-        : collectionId === current.collection_id
-          ? undefined
-          : [];
-
-    if (nextTopicIds) await replaceCardTopics(client, cardId, nextTopicIds);
+    if (input.topicIds !== undefined)
+      await replaceCardTopics(
+        client,
+        cardId,
+        await uniqueTopicIdsForCollection(client, collectionId, input.topicIds),
+      );
+    else if (collectionId !== current.collection_id) await replaceCardTopics(client, cardId, []);
     if (frontAudioId !== current.front_audio_id)
       await claimAudio(client, frontAudioId, cardId, "front");
     if (backAudioId !== current.back_audio_id)

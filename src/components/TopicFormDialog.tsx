@@ -59,21 +59,19 @@ export function TopicFormDialog({
 
   const save = useMutation({
     mutationFn: async () => {
-      const saved = topic
-        ? topicSchema.parse(
-            await apiRequest(apiPaths.topic(topic.id), {
-              method: "PATCH",
-              body: JSON.stringify(topicInputSchema.parse({ name, icon })),
-            }),
-          )
-        : topicSchema.parse(
-            await apiRequest(apiPaths.topics, {
-              method: "POST",
-              body: JSON.stringify(createTopicInputSchema.parse({ collectionId, name, icon })),
-            }),
-          );
+      const input = topicInputSchema.parse({ name, icon });
 
-      return saved;
+      return topicSchema.parse(
+        topic
+          ? await apiRequest(apiPaths.topic(topic.id), {
+              method: "PATCH",
+              body: JSON.stringify(input),
+            })
+          : await apiRequest(apiPaths.topics, {
+              method: "POST",
+              body: JSON.stringify(createTopicInputSchema.parse({ collectionId, ...input })),
+            }),
+      );
     },
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: queryKeys.topics });
