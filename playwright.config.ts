@@ -24,8 +24,13 @@ export default defineConfig({
     // separately, which is what makes the suite fast enough to run in parallel. Reuse stays off so
     // a server left over from an earlier run can never serve stale code.
     command: "npm run serve:e2e",
+    // The command builds first, which is slower on a cold CI runner than the 60s default allows.
+    timeout: 180_000,
     url: "http://127.0.0.1:4173",
     reuseExistingServer: false,
+    // Without this the build and server output is swallowed, and a startup failure reports only
+    // that the wait timed out.
+    stdout: "pipe",
   },
   projects: [
     { name: "chromium", use: { ...devices["Desktop Chrome"] } },
