@@ -9,11 +9,7 @@ import {
   deleteCollection,
   listCollections,
 } from "../../src/server/resources/collections.js";
-import {
-  createTopic,
-  deleteTopic,
-  listTopics,
-} from "../../src/server/resources/topics.js";
+import { createTopic, deleteTopic, listTopics } from "../../src/server/resources/topics.js";
 import { recordReview } from "../../src/server/resources/reviews.js";
 import { login } from "../../src/server/resources/sessions.js";
 import { getStats } from "../../src/server/resources/stats.js";
