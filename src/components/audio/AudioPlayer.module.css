@@ -18,7 +18,7 @@
 }
 
 .player button:focus-visible {
-  outline: 3px solid var(--color-primary-text);
+  outline: 3px solid var(--color-focus);
   outline-offset: 2px;
 }
 
@@ -84,5 +84,11 @@
   .spinner {
     border-style: dotted;
     animation: none;
+  }
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .player button:hover:not(:disabled, [aria-disabled="true"]) {
+    background: var(--color-surface-hover);
   }
 }

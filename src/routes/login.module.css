@@ -100,3 +100,9 @@
     animation: none;
   }
 }
+
+@media (hover: hover) and (pointer: fine) {
+  .card button:hover:not(:disabled) {
+    background: var(--color-primary-hover);
+  }
+}

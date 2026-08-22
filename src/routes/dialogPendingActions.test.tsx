@@ -46,8 +46,8 @@ describe("form dialog pending actions", () => {
     );
     renderCardDialog();
     const dialog = await screen.findByRole("dialog");
-    await user.type(screen.getByLabelText("Vorderseite Text bis 1.000 Zeichen"), "Schnee");
-    await user.type(screen.getByLabelText("Rückseite Text bis 1.000 Zeichen"), "snow");
+    await user.type(screen.getByLabelText("Vorderseite Maximal 1.000 Zeichen"), "Schnee");
+    await user.type(screen.getByLabelText("Rückseite Maximal 1.000 Zeichen"), "snow");
     await user.click(screen.getByRole("button", { name: "Speichern" }));
 
     const pendingSave = await within(dialog).findByRole("button", {

@@ -174,3 +174,18 @@
     max-inline-size: 40rem;
   }
 }
+
+@media (hover: hover) and (pointer: fine) {
+  .sheet header button:hover:not(:disabled) {
+    background: var(--color-divider-hover);
+  }
+
+  .explanation > button:hover:not(:disabled),
+  .sheet form button:hover:not(:disabled) {
+    background: var(--color-primary-hover);
+  }
+
+  .prompts button:hover:not(:disabled) {
+    background: var(--color-surface-hover);
+  }
+}

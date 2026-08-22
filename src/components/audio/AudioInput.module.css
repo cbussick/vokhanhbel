@@ -123,9 +123,6 @@
   font-size: var(--font-sm);
   font-weight: 800;
   line-height: 1.2;
-  transition:
-    translate var(--duration-fast) var(--ease-standard),
-    background-color var(--duration-fast) var(--ease-standard);
 }
 
 .recordButton {
@@ -176,7 +173,7 @@
 }
 
 .fileInput:focus-visible + .dropZone {
-  outline: 3px solid var(--color-primary-text);
+  outline: 3px solid var(--color-focus);
   outline-offset: 2px;
 }
 
@@ -216,7 +213,7 @@
 .error {
   color: var(--color-danger);
   font-size: var(--font-sm);
-  font-weight: 600;
+  font-weight: 700;
 }
 
 @keyframes recording-pulse {
@@ -232,17 +229,18 @@
 }
 
 @media (hover: hover) and (pointer: fine) {
+  /* The drop target also emphasises its border; every other control only tints. */
   .dropZone:hover {
     border-color: var(--color-primary-text);
-    background: color-mix(in srgb, var(--color-primary) 14%, var(--color-surface));
+    background: var(--color-surface-hover);
   }
 
-  .recordButton:hover {
-    background: color-mix(in srgb, var(--color-primary) 78%, white);
+  .recordButton:hover:not(:disabled) {
+    background: var(--color-primary-hover);
   }
 
-  .stopButton:hover {
-    background: color-mix(in srgb, var(--color-danger) 88%, black);
+  .stopButton:hover:not(:disabled) {
+    background: var(--color-danger-hover);
   }
 }
 

@@ -74,3 +74,9 @@
     outline-offset: -2px;
   }
 }
+
+@media (hover: hover) and (pointer: fine) {
+  .trigger:hover:not(:disabled) {
+    background: var(--color-surface-hover);
+  }
+}

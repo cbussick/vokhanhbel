@@ -34,7 +34,10 @@
 
   button {
     cursor: pointer;
-    transition: translate var(--duration-fast) var(--ease-standard);
+    transition:
+      filter var(--duration-fast) var(--ease-standard),
+      background-color var(--duration-fast) var(--ease-standard),
+      color var(--duration-fast) var(--ease-standard);
   }
 
   img,
@@ -58,8 +61,15 @@
     --color-surface: #fff;
     --color-text: #243642;
     --color-text-secondary: #586b76;
+    --color-focus: #1d7fa3;
     --color-border: #d6e6ee;
     --color-divider: #eef5f8;
+
+    /* Hover surfaces: coloured controls lighten, neutral ones gain a primary tint. */
+    --color-primary-hover: color-mix(in srgb, var(--color-primary) 78%, white);
+    --color-surface-hover: color-mix(in srgb, var(--color-primary) 12%, var(--color-surface));
+    --color-divider-hover: color-mix(in srgb, var(--color-primary) 28%, var(--color-surface));
+    --color-danger-hover: color-mix(in srgb, var(--color-danger) 88%, black);
     --space-1: 0.25rem;
     --space-2: 0.5rem;
     --space-3: 0.75rem;
@@ -96,6 +106,16 @@
 }
 
 @layer base {
+  html {
+    /* Reserved so locking the page behind a modal dialog cannot shift the layout. */
+    scrollbar-gutter: stable;
+  }
+
+  /* A modal dialog owns the whole screen, so the page behind it must not scroll. */
+  html:has(dialog[open]) {
+    overflow: hidden;
+  }
+
   body {
     min-inline-size: 20rem;
     min-block-size: 100vh;
@@ -119,12 +139,13 @@
     opacity: 0.58;
   }
 
+  /* Press feedback that darkens the control instead of moving it. */
   button:active:not(:disabled, [aria-disabled="true"]) {
-    translate: 0 1px;
+    filter: brightness(0.94);
   }
 
   :where(a, button, input, textarea):focus-visible {
-    outline: 3px solid var(--color-primary-text);
+    outline: 3px solid var(--color-focus);
     outline-offset: 2px;
   }
 
@@ -152,9 +173,5 @@
 
   button {
     transition-duration: 0ms;
-  }
-
-  button:active:not(:disabled, [aria-disabled="true"]) {
-    translate: 0;
   }
 }
