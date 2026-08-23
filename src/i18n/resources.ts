@@ -17,6 +17,7 @@ export const de = {
     },
     nav: { review: "Wiederholen", cards: "Karten", me: "Ich" },
     common: {
+      back: "Zurück",
       close: "Schließen",
       cancel: "Abbrechen",
       save: "Speichern",

@@ -30,6 +30,14 @@ function TextIcon() {
   );
 }
 
+function BackIcon() {
+  return (
+    <svg viewBox="0 0 24 24" focusable="false" aria-hidden="true">
+      <path d="m12 5-7 7 7 7M5 12h14" />
+    </svg>
+  );
+}
+
 export function CardFormDialog({
   card,
   defaultCollectionId,
@@ -177,11 +185,18 @@ export function CardFormDialog({
     setTopicIds([]);
   };
 
+  const dialogClassName = isConfirmingDelete
+    ? styles.dialog
+    : `${styles.dialog} ${styles.mobileFullscreenDialog}`;
+  const sheetClassName = isConfirmingDelete
+    ? styles.sheet
+    : `${styles.sheet} ${styles.mobileFullscreenSheet}`;
+
   return (
     <>
       <dialog
         ref={dialogRef}
-        className={styles.dialog}
+        className={dialogClassName}
         onCancel={(event) => {
           if (event.target !== event.currentTarget) return;
           event.preventDefault();
@@ -198,13 +213,24 @@ export function CardFormDialog({
         }}
         aria-labelledby="card-dialog-title"
       >
-        <section className={styles.sheet} aria-busy={isPending}>
-          <header>
+        <section className={sheetClassName} aria-busy={isPending}>
+          <header className={isConfirmingDelete ? undefined : styles.mobileFullscreenHeader}>
+            {!isConfirmingDelete && (
+              <button
+                type="button"
+                className={`${styles.iconButton} ${styles.backButton}`}
+                disabled={isPending}
+                onClick={close}
+                aria-label={t("common.back")}
+              >
+                <BackIcon />
+              </button>
+            )}
             <h2 id="card-dialog-title">{t(card ? "cards.edit" : "cards.create")}</h2>
             {!isConfirmingDelete && (
               <button
                 type="button"
-                className={styles.iconButton}
+                className={`${styles.iconButton} ${styles.closeButton}`}
                 disabled={isPending}
                 onClick={close}
                 aria-label={t("common.close")}

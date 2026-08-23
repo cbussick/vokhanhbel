@@ -748,6 +748,43 @@ test("keeps audio controls compact in the collection overview", async ({ page })
   expect(audioCardBox!.height).toBeLessThanOrEqual(textCardBox!.height + 4);
 });
 
+test("presents Card creation as a full-screen task on mobile", async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 700 });
+  const state = await installMockApi(page);
+  await page.goto(`/cards/${mockCollection.id}`);
+
+  await page.getByRole("button", { name: "Karte hinzufügen" }).first().click();
+
+  const dialog = page.getByRole("dialog", { name: "Karte erstellen" });
+  await expect
+    .poll(async () => {
+      const box = await dialog.boundingBox();
+
+      return (
+        box && {
+          x: Math.round(box.x),
+          y: Math.round(box.y),
+          width: Math.round(box.width),
+          height: Math.round(box.height),
+        }
+      );
+    })
+    .toEqual({ x: 0, y: 0, width: 320, height: 700 });
+  await expect(dialog.getByRole("button", { name: "Zurück" })).toBeVisible();
+  await expect(dialog.getByRole("button", { name: "Schließen" })).toBeHidden();
+
+  await dialog.getByRole("button", { name: "Zurück" }).click();
+  await expect(dialog).toBeHidden();
+
+  await page.goto(`/cards/${mockCollection.id}/${state.cards[0]!.id}`);
+  const editDialog = page.getByRole("dialog", { name: "Karte bearbeiten" });
+  await editDialog.getByRole("button", { name: "Karte löschen" }).click();
+
+  await expect
+    .poll(async () => Math.round((await editDialog.boundingBox())?.height ?? 0))
+    .toBeLessThan(700);
+});
+
 for (const viewport of [
   { name: "mobile", width: 390, height: 844 },
   { name: "tablet", width: 768, height: 900 },
@@ -821,7 +858,9 @@ for (const viewport of [
       animations: "disabled",
     });
     await page.getByRole("combobox", { name: "Sammlung" }).press("Escape");
-    await page.getByRole("button", { name: "Schließen" }).click();
+    await page
+      .getByRole("button", { name: viewport.name === "mobile" ? "Zurück" : "Schließen" })
+      .click();
     await page.getByRole("link", { name: /Ich/ }).click();
     await expect(page.getByRole("heading", { name: "Khanhs Fortschritt" })).toBeVisible();
     await expect(page).toHaveScreenshot(`me-${viewport.name}.png`, { animations: "disabled" });
