@@ -8,7 +8,8 @@ export interface TutorProviderRequest {
   signal: AbortSignal;
 }
 export type TutorProviderEvent =
-  { type: "delta"; text: string } | { type: "done"; truncated: boolean };
+  | { type: "delta"; text: string }
+  | { type: "done"; truncated: boolean };
 export interface AiProvider {
   streamTutorReply: (request: TutorProviderRequest) => AsyncIterable<TutorProviderEvent>;
 }

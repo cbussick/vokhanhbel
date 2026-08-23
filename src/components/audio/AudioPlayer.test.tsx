@@ -15,18 +15,18 @@ const secondAudio = { ...firstAudio, id: "22222222-2222-4222-8222-222222222222" 
 describe("AudioPlayer", () => {
   beforeEach(() => {
     vi.spyOn(HTMLMediaElement.prototype, "load").mockImplementation(() => undefined);
-    vi.spyOn(HTMLMediaElement.prototype, "play").mockImplementation(function (
-      this: HTMLMediaElement,
-    ) {
-      fireEvent.playing(this);
+    vi.spyOn(HTMLMediaElement.prototype, "play").mockImplementation(
+      function (this: HTMLMediaElement) {
+        fireEvent.playing(this);
 
-      return Promise.resolve();
-    });
-    vi.spyOn(HTMLMediaElement.prototype, "pause").mockImplementation(function (
-      this: HTMLMediaElement,
-    ) {
-      fireEvent.pause(this);
-    });
+        return Promise.resolve();
+      },
+    );
+    vi.spyOn(HTMLMediaElement.prototype, "pause").mockImplementation(
+      function (this: HTMLMediaElement) {
+        fireEvent.pause(this);
+      },
+    );
   });
 
   it("loads only on Play and pauses the previous application player", async () => {

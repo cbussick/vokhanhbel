@@ -1,9 +1,0 @@
-coverage
-dist
-drizzle/meta
-node_modules
-package-lock.json
-src/routeTree.gen.ts
-.env.example
-.scratch
-docs/agents/triage-labels.md
