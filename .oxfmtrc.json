@@ -3,6 +3,9 @@
   "trailingComma": "all",
   "printWidth": 100,
   "sortPackageJson": false,
+  "sortImports": {
+    "newlinesBetween": false
+  },
   "ignorePatterns": [
     "coverage",
     "dist",

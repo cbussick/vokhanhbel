@@ -1,6 +1,6 @@
-import { pathToFileURL } from "node:url";
-import { Writable } from "node:stream";
 import { createInterface } from "node:readline/promises";
+import { Writable } from "node:stream";
+import { pathToFileURL } from "node:url";
 import { encodePassword } from "../src/server/auth/password.ts";
 
 class HiddenInputOutput extends Writable {

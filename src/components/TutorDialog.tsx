@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import type { Card } from "../contracts/card";
 import { apiPaths } from "../contracts/apiPaths";
-import { tutorLimits, tutorStreamEventSchema, type TutorInput } from "../contracts/tutor";
+import type { Card } from "../contracts/card";
 import { problemSchema, problemTypes } from "../contracts/problem";
+import { tutorLimits, tutorStreamEventSchema, type TutorInput } from "../contracts/tutor";
 import { useOnlineStatus } from "../lib/browserState";
 import { publishSessionExpired } from "../lib/sessionEvents";
 import styles from "./TutorDialog.module.css";

@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import babel from "@rolldown/plugin-babel";
-import react, { reactCompilerPreset } from "@vitejs/plugin-react";
 import { tanstackRouter } from "@tanstack/router-plugin/vite";
+import react, { reactCompilerPreset } from "@vitejs/plugin-react";
 import { configDefaults, defineConfig } from "vitest/config";
 
 const deployment = JSON.parse(readFileSync(new URL("./vercel.json", import.meta.url), "utf8")) as {

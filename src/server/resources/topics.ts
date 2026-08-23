@@ -1,6 +1,6 @@
 import { and, asc, eq, isNull } from "drizzle-orm";
-import type { CreateTopicInput, TopicInput } from "../../contracts/topic.js";
 import { problemTypes } from "../../contracts/problem.js";
+import type { CreateTopicInput, TopicInput } from "../../contracts/topic.js";
 import { getDatabase } from "../database/client.js";
 import { isForeignKeyViolation, isUniqueViolation } from "../database/errors.js";
 import { cardTopics, collections, topics } from "../database/schema.js";

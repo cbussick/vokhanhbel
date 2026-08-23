@@ -3,8 +3,8 @@
 // broke the preview deploy. Item URLs still use /api/topics/:id; vercel.json rewrites
 // them here.
 import { z } from "zod";
-import { createTopicInputSchema, topicInputSchema } from "../../src/contracts/topic.js";
 import { problemTypes } from "../../src/contracts/problem.js";
+import { createTopicInputSchema, topicInputSchema } from "../../src/contracts/topic.js";
 import { handleRequest } from "../../src/server/http/handler.js";
 import { AppProblem } from "../../src/server/http/problem.js";
 import {

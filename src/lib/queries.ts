@@ -1,10 +1,10 @@
 import { queryOptions } from "@tanstack/react-query";
+import { apiPaths } from "../contracts/apiPaths";
 import { cardListSchema } from "../contracts/card";
 import { collectionListSchema } from "../contracts/collection";
-import { topicListSchema } from "../contracts/topic";
-import { apiPaths } from "../contracts/apiPaths";
 import { sessionStatusSchema } from "../contracts/session";
 import { statsSchema } from "../contracts/stats";
+import { topicListSchema } from "../contracts/topic";
 import { apiRequest, ApiError } from "./apiClient";
 import { queryKeys } from "./queryKeys";
 
