@@ -1,5 +1,5 @@
 import { AxeBuilder } from "@axe-core/playwright";
-import { expect, test, type Page, type Route } from "@playwright/test";
+import { expect, test, type Locator, type Page, type Route } from "@playwright/test";
 
 interface MockCard {
   id: string;
@@ -144,6 +144,25 @@ async function expectNoSeriousAxeViolations(page: Page) {
   ).toEqual([]);
 }
 
+async function expectMobileFullscreenDialog(dialog: Locator, width: number, height: number) {
+  await expect
+    .poll(async () => {
+      const box = await dialog.boundingBox();
+
+      return (
+        box && {
+          x: Math.round(box.x),
+          y: Math.round(box.y),
+          width: Math.round(box.width),
+          height: Math.round(box.height),
+        }
+      );
+    })
+    .toEqual({ x: 0, y: 0, width, height });
+  await expect(dialog.getByRole("button", { name: "Zurück" })).toBeVisible();
+  await expect(dialog.getByRole("button", { name: "Schließen" })).toBeHidden();
+}
+
 test("logs in with the exact password and logs out", async ({ page }) => {
   await installMockApi(page, false);
   await page.goto("/login");
@@ -197,6 +216,7 @@ test("creates, searches, and opens a Card accessibly", async ({ page }) => {
   await page.goto("/cards");
   await page.getByRole("link", { name: /Vietnamesisch/ }).click();
   await page.getByRole("button", { name: "Karte hinzufügen" }).first().click();
+  await expect(page.getByRole("dialog", { name: "Karte erstellen" })).toHaveCSS("opacity", "1");
   await expect(page.getByText("Text", { exact: true })).toHaveCount(2);
   await expect(page.getByText("Audio", { exact: true })).toHaveCount(2);
   await expectNoSeriousAxeViolations(page);
@@ -748,7 +768,7 @@ test("keeps audio controls compact in the collection overview", async ({ page })
   expect(audioCardBox!.height).toBeLessThanOrEqual(textCardBox!.height + 4);
 });
 
-test("presents Card creation as a full-screen task on mobile", async ({ page }) => {
+test("presents form dialogs as full-screen tasks on mobile", async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 700 });
   const state = await installMockApi(page);
   await page.goto(`/cards/${mockCollection.id}`);
@@ -756,22 +776,7 @@ test("presents Card creation as a full-screen task on mobile", async ({ page }) 
   await page.getByRole("button", { name: "Karte hinzufügen" }).first().click();
 
   const dialog = page.getByRole("dialog", { name: "Karte erstellen" });
-  await expect
-    .poll(async () => {
-      const box = await dialog.boundingBox();
-
-      return (
-        box && {
-          x: Math.round(box.x),
-          y: Math.round(box.y),
-          width: Math.round(box.width),
-          height: Math.round(box.height),
-        }
-      );
-    })
-    .toEqual({ x: 0, y: 0, width: 320, height: 700 });
-  await expect(dialog.getByRole("button", { name: "Zurück" })).toBeVisible();
-  await expect(dialog.getByRole("button", { name: "Schließen" })).toBeHidden();
+  await expectMobileFullscreenDialog(dialog, 320, 700);
 
   await dialog.getByRole("button", { name: "Zurück" }).click();
   await expect(dialog).toBeHidden();
@@ -783,6 +788,17 @@ test("presents Card creation as a full-screen task on mobile", async ({ page }) 
   await expect
     .poll(async () => Math.round((await editDialog.boundingBox())?.height ?? 0))
     .toBeLessThan(700);
+
+  await page.goto("/cards");
+  await page.getByRole("button", { name: "Sammlung hinzufügen" }).click();
+  const collectionDialog = page.getByRole("dialog", { name: "Sammlung erstellen" });
+  await expectMobileFullscreenDialog(collectionDialog, 320, 700);
+  await collectionDialog.getByRole("button", { name: "Zurück" }).click();
+
+  await page.goto(`/cards/${mockCollection.id}`);
+  await page.getByRole("button", { name: "Thema hinzufügen" }).click();
+  const topicDialog = page.getByRole("dialog", { name: "Thema erstellen" });
+  await expectMobileFullscreenDialog(topicDialog, 320, 700);
 });
 
 for (const viewport of [
@@ -841,12 +857,22 @@ for (const viewport of [
     await expect(page).toHaveScreenshot(`collection-editor-${viewport.name}.png`, {
       animations: "disabled",
     });
-    await page.getByRole("button", { name: "Schließen" }).click();
+    await page
+      .getByRole("button", { name: viewport.name === "mobile" ? "Zurück" : "Schließen" })
+      .click();
     await page.getByRole("link", { name: /Vietnamesisch/ }).click();
     await expect(page.getByRole("heading", { name: "Vietnamesisch" })).toBeVisible();
     await expect(page).toHaveScreenshot(`collection-cards-${viewport.name}.png`, {
       animations: "disabled",
     });
+    await page.getByRole("button", { name: "Thema hinzufügen" }).click();
+    await expect(page.getByRole("heading", { name: "Thema erstellen" })).toBeVisible();
+    await expect(page).toHaveScreenshot(`topic-editor-${viewport.name}.png`, {
+      animations: "disabled",
+    });
+    await page
+      .getByRole("button", { name: viewport.name === "mobile" ? "Zurück" : "Schließen" })
+      .click();
     await page.getByRole("button", { name: "Karte hinzufügen" }).first().click();
     await expect(page.getByRole("heading", { name: "Karte erstellen" })).toBeVisible();
     await expect(page).toHaveScreenshot(`card-editor-${viewport.name}.png`, {
