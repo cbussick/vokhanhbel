@@ -77,6 +77,66 @@
   font-size: var(--font-xl);
 }
 
+.mobileFullscreenHeader h2 {
+  min-inline-size: 0;
+}
+
+.backButton svg {
+  inline-size: 1.5rem;
+  block-size: 1.5rem;
+  fill: none;
+  stroke: currentcolor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2;
+}
+
+.iconButton.backButton {
+  display: none;
+}
+
+@media (width < 48rem) {
+  .mobileFullscreenDialog,
+  .mobileFullscreenSheet {
+    block-size: 100dvh;
+    max-block-size: 100dvh;
+  }
+
+  .mobileFullscreenDialog {
+    inline-size: 100dvw;
+    max-inline-size: none;
+    margin: 0;
+  }
+
+  .mobileFullscreenSheet {
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  .sheet .mobileFullscreenHeader {
+    justify-content: flex-start;
+    padding-block-start: max(var(--space-4), env(safe-area-inset-top));
+  }
+
+  .iconButton.backButton {
+    display: grid;
+  }
+
+  .iconButton.closeButton {
+    display: none;
+  }
+
+  .dialog.mobileFullscreenDialog {
+    translate: 0;
+  }
+
+  @starting-style {
+    .dialog.mobileFullscreenDialog[open] {
+      translate: 0;
+    }
+  }
+}
+
 .body {
   overflow-y: auto;
   overscroll-behavior: contain;
