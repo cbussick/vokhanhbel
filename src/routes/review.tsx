@@ -31,6 +31,36 @@ function countDue(cards: Card[], now: number): number {
   return cards.filter((card) => new Date(card.dueAt).getTime() <= now).length;
 }
 
+/** One row of the group list: an icon beside the name, with the group's own due count below it. */
+function GroupRow({
+  icon,
+  name,
+  cards,
+  now,
+  onStart,
+}: {
+  icon: React.ReactNode;
+  name: string;
+  cards: Card[];
+  now: number;
+  onStart: () => void;
+}) {
+  const { t } = useTranslation();
+  const dueCount = countDue(cards, now);
+
+  return (
+    <button type="button" disabled={cards.length === 0} onClick={onStart}>
+      {icon}
+      <span className={styles.rowText}>
+        <strong>{name}</strong>
+        <span className={styles.rowDetail}>
+          {dueCount > 0 ? t("review.due", { count: dueCount }) : t("review.collectionNoneDue")}
+        </span>
+      </span>
+    </button>
+  );
+}
+
 function ReviewRouteProvider() {
   return (
     <ReviewSessionProvider>
@@ -112,47 +142,33 @@ function ReviewRoute() {
               <ul className={styles.collections}>
                 {collectionList.map((collection) => {
                   const own = active.filter((card) => card.collectionId === collection.id);
-                  const ownDueCount = countDue(own, now);
                   const ownTopics = topicList.filter(
                     (topic) => topic.collectionId === collection.id,
                   );
 
                   return (
                     <li key={collection.id} className={styles.collectionGroup}>
-                      <button
-                        type="button"
-                        disabled={own.length === 0}
-                        onClick={() => begin(selectQueue(own, now))}
-                      >
-                        <CollectionIcon icon={collection.icon} />
-                        <strong>{collection.name}</strong>
-                        <span className={styles.rowDetail}>
-                          {ownDueCount > 0
-                            ? t("review.due", { count: ownDueCount })
-                            : t("review.collectionNoneDue")}
-                        </span>
-                      </button>
+                      <GroupRow
+                        icon={<CollectionIcon icon={collection.icon} />}
+                        name={collection.name}
+                        cards={own}
+                        now={now}
+                        onStart={() => begin(selectQueue(own, now))}
+                      />
                       {ownTopics.length > 0 && (
                         <ul className={styles.topicRows}>
                           {ownTopics.map((topic) => {
                             const inTopic = own.filter((card) => card.topicIds.includes(topic.id));
-                            const topicDueCount = countDue(inTopic, now);
 
                             return (
                               <li key={topic.id}>
-                                <button
-                                  type="button"
-                                  disabled={inTopic.length === 0}
-                                  onClick={() => begin(selectQueue(inTopic, now))}
-                                >
-                                  <TopicIcon icon={topic.icon} />
-                                  <strong>{topic.name}</strong>
-                                  <span className={styles.rowDetail}>
-                                    {topicDueCount > 0
-                                      ? t("review.due", { count: topicDueCount })
-                                      : t("review.collectionNoneDue")}
-                                  </span>
-                                </button>
+                                <GroupRow
+                                  icon={<TopicIcon icon={topic.icon} />}
+                                  name={topic.name}
+                                  cards={inTopic}
+                                  now={now}
+                                  onStart={() => begin(selectQueue(inTopic, now))}
+                                />
                               </li>
                             );
                           })}

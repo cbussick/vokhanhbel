@@ -37,13 +37,18 @@
   inline-size: 100%;
   min-block-size: 56px;
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
   gap: var(--space-3);
   padding: var(--space-3) var(--space-4);
   border: 0;
   background: transparent;
   text-align: start;
+}
+
+/* Name above its own count so rows read the same no matter how long a name is. */
+.rowText {
+  display: grid;
+  gap: var(--space-1);
 }
 
 .topicRows {
@@ -60,7 +65,6 @@
 }
 
 .collections strong {
-  margin-inline-end: auto;
   overflow-wrap: anywhere;
 }
 
