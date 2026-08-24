@@ -801,6 +801,33 @@ test("presents form dialogs as full-screen tasks on mobile", async ({ page }) =>
   await expectMobileFullscreenDialog(topicDialog, 320, 700);
 });
 
+test("gives the Tutor dialog full-screen chrome and a pinned composer on mobile", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 320, height: 700 });
+  await installMockApi(page);
+  await page.goto("/review");
+  await page.getByRole("button", { name: "Review starten" }).click();
+  await page.getByRole("button", { name: "Antwort zeigen" }).click();
+  await page.getByRole("button", { name: "Tutopher fragen" }).click();
+
+  const dialog = page.getByRole("dialog", { name: "Tutopher" });
+  await expectMobileFullscreenDialog(dialog, 320, 700);
+
+  const composerBox = await dialog.getByLabel("Deine Frage").boundingBox();
+  expect(composerBox).not.toBeNull();
+
+  // A transcript long enough to scroll must not push the composer anywhere.
+  for (let exchange = 1; exchange <= 4; exchange += 1) {
+    await dialog.getByRole("button", { name: "Einfach erklären" }).click();
+    await expect(dialog.getByText("Ein Apfel ist eine Frucht.")).toHaveCount(exchange);
+  }
+
+  expect(await dialog.getByLabel("Deine Frage").boundingBox()).toEqual(composerBox);
+  await dialog.getByRole("button", { name: "Zurück" }).click();
+  await expect(dialog).toBeHidden();
+});
+
 for (const viewport of [
   { name: "mobile", width: 390, height: 844 },
   { name: "tablet", width: 768, height: 900 },
@@ -842,7 +869,9 @@ for (const viewport of [
     await expect(page).toHaveScreenshot(`tutor-${viewport.name}.png`, {
       animations: "disabled",
     });
-    await page.getByRole("button", { name: "Schließen" }).click();
+    await page
+      .getByRole("button", { name: viewport.name === "mobile" ? "Zurück" : "Schließen" })
+      .click();
     await page.getByRole("button", { name: /Gewusst/ }).click();
     await expect(page.getByRole("heading", { name: "Gut gemacht!" })).toBeVisible();
     await expect(page).toHaveScreenshot(`review-summary-${viewport.name}.png`, {

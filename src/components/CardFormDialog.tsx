@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { apiPaths } from "../contracts/apiPaths";
 import {
@@ -17,7 +17,7 @@ import { stageAudioDraft } from "./audio/audioApi";
 import { AudioInput, releaseAudioDraft, type AudioDraft } from "./audio/AudioInput";
 import { CollectionFormDialog } from "./CollectionFormDialog";
 import { CollectionSelect } from "./CollectionSelect";
-import { FormDialogContent, getFormDialogClassName } from "./FormDialogContent";
+import { Dialog } from "./Dialog";
 import { PendingActionContent } from "./PendingActionContent";
 import { TopicFormDialog } from "./TopicFormDialog";
 import { TopicSelect } from "./TopicSelect";
@@ -65,14 +65,6 @@ export function CardFormDialog({
   const [creatingCollection, setCreatingCollection] = useState(false);
   const [creatingTopic, setCreatingTopic] = useState(false);
   const [error, setError] = useState<string>();
-
-  useEffect(() => {
-    const dialog = dialogRef.current;
-
-    if (!dialog) return;
-    dialog.showModal();
-    requestAnimationFrame(() => frontRef.current?.focus());
-  }, []);
 
   const save = useMutation({
     mutationFn: async () => {
@@ -180,207 +172,190 @@ export function CardFormDialog({
 
   return (
     <>
-      <dialog
-        ref={dialogRef}
-        className={getFormDialogClassName(isConfirmingDelete)}
-        onCancel={(event) => {
-          if (event.target !== event.currentTarget) return;
-          event.preventDefault();
-
-          if (isPending) return;
-
-          if (isConfirmingDelete) {
-            setIsConfirmingDelete(false);
-
-            return;
-          }
-
-          close();
-        }}
-        aria-labelledby="card-dialog-title"
+      <Dialog
+        dialogRef={dialogRef}
+        initialFocusRef={frontRef}
+        titleId="card-dialog-title"
+        title={t(card ? "cards.edit" : "cards.create")}
+        busy={isPending}
+        isConfirming={isConfirmingDelete}
+        onDismissConfirmation={() => setIsConfirmingDelete(false)}
+        onClose={close}
       >
-        <FormDialogContent
-          titleId="card-dialog-title"
-          title={t(card ? "cards.edit" : "cards.create")}
-          busy={isPending}
-          compact={isConfirmingDelete}
-          onClose={close}
-        >
-          {isConfirmingDelete ? (
-            <div className={styles.confirm}>
-              <p>{t("cards.deleteConfirm")}</p>
-              <div className={styles.actions}>
-                <button
-                  type="button"
-                  className={styles.secondary}
-                  disabled={remove.isPending}
-                  onClick={() => setIsConfirmingDelete(false)}
-                >
-                  {t("common.cancel")}
-                </button>
-                <button
-                  type="button"
-                  className={styles.danger}
-                  aria-busy={remove.isPending}
-                  aria-disabled={remove.isPending}
-                  onClick={() => {
-                    if (!remove.isPending) remove.mutate();
-                  }}
-                >
-                  <PendingActionContent
-                    pending={remove.isPending}
-                    label={t("cards.delete")}
-                    pendingLabel={t("common.deleting")}
-                  />
-                </button>
-              </div>
+        {isConfirmingDelete ? (
+          <div className={styles.confirm}>
+            <p>{t("cards.deleteConfirm")}</p>
+            <div className={styles.actions}>
+              <button
+                type="button"
+                className={styles.secondary}
+                disabled={remove.isPending}
+                onClick={() => setIsConfirmingDelete(false)}
+              >
+                {t("common.cancel")}
+              </button>
+              <button
+                type="button"
+                className={styles.danger}
+                aria-busy={remove.isPending}
+                aria-disabled={remove.isPending}
+                onClick={() => {
+                  if (!remove.isPending) remove.mutate();
+                }}
+              >
+                <PendingActionContent
+                  pending={remove.isPending}
+                  label={t("cards.delete")}
+                  pendingLabel={t("common.deleting")}
+                />
+              </button>
             </div>
-          ) : (
-            <form onSubmit={submit} noValidate>
-              <label htmlFor="card-collection" className={styles.fieldHeading}>
-                {t("cards.collection")}
-              </label>
-              <CollectionSelect
-                id="card-collection"
-                collections={collections.data ?? []}
-                value={collectionId}
-                onChange={selectCollection}
-                onCreate={() => setCreatingCollection(true)}
-                required
-                disabled={isPending}
-              />
-              <label htmlFor="card-topics" className={styles.fieldHeading}>
-                {t("cards.topics")}
-              </label>
-              <TopicSelect
-                id="card-topics"
-                topics={(topics.data ?? []).filter((topic) => topic.collectionId === collectionId)}
-                value={topicIds}
-                onChange={setTopicIds}
-                onCreate={() => setCreatingTopic(true)}
-                disabled={isPending}
-              />
-              <fieldset className={styles.faceEditor} disabled={isPending}>
-                <legend id="front-face-label" className={styles.fieldHeading}>
-                  {t("cards.front")}
-                </legend>
-                <span id="front-media-hint" className={styles.hint}>
-                  {t("cards.faceMediaHint")}
-                </span>
-                <div className={styles.faceControl}>
-                  <div className={styles.textControl}>
-                    <div className={styles.mediaLabel}>
-                      <span className={styles.mediaIcon} aria-hidden="true">
-                        <TextIcon />
-                      </span>
-                      {t("cards.text")}
-                    </div>
-                    <label id="front-text-label" htmlFor="card-front">
-                      {t("cards.textLabel")}
-                    </label>
-                    <textarea
-                      ref={frontRef}
-                      id="card-front"
-                      aria-labelledby="front-face-label front-text-label"
-                      aria-describedby="front-media-hint"
-                      maxLength={1_000}
-                      value={front}
-                      onChange={(event) => setFront(event.target.value)}
-                    />
+          </div>
+        ) : (
+          <form onSubmit={submit} noValidate>
+            <label htmlFor="card-collection" className={styles.fieldHeading}>
+              {t("cards.collection")}
+            </label>
+            <CollectionSelect
+              id="card-collection"
+              collections={collections.data ?? []}
+              value={collectionId}
+              onChange={selectCollection}
+              onCreate={() => setCreatingCollection(true)}
+              required
+              disabled={isPending}
+            />
+            <label htmlFor="card-topics" className={styles.fieldHeading}>
+              {t("cards.topics")}
+            </label>
+            <TopicSelect
+              id="card-topics"
+              topics={(topics.data ?? []).filter((topic) => topic.collectionId === collectionId)}
+              value={topicIds}
+              onChange={setTopicIds}
+              onCreate={() => setCreatingTopic(true)}
+              disabled={isPending}
+            />
+            <fieldset className={styles.faceEditor} disabled={isPending}>
+              <legend id="front-face-label" className={styles.fieldHeading}>
+                {t("cards.front")}
+              </legend>
+              <span id="front-media-hint" className={styles.hint}>
+                {t("cards.faceMediaHint")}
+              </span>
+              <div className={styles.faceControl}>
+                <div className={styles.textControl}>
+                  <div className={styles.mediaLabel}>
+                    <span className={styles.mediaIcon} aria-hidden="true">
+                      <TextIcon />
+                    </span>
+                    {t("cards.text")}
                   </div>
-                  <AudioInput
-                    face="front"
-                    draft={frontDraft}
-                    existing={card?.front.audio ?? null}
-                    existingRemoved={frontAudioRemoved}
-                    onDraftChange={setFrontDraft}
-                    onExistingRemovedChange={setFrontAudioRemoved}
+                  <label id="front-text-label" htmlFor="card-front">
+                    {t("cards.textLabel")}
+                  </label>
+                  <textarea
+                    ref={frontRef}
+                    id="card-front"
+                    aria-labelledby="front-face-label front-text-label"
+                    aria-describedby="front-media-hint"
+                    maxLength={1_000}
+                    value={front}
+                    onChange={(event) => setFront(event.target.value)}
                   />
                 </div>
-              </fieldset>
-              <fieldset className={styles.faceEditor} disabled={isPending}>
-                <legend id="back-face-label" className={styles.fieldHeading}>
-                  {t("cards.back")}
-                </legend>
-                <span id="back-media-hint" className={styles.hint}>
-                  {t("cards.faceMediaHint")}
-                </span>
-                <div className={styles.faceControl}>
-                  <div className={styles.textControl}>
-                    <div className={styles.mediaLabel}>
-                      <span className={styles.mediaIcon} aria-hidden="true">
-                        <TextIcon />
-                      </span>
-                      {t("cards.text")}
-                    </div>
-                    <label id="back-text-label" htmlFor="card-back">
-                      {t("cards.textLabel")}
-                    </label>
-                    <textarea
-                      id="card-back"
-                      aria-labelledby="back-face-label back-text-label"
-                      aria-describedby="back-media-hint"
-                      maxLength={1_000}
-                      value={back}
-                      onChange={(event) => setBack(event.target.value)}
-                    />
+                <AudioInput
+                  face="front"
+                  draft={frontDraft}
+                  existing={card?.front.audio ?? null}
+                  existingRemoved={frontAudioRemoved}
+                  onDraftChange={setFrontDraft}
+                  onExistingRemovedChange={setFrontAudioRemoved}
+                />
+              </div>
+            </fieldset>
+            <fieldset className={styles.faceEditor} disabled={isPending}>
+              <legend id="back-face-label" className={styles.fieldHeading}>
+                {t("cards.back")}
+              </legend>
+              <span id="back-media-hint" className={styles.hint}>
+                {t("cards.faceMediaHint")}
+              </span>
+              <div className={styles.faceControl}>
+                <div className={styles.textControl}>
+                  <div className={styles.mediaLabel}>
+                    <span className={styles.mediaIcon} aria-hidden="true">
+                      <TextIcon />
+                    </span>
+                    {t("cards.text")}
                   </div>
-                  <AudioInput
-                    face="back"
-                    draft={backDraft}
-                    existing={card?.back.audio ?? null}
-                    existingRemoved={backAudioRemoved}
-                    onDraftChange={setBackDraft}
-                    onExistingRemovedChange={setBackAudioRemoved}
+                  <label id="back-text-label" htmlFor="card-back">
+                    {t("cards.textLabel")}
+                  </label>
+                  <textarea
+                    id="card-back"
+                    aria-labelledby="back-face-label back-text-label"
+                    aria-describedby="back-media-hint"
+                    maxLength={1_000}
+                    value={back}
+                    onChange={(event) => setBack(event.target.value)}
                   />
                 </div>
-              </fieldset>
-              {error && (
-                <p role="alert" className={styles.error}>
-                  {error}
-                </p>
-              )}
-              <div className={styles.actions}>
-                {card && (
-                  <button
-                    type="button"
-                    className={styles.deleteLink}
-                    disabled={isPending}
-                    onClick={() => setIsConfirmingDelete(true)}
-                  >
-                    {t("cards.delete")}
-                  </button>
-                )}
+                <AudioInput
+                  face="back"
+                  draft={backDraft}
+                  existing={card?.back.audio ?? null}
+                  existingRemoved={backAudioRemoved}
+                  onDraftChange={setBackDraft}
+                  onExistingRemovedChange={setBackAudioRemoved}
+                />
+              </div>
+            </fieldset>
+            {error && (
+              <p role="alert" className={styles.error}>
+                {error}
+              </p>
+            )}
+            <div className={styles.actions}>
+              {card && (
                 <button
                   type="button"
-                  className={styles.secondary}
+                  className={styles.deleteLink}
                   disabled={isPending}
-                  onClick={close}
+                  onClick={() => setIsConfirmingDelete(true)}
                 >
-                  {t("common.cancel")}
+                  {t("cards.delete")}
                 </button>
-                <button
-                  type="submit"
-                  className={styles.primary}
-                  aria-busy={save.isPending}
-                  aria-disabled={save.isPending}
-                  disabled={
-                    !collectionId ||
-                    (!front.trim() && !frontDraft && (frontAudioRemoved || !card?.front.audio)) ||
-                    (!back.trim() && !backDraft && (backAudioRemoved || !card?.back.audio))
-                  }
-                >
-                  <PendingActionContent
-                    pending={save.isPending}
-                    label={t("common.save")}
-                    pendingLabel={t("common.saving")}
-                  />
-                </button>
-              </div>
-            </form>
-          )}
-        </FormDialogContent>
-      </dialog>
+              )}
+              <button
+                type="button"
+                className={styles.secondary}
+                disabled={isPending}
+                onClick={close}
+              >
+                {t("common.cancel")}
+              </button>
+              <button
+                type="submit"
+                className={styles.primary}
+                aria-busy={save.isPending}
+                aria-disabled={save.isPending}
+                disabled={
+                  !collectionId ||
+                  (!front.trim() && !frontDraft && (frontAudioRemoved || !card?.front.audio)) ||
+                  (!back.trim() && !backDraft && (backAudioRemoved || !card?.back.audio))
+                }
+              >
+                <PendingActionContent
+                  pending={save.isPending}
+                  label={t("common.save")}
+                  pendingLabel={t("common.saving")}
+                />
+              </button>
+            </div>
+          </form>
+        )}
+      </Dialog>
       {creatingCollection && (
         <CollectionFormDialog
           onClose={() => setCreatingCollection(false)}

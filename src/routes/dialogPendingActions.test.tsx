@@ -30,7 +30,7 @@ function renderCardDialog() {
   );
 }
 
-describe("form dialog pending actions", () => {
+describe("shared dialog chrome and pending actions", () => {
   it("freezes the Card dialog and blocks dismissal while saving", async () => {
     const user = userEvent.setup();
     const requestGate = createRequestGate();
@@ -106,6 +106,59 @@ describe("form dialog pending actions", () => {
     expect(within(dialog).getByRole("button", { name: "Abbrechen" })).toBeEnabled();
     expect(within(dialog).getByRole("button", { name: "Schließen" })).toBeEnabled();
     expect(name).toBeEnabled();
+  });
+
+  it("gives the Tutor dialog the shared close affordances and cancel handling", async () => {
+    const user = userEvent.setup();
+    await renderApp("/review");
+
+    await user.click(await screen.findByRole("button", { name: "Review starten" }));
+    await user.click(await screen.findByRole("button", { name: "Antwort zeigen" }));
+    await user.click(await screen.findByRole("button", { name: "Tutopher fragen" }));
+
+    const dialog = screen.getByRole("dialog", { name: "Tutopher" });
+    expect(within(dialog).getByRole("button", { name: "Schließen" })).toBeEnabled();
+    expect(within(dialog).getByRole("button", { name: "Zurück" })).toBeEnabled();
+
+    fireEvent(dialog, new Event("cancel", { cancelable: true }));
+    await waitFor(() =>
+      expect(screen.queryByRole("dialog", { name: "Tutopher" })).not.toBeInTheDocument(),
+    );
+  });
+
+  it("gives the audio-only Tutor explanation the shared dialog chrome", async () => {
+    const user = userEvent.setup();
+    const metadata = { durationMs: 1_000, contentType: "audio/wav", byteSize: 8_044 };
+    mockServer.use(
+      http.get("/api/cards", () =>
+        HttpResponse.json([
+          {
+            ...testCards[0]!,
+            front: {
+              text: null,
+              audio: { ...metadata, id: "88888888-8888-4888-8888-888888888881" },
+            },
+            back: { text: "Antwort", audio: null },
+          },
+        ]),
+      ),
+      http.get("/api/audio/:audioId", () => new HttpResponse(new Uint8Array([1]))),
+    );
+    await renderApp("/review");
+
+    await user.click(await screen.findByRole("button", { name: "Review starten" }));
+    await user.click(await screen.findByRole("button", { name: "Antwort zeigen" }));
+    await user.click(await screen.findByRole("button", { name: "Tutopher fragen" }));
+
+    const dialog = screen.getByRole("dialog", { name: "Tutopher" });
+    expect(within(dialog).getByText(/Tutopher kann Aufnahmen nicht anhören/)).toBeVisible();
+    expect(within(dialog).getByRole("button", { name: "Schließen" })).toBeEnabled();
+    expect(within(dialog).getByRole("button", { name: "Zurück" })).toBeEnabled();
+
+    await user.click(within(dialog).getByRole("button", { name: "Zurück" }));
+    await waitFor(() =>
+      expect(screen.queryByRole("dialog", { name: "Tutopher" })).not.toBeInTheDocument(),
+    );
   });
 
   it("blocks cancellation while deleting a Collection", async () => {

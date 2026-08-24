@@ -1,61 +1,25 @@
-.dialog {
-  inline-size: 100%;
-  max-inline-size: 30rem;
-  block-size: min(90dvh, 48rem);
-  margin: auto auto 0;
-  padding: 0;
-  border: 0;
-  border-radius: var(--radius-large) var(--radius-large) 0 0;
-  background: transparent;
-  color: var(--color-text);
+/*
+ * The chrome — dialog element, header, close and back affordances, scrolling body, pinned footer —
+ * belongs to Dialog.module.css. Only the conversation itself is styled here.
+ *
+ * A conversation needs a stable height instead of one that grows with every reply. Below 48rem the
+ * shared stylesheet makes the dialog fullscreen, so the height only applies above that breakpoint.
+ */
+@media (width >= 48rem) {
+  .tutorDialog {
+    --dialog-block-size: min(90dvh, 48rem);
+  }
 }
 
-.dialog::backdrop {
-  background: rgb(36 54 66 / 45%);
-}
-
-.sheet {
+/*
+ * Only the disclosure and the transcript are declared: everything below them lands in an implicit
+ * auto row, so a track never sits empty and shortens the transcript when a control is hidden.
+ */
+.conversation {
   block-size: 100%;
   display: grid;
-  grid-template-rows: auto auto 1fr auto auto;
+  grid-template-rows: auto minmax(0, 1fr);
   gap: var(--space-3);
-  padding: var(--space-4) var(--space-4) max(var(--space-4), env(safe-area-inset-bottom));
-  border-radius: inherit;
-  background: var(--color-surface);
-  box-shadow: var(--shadow-sheet);
-}
-
-.explanation {
-  block-size: auto;
-  grid-template-rows: auto auto auto;
-}
-
-.explanation > button {
-  min-block-size: 44px;
-  border: 0;
-  border-radius: var(--radius-medium);
-  background: var(--color-primary);
-  color: var(--color-primary-text);
-  font-weight: 700;
-}
-
-.sheet header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.sheet h2 {
-  font-family: var(--font-display);
-}
-
-.sheet header button {
-  min-inline-size: 44px;
-  min-block-size: 44px;
-  border: 0;
-  border-radius: var(--radius-full);
-  background: var(--color-divider);
-  font-size: var(--font-xl);
 }
 
 .disclosure {
@@ -132,19 +96,19 @@
   background: white;
 }
 
-.sheet form {
+.composer {
   display: grid;
   grid-template-columns: 1fr auto;
   gap: var(--space-2);
 }
 
-.sheet form label,
-.sheet form p {
+.composer label,
+.composer p {
   grid-column: 1 / -1;
   font-size: var(--font-sm);
 }
 
-.sheet textarea {
+.composer textarea {
   min-block-size: 52px;
   max-block-size: 8rem;
   resize: vertical;
@@ -153,7 +117,7 @@
   border-radius: var(--radius-medium);
 }
 
-.sheet form button {
+.composer button {
   min-block-size: 52px;
   padding-inline: var(--space-4);
   border: 0;
@@ -162,26 +126,8 @@
   font-weight: 800;
 }
 
-@media (width >= 48rem) {
-  .dialog {
-    margin: auto;
-    border-radius: var(--radius-large);
-  }
-}
-
-@media (width >= 64rem) {
-  .dialog {
-    max-inline-size: 40rem;
-  }
-}
-
 @media (hover: hover) and (pointer: fine) {
-  .sheet header button:hover:not(:disabled) {
-    background: var(--color-divider-hover);
-  }
-
-  .explanation > button:hover:not(:disabled),
-  .sheet form button:hover:not(:disabled) {
+  .composer button:hover:not(:disabled) {
     background: var(--color-primary-hover);
   }
 

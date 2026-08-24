@@ -6,6 +6,7 @@ import { problemSchema, problemTypes } from "../contracts/problem";
 import { tutorLimits, tutorStreamEventSchema, type TutorInput } from "../contracts/tutor";
 import { useOnlineStatus } from "../lib/browserState";
 import { publishSessionExpired } from "../lib/sessionEvents";
+import { Dialog } from "./Dialog";
 import styles from "./TutorDialog.module.css";
 
 interface Message {
@@ -51,10 +52,6 @@ export function TutorDialog({ card, onClose }: { card: Card; onClose: () => void
   const thinking = request.status === "thinking";
   const error = request.status === "error" ? request.message : undefined;
   const retryAfter = request.status === "error" ? request.retryAfter : 0;
-
-  useEffect(() => {
-    dialogRef.current?.showModal();
-  }, []);
 
   useEffect(() => {
     if (request.status !== "submitting") return;
@@ -221,48 +218,44 @@ export function TutorDialog({ card, onClose }: { card: Card; onClose: () => void
 
   if (!card.front.text || !card.back.text) {
     return (
-      <dialog
-        ref={dialogRef}
-        className={styles.dialog}
-        onCancel={(event) => {
-          event.preventDefault();
-          close();
-        }}
-        aria-labelledby="tutor-title"
-      >
-        <section className={`${styles.sheet} ${styles.explanation}`}>
-          <header>
-            <h2 id="tutor-title">{t("tutor.title")}</h2>
-            <button type="button" onClick={close} aria-label={t("common.close")}>
-              ×
-            </button>
-          </header>
-          <p>{t("tutor.audioOnly")}</p>
-          <button type="button" onClick={close}>
-            {t("common.close")}
-          </button>
-        </section>
-      </dialog>
+      <Dialog dialogRef={dialogRef} titleId="tutor-title" title={t("tutor.title")} onClose={close}>
+        <p>{t("tutor.audioOnly")}</p>
+      </Dialog>
     );
   }
 
   return (
-    <dialog
-      ref={dialogRef}
-      className={styles.dialog}
-      onCancel={(event) => {
-        event.preventDefault();
-        close();
-      }}
-      aria-labelledby="tutor-title"
-    >
-      <section className={styles.sheet}>
-        <header>
-          <h2 id="tutor-title">{t("tutor.title")}</h2>
-          <button type="button" onClick={close} aria-label={t("common.close")}>
-            ×
+    <Dialog
+      dialogRef={dialogRef}
+      className={styles.tutorDialog}
+      titleId="tutor-title"
+      title={t("tutor.title")}
+      onClose={close}
+      footer={
+        <form
+          className={styles.composer}
+          onSubmit={(event) => {
+            event.preventDefault();
+            void send();
+          }}
+        >
+          <label htmlFor="tutor-question">{t("tutor.question")}</label>
+          <textarea
+            id="tutor-question"
+            minLength={1}
+            maxLength={tutorLimits.messageCharacters}
+            value={question}
+            onChange={(event) => setQuestion(event.target.value)}
+            disabled={pending || !online || retryAfter > 0}
+          />
+          <button type="submit" disabled={pending || !question.trim() || !online || retryAfter > 0}>
+            {t("tutor.send")}
           </button>
-        </header>
+          {!online && <p>{t("tutor.offline")}</p>}
+        </form>
+      }
+    >
+      <div className={styles.conversation}>
         <p className={styles.disclosure}>{t("tutor.disclosure")}</p>
         <div ref={scrollerRef} className={styles.messages} onScroll={onScroll} aria-live="polite">
           {messages.map((message, index) => (
@@ -310,27 +303,7 @@ export function TutorDialog({ card, onClose }: { card: Card; onClose: () => void
             </button>
           ))}
         </div>
-        <form
-          onSubmit={(event) => {
-            event.preventDefault();
-            void send();
-          }}
-        >
-          <label htmlFor="tutor-question">{t("tutor.question")}</label>
-          <textarea
-            id="tutor-question"
-            minLength={1}
-            maxLength={tutorLimits.messageCharacters}
-            value={question}
-            onChange={(event) => setQuestion(event.target.value)}
-            disabled={pending || !online || retryAfter > 0}
-          />
-          <button type="submit" disabled={pending || !question.trim() || !online || retryAfter > 0}>
-            {t("tutor.send")}
-          </button>
-          {!online && <p>{t("tutor.offline")}</p>}
-        </form>
-      </section>
-    </dialog>
+      </div>
+    </Dialog>
   );
 }
