@@ -1,7 +1,9 @@
 .dialog {
   inline-size: 100%;
   max-inline-size: 30rem;
-  block-size: auto;
+
+  /* A consumer that needs a height instead of one that grows with its content sets the property. */
+  block-size: var(--dialog-block-size, auto);
   max-block-size: calc(100dvh - var(--space-6));
   margin: auto auto 0;
   padding: 0;
@@ -50,11 +52,12 @@
   }
 }
 
-/* The top bar stays put; only .body scrolls. */
+/* The top bar and the footer stay put; only .body scrolls. */
 .sheet {
+  block-size: var(--dialog-block-size, auto);
   max-block-size: calc(100dvh - var(--space-6));
   display: grid;
-  grid-template-rows: auto minmax(0, 1fr);
+  grid-template-rows: auto minmax(0, 1fr) auto;
   overflow: hidden;
   border-radius: var(--radius-large) var(--radius-large) 0 0;
   background: var(--color-surface);
@@ -143,6 +146,16 @@
   padding: var(--space-2) var(--space-4) max(var(--space-6), env(safe-area-inset-bottom));
 }
 
+/* The footer carries the bottom inset instead, so the two never stack up. */
+.bodyAboveFooter {
+  padding-block-end: var(--space-2);
+}
+
+.footer {
+  padding: var(--space-3) var(--space-4) max(var(--space-4), env(safe-area-inset-bottom));
+  border-block-start: 1px solid var(--color-divider);
+}
+
 .iconButton {
   min-inline-size: 44px;
   min-block-size: 44px;
@@ -155,18 +168,18 @@
   line-height: 1;
 }
 
-.sheet form {
+.body form {
   display: grid;
   gap: var(--space-2);
 }
 
-.sheet label {
+.body label {
   margin-block-start: var(--space-3);
   font-weight: 700;
 }
 
 /* One heading size for every field group, whether it labels a control or a fieldset. */
-.sheet .fieldHeading {
+.body .fieldHeading {
   padding: 0;
   font-size: var(--font-lg);
   font-weight: 800;
@@ -289,7 +302,7 @@
   outline-offset: 2px;
 }
 
-.sheet input {
+.body input {
   inline-size: 100%;
   min-block-size: 48px;
   padding: var(--space-2) var(--space-3);
@@ -298,7 +311,7 @@
   background: white;
 }
 
-.sheet textarea {
+.body textarea {
   inline-size: 100%;
   min-block-size: 7rem;
   resize: none;
@@ -309,7 +322,7 @@
   line-height: 1.65;
 }
 
-.sheet textarea:first-of-type {
+.body textarea:first-of-type {
   min-block-size: 5rem;
 }
 
