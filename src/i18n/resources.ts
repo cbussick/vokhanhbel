@@ -218,6 +218,10 @@ export const de = {
       error: "Da ist etwas schiefgegangen. Versuch es noch einmal.",
       truncated: "Antwort wurde gekürzt.",
       latest: "Zur neuesten Nachricht",
+      remainingMessages: "Du kannst noch {{count}} Nachrichten senden.",
+      remainingMessages_one: "Du kannst noch eine Nachricht senden.",
+      conversationFull: "Diese Unterhaltung ist voll. Beginne neu, um weiterzuschreiben.",
+      startOver: "Neu beginnen",
       sessionLimit: "Tutopher braucht kurz Pause. Versuch es später noch einmal.",
       dailyLimit: "Tutopher hat für heute Feierabend. Morgen geht’s weiter.",
       audioOnly:

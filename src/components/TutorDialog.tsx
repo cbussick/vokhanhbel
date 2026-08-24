@@ -62,6 +62,13 @@ export function TutorDialog({
   const thinking = request.status === "thinking";
   const error = request.status === "error" ? request.message : undefined;
   const retryAfter = request.status === "error" ? request.retryAfter : 0;
+  const remainingLearnerMessages = Math.max(
+    0,
+    (tutorLimits.conversationMessageCeiling - messages.length) / 2,
+  );
+  const atConversationCeiling = remainingLearnerMessages === 0;
+  const conversationFull = atConversationCeiling && !pending;
+  const composerDisabled = pending || !online || retryAfter > 0 || atConversationCeiling;
 
   useEffect(() => {
     if (request.status !== "submitting") return;
@@ -115,11 +122,10 @@ export function TutorDialog({
   const send = async (text = question) => {
     const trimmed = text.trim();
 
-    if (!trimmed || pending || !online || retryAfter > 0) return;
+    if (!trimmed || composerDisabled) return;
 
-    const history = messages.slice(-tutorLimits.conversationMessages);
     const historyLength = messages.length;
-    const input: TutorInput = { message: trimmed, messages: history };
+    const input: TutorInput = { message: trimmed, messages };
     const controller = new AbortController();
 
     activeRequestRef.current = { controller, historyLength };
@@ -240,6 +246,15 @@ export function TutorDialog({
     setFollowing(true);
   };
 
+  const startOver = () => {
+    updateMessages(() => []);
+    setQuestion("");
+    setRequest({ status: "idle" });
+    setAnnouncement("");
+    setTruncated(false);
+    setFollowing(true);
+  };
+
   if (!card.front.text || !card.back.text) {
     return (
       <Dialog dialogRef={dialogRef} titleId="tutor-title" title={t("tutor.title")} onClose={close}>
@@ -266,16 +281,25 @@ export function TutorDialog({
           <label htmlFor="tutor-question">{t("tutor.question")}</label>
           <textarea
             id="tutor-question"
+            aria-describedby={conversationFull ? "tutor-conversation-full" : undefined}
             minLength={1}
             maxLength={tutorLimits.messageCharacters}
             value={question}
             onChange={(event) => setQuestion(event.target.value)}
-            disabled={pending || !online || retryAfter > 0}
+            disabled={composerDisabled}
           />
-          <button type="submit" disabled={pending || !question.trim() || !online || retryAfter > 0}>
+          <button type="submit" disabled={composerDisabled || !question.trim()}>
             {t("tutor.send")}
           </button>
           {!online && <p>{t("tutor.offline")}</p>}
+          {conversationFull && (
+            <>
+              <p id="tutor-conversation-full">{t("tutor.conversationFull")}</p>
+              <button type="button" onClick={startOver}>
+                {t("tutor.startOver")}
+              </button>
+            </>
+          )}
         </form>
       }
     >
@@ -319,12 +343,17 @@ export function TutorDialog({
             {t("tutor.latest")}
           </button>
         )}
+        {remainingLearnerMessages > 0 && remainingLearnerMessages <= 3 && (
+          <p className={styles.notice}>
+            {t("tutor.remainingMessages", { count: remainingLearnerMessages })}
+          </p>
+        )}
         <div className={styles.prompts}>
           {(["simple", "example", "memory"] as const).map((key) => (
             <button
               key={key}
               type="button"
-              disabled={pending}
+              disabled={composerDisabled}
               onClick={() => void send(t(`tutor.${key}`))}
             >
               {t(`tutor.${key}`)}

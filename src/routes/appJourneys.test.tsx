@@ -957,6 +957,80 @@ describe("rendered app journeys", () => {
     expect(screen.getByText("Das ist die Antwort.")).toBeVisible();
   });
 
+  it("stops a Tutor Conversation after eight Learner messages until it starts over", async () => {
+    const user = userEvent.setup();
+    const requests: Array<{
+      message: string;
+      messages: Array<{ role: "user" | "assistant"; content: string }>;
+    }> = [];
+    mockServer.use(
+      http.post("/api/cards/:cardId/tutor-replies", async ({ request }) => {
+        requests.push((await request.json()) as (typeof requests)[number]);
+
+        return completedTutorReply(`Antwort ${requests.length}`);
+      }),
+    );
+    await renderApp("/review");
+    await user.click(await screen.findByRole("button", { name: "Review starten" }));
+    await user.click(await screen.findByRole("button", { name: "Antwort zeigen" }));
+    await user.click(await screen.findByRole("button", { name: "Mit Tutopher reden" }));
+
+    expect(screen.queryByText(/Du kannst noch .* Nachrichten senden\./)).not.toBeInTheDocument();
+
+    for (let exchange = 1; exchange <= 8; exchange += 1) {
+      await user.type(screen.getByLabelText("Deine Nachricht"), `Nachricht ${exchange}`);
+      await user.click(screen.getByRole("button", { name: "Senden" }));
+      await screen.findByText(`Antwort ${exchange}`);
+
+      if (exchange === 4)
+        expect(
+          screen.queryByText(/Du kannst noch .* Nachrichten senden\./),
+        ).not.toBeInTheDocument();
+      if (exchange === 5)
+        expect(screen.getByText("Du kannst noch 3 Nachrichten senden.")).toBeVisible();
+    }
+
+    expect(requests).toHaveLength(8);
+    expect(requests[7]).toEqual({
+      message: "Nachricht 8",
+      messages: [
+        { role: "user", content: "Nachricht 1" },
+        { role: "assistant", content: "Antwort 1" },
+        { role: "user", content: "Nachricht 2" },
+        { role: "assistant", content: "Antwort 2" },
+        { role: "user", content: "Nachricht 3" },
+        { role: "assistant", content: "Antwort 3" },
+        { role: "user", content: "Nachricht 4" },
+        { role: "assistant", content: "Antwort 4" },
+        { role: "user", content: "Nachricht 5" },
+        { role: "assistant", content: "Antwort 5" },
+        { role: "user", content: "Nachricht 6" },
+        { role: "assistant", content: "Antwort 6" },
+        { role: "user", content: "Nachricht 7" },
+        { role: "assistant", content: "Antwort 7" },
+      ],
+    });
+
+    const composer = screen.getByLabelText("Deine Nachricht");
+    expect(composer).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Senden" })).toBeDisabled();
+    expect(
+      screen.getByText("Diese Unterhaltung ist voll. Beginne neu, um weiterzuschreiben."),
+    ).toBeVisible();
+
+    await user.click(screen.getByRole("button", { name: "Schließen" }));
+    await user.click(screen.getByRole("button", { name: "Mit Tutopher reden" }));
+    expect(screen.getByLabelText("Deine Nachricht")).toBeDisabled();
+    expect(screen.getByText("Nachricht 1")).toBeVisible();
+    expect(screen.getByText("Antwort 8")).toBeVisible();
+
+    await user.click(screen.getByRole("button", { name: "Neu beginnen" }));
+    expect(screen.getByLabelText("Deine Nachricht")).toBeEnabled();
+    expect(screen.queryByText("Nachricht 1")).not.toBeInTheDocument();
+    expect(screen.queryByText("Antwort 8")).not.toBeInTheDocument();
+    expect(screen.queryByText(/Du kannst noch .* Nachrichten senden\./)).not.toBeInTheDocument();
+  });
+
   it("starts a fresh Tutor Conversation after advancing to another Card", async () => {
     const user = userEvent.setup();
     const secondCard = {

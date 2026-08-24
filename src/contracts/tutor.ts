@@ -3,7 +3,7 @@ import { problemTypes } from "./problem.js";
 
 export const tutorLimits = {
   messageCharacters: 500,
-  conversationMessages: 8,
+  conversationMessageCeiling: 16,
   conversationMessageCharacters: 4_000,
 } as const;
 
@@ -14,7 +14,7 @@ export const tutorMessageSchema = z.object({
 
 export const tutorInputSchema = z.object({
   message: z.string().min(1).max(tutorLimits.messageCharacters),
-  messages: z.array(tutorMessageSchema).max(tutorLimits.conversationMessages),
+  messages: z.array(tutorMessageSchema).max(tutorLimits.conversationMessageCeiling),
 });
 export type TutorInput = z.infer<typeof tutorInputSchema>;
 
