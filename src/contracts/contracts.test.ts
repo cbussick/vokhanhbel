@@ -11,7 +11,7 @@ import {
   topicInputSchema,
   topicSchema,
 } from "./topic.js";
-import { tutorStreamEventSchema } from "./tutor.js";
+import { tutorInputSchema, tutorStreamEventSchema } from "./tutor.js";
 
 describe("public contracts", () => {
   it("normalizes valid Card input at the boundary", () => {
@@ -220,6 +220,21 @@ describe("public contracts", () => {
       tutorStreamEventSchema.safeParse({
         event: "error",
         data: { type: "/problems/unexpected" },
+      }).success,
+    ).toBe(false);
+  });
+
+  it("accepts at most 16 prior Tutor Conversation messages", () => {
+    const messages = Array.from({ length: 16 }, (_, index) => ({
+      role: index % 2 === 0 ? ("user" as const) : ("assistant" as const),
+      content: `Nachricht ${index + 1}`,
+    }));
+
+    expect(tutorInputSchema.safeParse({ message: "Noch eine Frage", messages }).success).toBe(true);
+    expect(
+      tutorInputSchema.safeParse({
+        message: "Eine Frage zu viel",
+        messages: [...messages, { role: "user", content: "Nachricht 17" }],
       }).success,
     ).toBe(false);
   });
