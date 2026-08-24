@@ -1,32 +1,54 @@
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["typescript", "jsx-a11y", "react", "import"],
-  "jsPlugins": [
+import { defineConfig } from "oxlint";
+
+export default defineConfig({
+  plugins: ["typescript", "jsx-a11y", "react", "import"],
+  jsPlugins: [
     {
-      "name": "stylistic",
-      "specifier": "@stylistic/eslint-plugin"
-    }
+      name: "stylistic",
+      specifier: "@stylistic/eslint-plugin",
+    },
+    {
+      name: "anti-slop",
+      specifier: "./tools/oxlint/anti-slop/index.ts",
+    },
   ],
-  "categories": {
-    "correctness": "error",
-    "suspicious": "error"
+  categories: {
+    correctness: "error",
+    suspicious: "error",
   },
-  "options": {
-    "typeAware": true
+  options: {
+    typeAware: true,
   },
-  "env": {
-    "builtin": true,
-    "browser": true,
-    "node": true
+  env: {
+    builtin: true,
+    browser: true,
+    node: true,
   },
-  "ignorePatterns": ["**/*.js", "dist/**", "coverage/**", "src/routeTree.gen.ts"],
-  "rules": {
+  ignorePatterns: [
+    "**/*.js",
+    "dist/**",
+    "coverage/**",
+    "src/routeTree.gen.ts",
+    "tools/oxlint/anti-slop/**",
+    ".agent/**",
+    ".agents/**",
+    ".claude/**",
+    ".codex/**",
+    ".continue/**",
+    ".cursor/**",
+    ".gemini/**",
+    ".opencode/**",
+    ".pi/**",
+    ".roo/**",
+    ".windsurf/**",
+  ],
+  rules: {
     "no-case-declarations": "error",
     "no-empty": [
       "error",
       {
-        "allowEmptyCatch": true
-      }
+        allowEmptyCatch: true,
+      },
     ],
     "no-fallthrough": "error",
     "no-prototype-builtins": "error",
@@ -54,16 +76,31 @@
     "import/no-unassigned-import": [
       "error",
       {
-        "allow": ["**/*.css", "**/i18n/config", "@testing-library/**"]
-      }
+        allow: ["**/*.css", "**/i18n/config", "@testing-library/**"],
+      },
     ],
     "typescript/consistent-return": "off",
-    "typescript/no-unsafe-type-assertion": "off"
+    "typescript/no-unsafe-type-assertion": "off",
+    "anti-slop/no-chained-type-assertions": "warn",
+    "anti-slop/no-conditional-empty-object-spread": "warn",
+    "anti-slop/no-known-value-widening": "warn",
+    "anti-slop/no-module-mocking": "warn",
+    "anti-slop/no-object-parameters": "warn",
+    "anti-slop/no-reflect-apply": "warn",
+    "anti-slop/no-reflect-get": "warn",
+    "anti-slop/no-runtime-typeof": "warn",
+    "anti-slop/no-shape-in-symbol-names": "warn",
+    "anti-slop/no-unknown-parameters": "warn",
+    "anti-slop/no-unknown-returns": "warn",
+    "anti-slop/no-unknown-type-aliases": "warn",
+    "anti-slop/no-unsafe-dictionary-type": "warn",
+    "anti-slop/no-widen-then-assert": "warn",
+    "anti-slop/require-safety-comment-for-type-assertion": "warn",
   },
-  "overrides": [
+  overrides: [
     {
-      "files": ["**/*.ts", "**/*.tsx", "**/*.mts", "**/*.cts"],
-      "rules": {
+      files: ["**/*.ts", "**/*.tsx", "**/*.mts", "**/*.cts"],
+      rules: {
         "constructor-super": "off",
         "getter-return": "off",
         "no-class-assign": "off",
@@ -87,28 +124,28 @@
         "jsx-a11y/interactive-supports-focus": [
           "error",
           {
-            "tabbable": [
+            tabbable: [
               "button",
               "checkbox",
               "link",
               "searchbox",
               "spinbutton",
               "switch",
-              "textbox"
-            ]
-          }
+              "textbox",
+            ],
+          },
         ],
         "jsx-a11y/no-interactive-element-to-noninteractive-role": [
           "error",
           {
-            "tr": ["none", "presentation"],
-            "canvas": ["img"]
-          }
+            tr: ["none", "presentation"],
+            canvas: ["img"],
+          },
         ],
         "jsx-a11y/no-noninteractive-element-interactions": [
           "error",
           {
-            "handlers": [
+            handlers: [
               "onClick",
               "onError",
               "onLoad",
@@ -116,64 +153,57 @@
               "onMouseUp",
               "onKeyPress",
               "onKeyDown",
-              "onKeyUp"
+              "onKeyUp",
             ],
-            "alert": ["onKeyUp", "onKeyDown", "onKeyPress"],
-            "body": ["onError", "onLoad"],
-            "dialog": ["onKeyUp", "onKeyDown", "onKeyPress"],
-            "iframe": ["onError", "onLoad"],
-            "img": ["onError", "onLoad"]
-          }
+            alert: ["onKeyUp", "onKeyDown", "onKeyPress"],
+            body: ["onError", "onLoad"],
+            dialog: ["onKeyUp", "onKeyDown", "onKeyPress"],
+            iframe: ["onError", "onLoad"],
+            img: ["onError", "onLoad"],
+          },
         ],
         "jsx-a11y/no-noninteractive-element-to-interactive-role": [
           "error",
           {
-            "ul": ["listbox", "menu", "menubar", "radiogroup", "tablist", "tree", "treegrid"],
-            "ol": ["listbox", "menu", "menubar", "radiogroup", "tablist", "tree", "treegrid"],
-            "li": [
+            ul: ["listbox", "menu", "menubar", "radiogroup", "tablist", "tree", "treegrid"],
+            ol: ["listbox", "menu", "menubar", "radiogroup", "tablist", "tree", "treegrid"],
+            li: [
               "menuitem",
               "menuitemradio",
               "menuitemcheckbox",
               "option",
               "row",
               "tab",
-              "treeitem"
+              "treeitem",
             ],
-            "table": ["grid"],
-            "td": ["gridcell"],
-            "fieldset": ["radiogroup", "presentation"]
-          }
+            table: ["grid"],
+            td: ["gridcell"],
+            fieldset: ["radiogroup", "presentation"],
+          },
         ],
         "jsx-a11y/no-noninteractive-tabindex": [
           "error",
           {
-            "tags": [],
-            "roles": ["tabpanel"],
-            "allowExpressionValues": true
-          }
+            tags: [],
+            roles: ["tabpanel"],
+            allowExpressionValues: true,
+          },
         ],
         "jsx-a11y/no-static-element-interactions": [
           "error",
           {
-            "allowExpressionValues": true,
-            "handlers": [
-              "onClick",
-              "onMouseDown",
-              "onMouseUp",
-              "onKeyPress",
-              "onKeyDown",
-              "onKeyUp"
-            ]
-          }
+            allowExpressionValues: true,
+            handlers: ["onClick", "onMouseDown", "onMouseUp", "onKeyPress", "onKeyDown", "onKeyUp"],
+          },
         ],
         "import/first": "warn",
         "stylistic/padding-line-between-statements": [
           "warn",
           {
-            "blankLine": "always",
-            "prev": "*",
-            "next": "return"
-          }
+            blankLine: "always",
+            prev: "*",
+            next: "return",
+          },
         ],
         "react/rules-of-hooks": "error",
         "react/unsupported-syntax": "warn",
@@ -181,28 +211,28 @@
         "typescript/no-misused-promises": [
           "error",
           {
-            "checksVoidReturn": {
-              "attributes": false
-            }
-          }
+            checksVoidReturn: {
+              attributes: false,
+            },
+          },
         ],
         "react/exhaustive-deps": "warn",
-        "react/incompatible-library": "warn"
-      }
+        "react/incompatible-library": "warn",
+      },
     },
     {
-      "files": ["**/*.test.{ts,tsx}", "src/test/**/*.ts", "tests/**/*.ts"],
-      "rules": {
+      files: ["**/*.test.{ts,tsx}", "src/test/**/*.ts", "tests/**/*.ts"],
+      rules: {
         "require-yield": "off",
         "typescript/require-await": "off",
         "typescript/no-unsafe-assignment": "off",
-        "typescript/no-unsafe-member-access": "off"
-      }
-    }
+        "typescript/no-unsafe-member-access": "off",
+      },
+    },
   ],
-  "globals": {
-    "AsyncDisposableStack": "readonly",
-    "DisposableStack": "readonly",
-    "SuppressedError": "readonly"
-  }
-}
+  globals: {
+    AsyncDisposableStack: "readonly",
+    DisposableStack: "readonly",
+    SuppressedError: "readonly",
+  },
+});

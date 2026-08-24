@@ -13,6 +13,7 @@
     "src/routeTree.gen.ts",
     ".env.example",
     ".scratch",
-    "docs/agents/triage-labels.md"
+    "docs/agents/triage-labels.md",
+    "tools/oxlint/anti-slop"
   ]
 }
