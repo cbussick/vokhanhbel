@@ -231,7 +231,14 @@ function ReviewSessionRoute() {
               </div>
             )}
           </div>
-          {tutorOpen && <TutorDialog card={card} onClose={() => setTutorOpen(false)} />}
+          {tutorOpen && (
+            <TutorDialog
+              card={card}
+              messages={reviewSession.view.tutorConversation}
+              updateMessages={reviewSession.updateTutorConversation}
+              onClose={() => setTutorOpen(false)}
+            />
+          )}
         </section>
       </AppShell>
     </RequireSession>

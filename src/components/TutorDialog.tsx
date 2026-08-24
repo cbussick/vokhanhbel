@@ -6,13 +6,9 @@ import { problemSchema, problemTypes } from "../contracts/problem";
 import { tutorLimits, tutorStreamEventSchema, type TutorInput } from "../contracts/tutor";
 import { useOnlineStatus } from "../lib/browserState";
 import { publishSessionExpired } from "../lib/sessionEvents";
+import type { TutorConversationMessage } from "../state/ReviewSessionContext";
 import { Dialog } from "./Dialog";
 import styles from "./TutorDialog.module.css";
-
-interface Message {
-  role: "user" | "assistant";
-  content: string;
-}
 
 type RequestState =
   | { status: "idle" }
@@ -30,17 +26,31 @@ class TutorRequestError extends Error {
   }
 }
 
-export function TutorDialog({ card, onClose }: { card: Card; onClose: () => void }) {
+export function TutorDialog({
+  card,
+  messages,
+  updateMessages,
+  onClose,
+}: {
+  card: Card;
+  messages: TutorConversationMessage[];
+  updateMessages: (
+    update: (messages: TutorConversationMessage[]) => TutorConversationMessage[],
+  ) => void;
+  onClose: () => void;
+}) {
   const { t } = useTranslation();
 
   const dialogRef = useRef<HTMLDialogElement>(null);
-  const abortRef = useRef<AbortController | undefined>(undefined);
+  const activeRequestRef = useRef<
+    { controller: AbortController; historyLength: number } | undefined
+  >(undefined);
   const scrollerRef = useRef<HTMLDivElement>(null);
   const endRef = useRef<HTMLDivElement>(null);
 
-  const [messages, setMessages] = useState<Message[]>([]);
   const [question, setQuestion] = useState("");
   const [request, setRequest] = useState<RequestState>({ status: "idle" });
+  const [announcement, setAnnouncement] = useState("");
   const [truncated, setTruncated] = useState(false);
   const [following, setFollowing] = useState(true);
 
@@ -79,7 +89,7 @@ export function TutorDialog({ card, onClose }: { card: Card; onClose: () => void
     return () => window.clearInterval(timer);
   }, [retryAfter]);
 
-  useEffect(() => () => abortRef.current?.abort(), []);
+  useEffect(() => () => activeRequestRef.current?.controller.abort(), []);
 
   // messages and thinking are deliberate triggers, not values the callback reads: they are what
   // makes the view follow a new Tutor reply. Removing them would only scroll when the Learner
@@ -90,7 +100,14 @@ export function TutorDialog({ card, onClose }: { card: Card; onClose: () => void
   }, [messages, following, thinking]);
 
   const close = () => {
-    abortRef.current?.abort();
+    const activeRequest = activeRequestRef.current;
+
+    if (activeRequest) {
+      activeRequest.controller.abort();
+      updateMessages((items) => items.slice(0, activeRequest.historyLength));
+      activeRequestRef.current = undefined;
+    }
+
     dialogRef.current?.close();
     onClose();
   };
@@ -105,11 +122,12 @@ export function TutorDialog({ card, onClose }: { card: Card; onClose: () => void
     const input: TutorInput = { message: trimmed, messages: history };
     const controller = new AbortController();
 
-    abortRef.current = controller;
+    activeRequestRef.current = { controller, historyLength };
     setQuestion("");
+    setAnnouncement("");
     setTruncated(false);
     setRequest({ status: "submitting" });
-    setMessages((items) => [
+    updateMessages((items) => [
       ...items,
       { role: "user", content: trimmed },
       { role: "assistant", content: "" },
@@ -147,10 +165,12 @@ export function TutorDialog({ card, onClose }: { card: Card; onClose: () => void
       const decoder = new TextDecoder();
       let buffer = "";
       let completed = false;
+      let assistantReply = "";
 
       while (true) {
         const { value, done } = await reader.read();
 
+        if (controller.signal.aborted) return;
         if (done) break;
 
         buffer += decoder.decode(value, { stream: true });
@@ -166,8 +186,9 @@ export function TutorDialog({ card, onClose }: { card: Card; onClose: () => void
           const streamEvent = tutorStreamEventSchema.parse({ event, data });
 
           if (streamEvent.event === "delta") {
+            assistantReply += streamEvent.data.text;
             setRequest((state) => (state.status === "streaming" ? state : { status: "streaming" }));
-            setMessages((items) =>
+            updateMessages((items) =>
               items.map((message, index) =>
                 index === items.length - 1
                   ? { ...message, content: message.content + streamEvent.data.text }
@@ -182,13 +203,16 @@ export function TutorDialog({ card, onClose }: { card: Card; onClose: () => void
       }
 
       if (!completed) throw new Error("failed");
+      activeRequestRef.current = undefined;
+      setAnnouncement(`${t("tutor.title")}: ${assistantReply}`);
       setRequest({ status: "idle" });
     } catch (value) {
       if (controller.signal.aborted) return;
 
+      activeRequestRef.current = undefined;
       const code = value instanceof Error ? value.message : "failed";
 
-      setMessages((items) => items.slice(0, historyLength));
+      updateMessages((items) => items.slice(0, historyLength));
       setQuestion(trimmed);
       setRequest({
         status: "error",
@@ -257,7 +281,7 @@ export function TutorDialog({ card, onClose }: { card: Card; onClose: () => void
     >
       <div className={styles.conversation}>
         <p className={styles.disclosure}>{t("tutor.disclosure")}</p>
-        <div ref={scrollerRef} className={styles.messages} onScroll={onScroll} aria-live="polite">
+        <div ref={scrollerRef} className={styles.messages} onScroll={onScroll}>
           {messages.map((message, index) => (
             <article
               key={`${message.role}-${index}`}
@@ -286,6 +310,9 @@ export function TutorDialog({ card, onClose }: { card: Card; onClose: () => void
           )}
           <div ref={endRef} />
         </div>
+        <p className={styles.visuallyHidden} role="status" aria-atomic="true">
+          {announcement}
+        </p>
         {!following && (
           <button type="button" className={styles.latest} onClick={latest}>
             {t("tutor.latest")}
