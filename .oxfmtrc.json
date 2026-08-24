@@ -1,0 +1,19 @@
+{
+  "$schema": "./node_modules/oxfmt/configuration_schema.json",
+  "sortPackageJson": false,
+  "sortImports": {
+    "newlinesBetween": false
+  },
+  "ignorePatterns": [
+    "coverage",
+    "dist",
+    "drizzle/meta",
+    "node_modules",
+    "package-lock.json",
+    "src/routeTree.gen.ts",
+    ".env.example",
+    ".scratch",
+    "docs/agents/triage-labels.md",
+    "tools/oxlint/anti-slop"
+  ]
+}

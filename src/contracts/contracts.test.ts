@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { cardSchema, createCardInputSchema, updateCardInputSchema } from "./card.js";
 import { collectionInputSchema, collectionSchema, defaultCollectionIcon } from "./collection.js";
+import { problemSchema } from "./problem.js";
+import { reviewSubmissionInputSchema } from "./review.js";
+import { loginInputSchema } from "./session.js";
+import { statsSchema } from "./stats.js";
 import {
   createTopicInputSchema,
   defaultTopicIcon,
@@ -8,10 +12,6 @@ import {
   topicSchema,
 } from "./topic.js";
 import { tutorStreamEventSchema } from "./tutor.js";
-import { problemSchema } from "./problem.js";
-import { reviewSubmissionInputSchema } from "./review.js";
-import { loginInputSchema } from "./session.js";
-import { statsSchema } from "./stats.js";
 
 describe("public contracts", () => {
   it("normalizes valid Card input at the boundary", () => {

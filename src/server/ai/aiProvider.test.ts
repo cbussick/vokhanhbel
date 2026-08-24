@@ -4,6 +4,9 @@ import { createOpenAiProvider } from "./aiProvider.js";
 
 const { createResponse } = vi.hoisted(() => ({ createResponse: vi.fn() }));
 
+// These tests cover the OpenAI adapter itself, which constructs the client. Injecting a seam here
+// would only move the boundary and leave the adapter untested. Consumers use AiProvider instead.
+// oxlint-disable-next-line anti-slop/no-module-mocking -- adapter test needs the real SDK faked
 vi.mock("openai", () => ({
   default: class OpenAiMock {
     responses = { create: createResponse };

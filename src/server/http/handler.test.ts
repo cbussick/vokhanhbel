@@ -1,5 +1,5 @@
-import { z } from "zod";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { z } from "zod";
 import { handleRequest } from "./handler.js";
 
 const schema = z.object({ name: z.string() });

@@ -11,8 +11,18 @@ export class AppProblem extends Error {
   }
 }
 
+/** RFC 9457 problem detail document returned to clients. */
+interface ProblemBody {
+  type: string;
+  title: string;
+  status: number;
+  instance: string;
+  detail?: string;
+  errors?: { pointer: string; code: string }[];
+}
+
 export function problemResponse(problem: AppProblem, requestId: string): Response {
-  const body: Record<string, unknown> = {
+  const body: ProblemBody = {
     type: problem.type,
     title: problem.title,
     status: problem.status,

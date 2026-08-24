@@ -51,6 +51,11 @@ const structuredCardSchema = z.object({
 
 export const cardSchema = z.preprocess((value) => {
   if (!value || typeof value !== "object") return value;
+  // This preprocessor is the boundary parser itself, so the payload has no contract yet;
+  // cardSchema imposes one below.
+  // SAFETY: the guard above established that value is a non-null object, so indexing it by string
+  // is sound. cardSchema validates every field immediately after this preprocessing step.
+  // oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type -- boundary parser
   const candidate = value as Record<string, unknown>;
 
   return {

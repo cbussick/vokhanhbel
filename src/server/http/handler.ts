@@ -102,6 +102,8 @@ export async function handleRequest<TBody = undefined>(
     if (options.protected && !sessionHash)
       throw new AppProblem(401, problemTypes.unauthenticated, "Anmeldung erforderlich");
 
+    // SAFETY: the false branch runs only when no bodySchema was supplied, and TBody is inferred as
+    // undefined for those routes.
     const body = options.bodySchema
       ? await parseBody(request, options.bodySchema)
       : (undefined as TBody);

@@ -1,6 +1,6 @@
 import { z } from "zod";
-import type { TutorInput } from "../../contracts/tutor.js";
 import { problemTypes } from "../../contracts/problem.js";
+import type { TutorInput } from "../../contracts/tutor.js";
 import { berlinTimeZone } from "../../domain/time.js";
 import type { AiProvider } from "../ai/aiProvider.js";
 import { getPool } from "../database/client.js";

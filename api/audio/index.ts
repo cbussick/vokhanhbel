@@ -13,7 +13,9 @@ async function readLimitedBody(request: Request): Promise<Uint8Array> {
   const chunks: Uint8Array[] = [];
   let byteLength = 0;
 
-  for await (const value of request.body as unknown as AsyncIterable<Uint8Array>) {
+  const chunkStream: AsyncIterable<Uint8Array> = request.body;
+
+  for await (const value of chunkStream) {
     byteLength += value.byteLength;
     if (byteLength > maximumAudioBytes) {
       throw new AppProblem(413, problemTypes.requestTooLarge, "Audiodatei ist zu groß");

@@ -134,12 +134,15 @@ export function AudioInput({
     intervalRef.current = undefined;
   };
 
+  // This cleanup must run on unmount only. Listing clearTimers and stopTracks would re-run it
+  // whenever their identity changes, which would stop an in-progress recording.
   useEffect(
     () => () => {
       clearTimers();
       if (recorderRef.current?.state === "recording") recorderRef.current.stop();
       stopTracks();
     },
+    // oxlint-disable-next-line react/exhaustive-effect-dependencies -- unmount-only cleanup
     [],
   );
 

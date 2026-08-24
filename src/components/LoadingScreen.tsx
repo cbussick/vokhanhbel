@@ -1,6 +1,6 @@
 import { useTranslation } from "react-i18next";
-import styles from "./LoadingScreen.module.css";
 import { TutopherAvatar } from "./TutopherAvatar";
+import styles from "./LoadingScreen.module.css";
 
 export function LoadingScreen() {
   const { t } = useTranslation();

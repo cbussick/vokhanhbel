@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import type { Card } from "../contracts/card";
 import { apiPaths } from "../contracts/apiPaths";
-import { tutorLimits, tutorStreamEventSchema, type TutorInput } from "../contracts/tutor";
+import type { Card } from "../contracts/card";
 import { problemSchema, problemTypes } from "../contracts/problem";
+import { tutorLimits, tutorStreamEventSchema, type TutorInput } from "../contracts/tutor";
 import { useOnlineStatus } from "../lib/browserState";
 import { publishSessionExpired } from "../lib/sessionEvents";
 import styles from "./TutorDialog.module.css";
@@ -84,8 +84,12 @@ export function TutorDialog({ card, onClose }: { card: Card; onClose: () => void
 
   useEffect(() => () => abortRef.current?.abort(), []);
 
+  // messages and thinking are deliberate triggers, not values the callback reads: they are what
+  // makes the view follow a new Tutor reply. Removing them would only scroll when the Learner
+  // toggles following.
   useEffect(() => {
     if (following) endRef.current?.scrollIntoView?.();
+    // oxlint-disable-next-line react/exhaustive-effect-dependencies -- deliberate scroll triggers
   }, [messages, following, thinking]);
 
   const close = () => {

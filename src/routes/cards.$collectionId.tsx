@@ -3,6 +3,7 @@ import { createFileRoute, Link, Outlet, useNavigate } from "@tanstack/react-rout
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { AppShell } from "../components/AppShell";
+import { AudioPlayer, formatAudioDuration } from "../components/audio/AudioPlayer";
 import { CardFormDialog } from "../components/CardFormDialog";
 import { CollectionFormDialog } from "../components/CollectionFormDialog";
 import { CollectionIcon } from "../components/CollectionIcon";
@@ -10,7 +11,6 @@ import { DelayedSkeleton } from "../components/DelayedSkeleton";
 import { IconButton } from "../components/IconButton";
 import { TopicFormDialog } from "../components/TopicFormDialog";
 import { TopicIcon } from "../components/TopicIcon";
-import { AudioPlayer, formatAudioDuration } from "../components/audio/AudioPlayer";
 import { useOnlineStatus } from "../lib/browserState";
 import { cardsQuery, collectionsQuery, topicsQuery } from "../lib/queries";
 import styles from "./cards.module.css";

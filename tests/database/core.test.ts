@@ -1,26 +1,26 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { createCard, deleteCard, listCards, updateCard } from "../../src/server/resources/cards.js";
-import { getPool } from "../../src/server/database/client.js";
-import { encodePassword } from "../../src/server/auth/password.js";
-import { resetServerEnvironmentForTests } from "../../src/server/config/environment.js";
-import { defaultCollectionId } from "../../src/server/database/schema.js";
-import {
-  createCollection,
-  deleteCollection,
-  listCollections,
-} from "../../src/server/resources/collections.js";
-import { createTopic, deleteTopic, listTopics } from "../../src/server/resources/topics.js";
-import { recordReview } from "../../src/server/resources/reviews.js";
-import { login } from "../../src/server/resources/sessions.js";
-import { getStats } from "../../src/server/resources/stats.js";
-import { consumeTutorAllowance, createTutorStream } from "../../src/server/resources/tutor.js";
-import { retryAudioCleanup, stageAudio } from "../../src/server/resources/audio.js";
+import { createWavFixture } from "../../src/server/audio/audioFixture.test-helper.js";
 import {
   FailingAudioObjectStore,
   InMemoryAudioObjectStore,
   setAudioObjectStoreForTests,
 } from "../../src/server/audio/audioObjectStore.js";
-import { createWavFixture } from "../../src/server/audio/audioFixture.test-helper.js";
+import { encodePassword } from "../../src/server/auth/password.js";
+import { resetServerEnvironmentForTests } from "../../src/server/config/environment.js";
+import { getPool } from "../../src/server/database/client.js";
+import { defaultCollectionId } from "../../src/server/database/schema.js";
+import { retryAudioCleanup, stageAudio } from "../../src/server/resources/audio.js";
+import { createCard, deleteCard, listCards, updateCard } from "../../src/server/resources/cards.js";
+import {
+  createCollection,
+  deleteCollection,
+  listCollections,
+} from "../../src/server/resources/collections.js";
+import { recordReview } from "../../src/server/resources/reviews.js";
+import { login } from "../../src/server/resources/sessions.js";
+import { getStats } from "../../src/server/resources/stats.js";
+import { createTopic, deleteTopic, listTopics } from "../../src/server/resources/topics.js";
+import { consumeTutorAllowance, createTutorStream } from "../../src/server/resources/tutor.js";
 
 const inDefaultCollection = { collectionId: defaultCollectionId };
 

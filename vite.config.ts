@@ -1,9 +1,11 @@
 import { readFileSync } from "node:fs";
 import babel from "@rolldown/plugin-babel";
-import react, { reactCompilerPreset } from "@vitejs/plugin-react";
 import { tanstackRouter } from "@tanstack/router-plugin/vite";
+import react, { reactCompilerPreset } from "@vitejs/plugin-react";
 import { configDefaults, defineConfig } from "vitest/config";
 
+// SAFETY: vercel.json is committed to this repository, so its shape is controlled here rather than
+// supplied externally. A mismatch fails the build loudly.
 const deployment = JSON.parse(readFileSync(new URL("./vercel.json", import.meta.url), "utf8")) as {
   headers: { source: string; headers: { key: string; value: string }[] }[];
 };
