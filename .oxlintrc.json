@@ -51,7 +51,12 @@
     "typescript/no-confusing-non-null-assertion": "error",
     "typescript/prefer-nullish-coalescing": "error",
     "react/react-in-jsx-scope": "off",
-    "import/no-unassigned-import": "off",
+    "import/no-unassigned-import": [
+      "error",
+      {
+        "allow": ["**/*.css", "**/i18n/config", "@testing-library/**"]
+      }
+    ],
     "typescript/consistent-return": "off",
     "typescript/no-unsafe-type-assertion": "off"
   },
