@@ -172,6 +172,8 @@ export async function recordReview(input: ReviewSubmissionInput): Promise<Review
     if (reviewedAt.getTime() > now.getTime() + maximumClockSkewMilliseconds)
       throw new AppProblem(422, problemTypes.deviceClockAhead, "Gerätezeit prüfen");
 
+    // SAFETY: the cards.box column carries the `cards_box_range` CHECK constraint restricting it
+    // to 0-5, so a stored value is always within the Box union.
     const boxBefore = card.box as Box;
     const boxAfter = getBoxAfterGrade(boxBefore, input.grade);
     const pointsAwarded = getPointsForGrade(input.grade);

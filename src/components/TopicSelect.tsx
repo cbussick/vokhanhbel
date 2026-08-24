@@ -40,6 +40,8 @@ export function TopicSelect({
     if (!isListboxOpen) return;
 
     const closeOnOutsidePointer = (event: PointerEvent) => {
+      // SAFETY: a pointerdown dispatched on the document always targets a DOM element, so target
+      // is a Node. contains() also accepts null, so a null target would still be handled.
       if (!rootRef.current?.contains(event.target as Node)) setIsOpen(false);
     };
 

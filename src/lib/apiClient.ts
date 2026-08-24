@@ -20,8 +20,14 @@ export async function apiRequest<T>(path: string, init?: RequestInit): Promise<T
 
   if (response.status === 401 && path !== apiPaths.session) publishSessionExpired();
   if (!response.ok) await throwApiError(response);
-  if (response.status === 204) return undefined as T;
+  if (response.status === 204) {
+    // SAFETY: 204 means the endpoint has no body by definition, and every caller of a 204 endpoint
+    // declares T as void or undefined.
+    return undefined as T;
+  }
 
+  // SAFETY: T is the caller's declared response contract. This is NOT validated here - the
+  // response is parsed against its schema at the call site.
   return response.json() as Promise<T>;
 }
 
