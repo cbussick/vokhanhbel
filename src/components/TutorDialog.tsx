@@ -84,8 +84,12 @@ export function TutorDialog({ card, onClose }: { card: Card; onClose: () => void
 
   useEffect(() => () => abortRef.current?.abort(), []);
 
+  // messages and thinking are deliberate triggers, not values the callback reads: they are what
+  // makes the view follow a new Tutor reply. Removing them would only scroll when the Learner
+  // toggles following.
   useEffect(() => {
     if (following) endRef.current?.scrollIntoView?.();
+    // oxlint-disable-next-line react/exhaustive-effect-dependencies -- deliberate scroll triggers
   }, [messages, following, thinking]);
 
   const close = () => {

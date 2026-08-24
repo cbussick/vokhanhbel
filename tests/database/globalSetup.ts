@@ -46,6 +46,7 @@ async function ensurePostgresRunning(): Promise<void> {
       `No PostgreSQL server answered at ${maintenanceDatabaseUrl} and starting the Compose ` +
         `service failed. Start Docker, or bring the database up manually with ` +
         `"docker compose up -d postgres".\n${reason}`,
+      { cause: error },
     );
   }
 }
