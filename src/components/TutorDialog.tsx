@@ -281,44 +281,55 @@ export function TutorDialog({
     >
       <div className={styles.conversation}>
         <p className={styles.disclosure}>{t("tutor.reliability")}</p>
-        <div ref={scrollerRef} className={styles.messages} onScroll={onScroll}>
-          {messages.length === 0 && <p className={styles.disclosure}>{t("tutor.dataFlow")}</p>}
-          {messages.map((message, index) => (
-            <article
-              key={`${message.role}-${index}`}
-              className={message.role === "user" ? styles.user : styles.assistant}
-            >
-              <strong>{message.role === "user" ? "Khanh" : t("tutor.title")}</strong>
-              {message.content && <p>{message.content}</p>}
-            </article>
-          ))}
-          {thinking && <p className={styles.thinking}>{t("tutor.thinking")}</p>}
-          {truncated && <p className={styles.notice}>{t("tutor.truncated")}</p>}
-          {error && (
-            <div className={styles.error} role="alert">
-              <p>
-                {error}
-                {retryAfter > 0 ? ` (${retryAfter} s)` : ""}
-              </p>
-              <button
-                type="button"
-                disabled={retryAfter > 0 || !online}
-                onClick={() => void send()}
+        <div className={styles.transcript}>
+          <div
+            ref={scrollerRef}
+            className={styles.messages}
+            role="region"
+            aria-label={t("tutor.conversation")}
+            onScroll={onScroll}
+          >
+            {messages.length === 0 && <p className={styles.disclosure}>{t("tutor.dataFlow")}</p>}
+            {messages.map((message, index) => (
+              <article
+                key={`${message.role}-${index}`}
+                className={message.role === "user" ? styles.user : styles.assistant}
               >
-                {t("common.retry")}
-              </button>
-            </div>
+                <strong>{message.role === "user" ? "Khanh" : t("tutor.title")}</strong>
+                {message.content && <p>{message.content}</p>}
+              </article>
+            ))}
+            {thinking && <p className={styles.thinking}>{t("tutor.thinking")}</p>}
+            {truncated && <p className={styles.notice}>{t("tutor.truncated")}</p>}
+            {error && (
+              <div className={styles.error} role="alert">
+                <p>
+                  {error}
+                  {retryAfter > 0 ? ` (${retryAfter} s)` : ""}
+                </p>
+                <button
+                  type="button"
+                  disabled={retryAfter > 0 || !online}
+                  onClick={() => void send()}
+                >
+                  {t("common.retry")}
+                </button>
+              </div>
+            )}
+            <div ref={endRef} />
+          </div>
+          {!following && (
+            <button type="button" className={styles.latest} onClick={latest}>
+              <svg aria-hidden="true" viewBox="0 0 24 24">
+                <path d="m5 9 7 7 7-7" />
+              </svg>
+              {t("tutor.latest")}
+            </button>
           )}
-          <div ref={endRef} />
         </div>
         <p className={styles.visuallyHidden} role="status" aria-atomic="true">
           {announcement}
         </p>
-        {!following && (
-          <button type="button" className={styles.latest} onClick={latest}>
-            {t("tutor.latest")}
-          </button>
-        )}
         <div className={styles.prompts}>
           {(["simple", "example", "memory"] as const).map((key) => (
             <button

@@ -935,6 +935,43 @@ describe("rendered app journeys", () => {
     expect(screen.getByRole("button", { name: "Senden" })).toBeVisible();
   });
 
+  it("offers a floating return to the newest Tutor message only while browsing earlier messages", async () => {
+    const user = userEvent.setup();
+    await renderApp("/review");
+    await user.click(await screen.findByRole("button", { name: "Review starten" }));
+    await user.click(await screen.findByRole("button", { name: "Antwort zeigen" }));
+    await user.click(await screen.findByRole("button", { name: "Mit Tutopher reden" }));
+
+    const transcript = screen.getByRole("region", { name: "Unterhaltung mit Tutopher" });
+    Object.defineProperties(transcript, {
+      clientHeight: { configurable: true, value: 200 },
+      scrollHeight: { configurable: true, value: 600 },
+      scrollTop: { configurable: true, value: 400, writable: true },
+    });
+
+    expect(
+      screen.queryByRole("button", { name: "Zur neuesten Nachricht" }),
+    ).not.toBeInTheDocument();
+
+    transcript.scrollTop = 100;
+    fireEvent.scroll(transcript);
+    expect(screen.getByRole("button", { name: "Zur neuesten Nachricht" })).toBeVisible();
+
+    transcript.scrollTop = 400;
+    fireEvent.scroll(transcript);
+    expect(
+      screen.queryByRole("button", { name: "Zur neuesten Nachricht" }),
+    ).not.toBeInTheDocument();
+
+    transcript.scrollTop = 100;
+    fireEvent.scroll(transcript);
+    const latest = screen.getByRole("button", { name: "Zur neuesten Nachricht" });
+    await user.click(latest);
+    expect(
+      screen.queryByRole("button", { name: "Zur neuesten Nachricht" }),
+    ).not.toBeInTheDocument();
+  });
+
   it("keeps the Tutor Conversation when the Learner closes and reopens the same Card", async () => {
     const user = userEvent.setup();
     mockServer.use(

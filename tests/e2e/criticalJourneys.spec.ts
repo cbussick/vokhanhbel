@@ -815,9 +815,11 @@ test("gives the Tutor dialog full-screen chrome and a pinned composer on mobile"
   await expectMobileFullscreenDialog(dialog, 320, 700);
 
   const composer = dialog.getByLabel("Deine Nachricht");
+  const transcript = dialog.getByRole("region", { name: "Unterhaltung mit Tutopher" });
   const composerBox = await composer.boundingBox();
   expect(composerBox).not.toBeNull();
   await expect(composer).toHaveCSS("resize", "none");
+  await expect(dialog.getByRole("button", { name: "Zur neuesten Nachricht" })).toBeHidden();
 
   // A transcript long enough to scroll must not push the composer anywhere.
   for (let exchange = 1; exchange <= 4; exchange += 1) {
@@ -826,6 +828,26 @@ test("gives the Tutor dialog full-screen chrome and a pinned composer on mobile"
   }
 
   expect(await composer.boundingBox()).toEqual(composerBox);
+  const transcriptBox = await transcript.boundingBox();
+  await transcript.evaluate((element) => {
+    (element as { scrollTop: number }).scrollTop = 0;
+  });
+  const latest = dialog.getByRole("button", { name: "Zur neuesten Nachricht" });
+  await expect(latest).toBeVisible();
+  expect(await transcript.boundingBox()).toEqual(transcriptBox);
+  await expect(latest).toHaveCSS("position", "absolute");
+  await expect(latest.locator("svg")).toBeVisible();
+  await expect(page).toHaveScreenshot("tutor-latest-mobile.png", { animations: "disabled" });
+
+  await latest.click();
+  await expect(latest).toBeHidden();
+  await expect
+    .poll(() =>
+      transcript.evaluate(
+        (element) => element.scrollHeight - element.scrollTop - element.clientHeight,
+      ),
+    )
+    .toBeLessThan(48);
   await dialog.getByRole("button", { name: "Zurück" }).click();
   await expect(dialog).toBeHidden();
 });
