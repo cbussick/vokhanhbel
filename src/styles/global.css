@@ -153,11 +153,6 @@
     background: var(--color-primary);
     color: var(--color-primary-text);
   }
-
-  .mascot {
-    inline-size: 4.75rem;
-    block-size: 4.75rem;
-  }
 }
 
 @media (forced-colors: active) {

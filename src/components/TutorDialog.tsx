@@ -8,6 +8,7 @@ import { useOnlineStatus } from "../lib/browserState";
 import { publishSessionExpired } from "../lib/sessionEvents";
 import type { TutorConversationMessage } from "../state/ReviewSessionContext";
 import { Dialog } from "./Dialog";
+import { TutopherAvatar } from "./TutopherAvatar";
 import styles from "./TutorDialog.module.css";
 
 type RequestState =
@@ -282,14 +283,30 @@ export function TutorDialog({
       <div className={styles.conversation}>
         <p className={styles.disclosure}>{t("tutor.reliability")}</p>
         <div ref={scrollerRef} className={styles.messages} onScroll={onScroll}>
-          {messages.length === 0 && <p className={styles.disclosure}>{t("tutor.dataFlow")}</p>}
+          {messages.length === 0 && (
+            <div className={styles.emptyState}>
+              <TutopherAvatar size="large" />
+              <p className={styles.promptHint}>{t("tutor.promptHint")}</p>
+              <p className={styles.disclosure}>{t("tutor.dataFlow")}</p>
+            </div>
+          )}
           {messages.map((message, index) => (
             <article
               key={`${message.role}-${index}`}
               className={message.role === "user" ? styles.user : styles.assistant}
+              aria-label={message.role === "assistant" ? t("tutor.title") : undefined}
             >
-              <strong>{message.role === "user" ? "Khanh" : t("tutor.title")}</strong>
-              {message.content && <p>{message.content}</p>}
+              {message.role === "user" ? (
+                <>
+                  <strong>Khanh</strong>
+                  {message.content && <p>{message.content}</p>}
+                </>
+              ) : (
+                <>
+                  <TutopherAvatar size="small" />
+                  <div className={styles.reply}>{message.content && <p>{message.content}</p>}</div>
+                </>
+              )}
             </article>
           ))}
           {thinking && <p className={styles.thinking}>{t("tutor.thinking")}</p>}
@@ -319,7 +336,7 @@ export function TutorDialog({
             {t("tutor.latest")}
           </button>
         )}
-        <div className={styles.prompts}>
+        <div className={`${styles.prompts} ${messages.length === 0 ? styles.emptyPrompts : ""}`}>
           {(["simple", "example", "memory"] as const).map((key) => (
             <button
               key={key}
