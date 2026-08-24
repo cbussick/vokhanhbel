@@ -1,8 +1,9 @@
 {
   "$schema": "./node_modules/oxlint/configuration_schema.json",
   "plugins": ["typescript"],
+  "jsPlugins": [{ "name": "stylistic", "specifier": "@stylistic/eslint-plugin" }],
   "categories": {
-    "correctness": "off"
+    "correctness": "error"
   },
   "options": {
     "typeAware": true
@@ -174,6 +175,7 @@
         "jsx-a11y/autocomplete-valid": "error",
         "jsx-a11y/click-events-have-key-events": "error",
         "jsx-a11y/control-has-associated-label": "off",
+        "jsx-a11y/prefer-tag-over-role": "off",
         "jsx-a11y/heading-has-content": "error",
         "jsx-a11y/html-has-lang": "error",
         "jsx-a11y/iframe-has-title": "error",
@@ -272,6 +274,10 @@
         "jsx-a11y/scope": "error",
         "jsx-a11y/tabindex-no-positive": "error",
         "import/first": "warn",
+        "stylistic/padding-line-between-statements": [
+          "warn",
+          { "blankLine": "always", "prev": "*", "next": "return" }
+        ],
         "react/rules-of-hooks": "error",
         "react/exhaustive-deps": "warn",
         "react/static-components": "error",

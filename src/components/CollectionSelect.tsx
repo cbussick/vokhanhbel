@@ -90,7 +90,7 @@ export function CollectionSelect({
       now - typeAhead.current.lastKeyAt > typeAheadResetMilliseconds
         ? key
         : `${typeAhead.current.query}${key}`;
-    const query = [...accumulatedQuery].every((character) => character === key)
+    const query = accumulatedQuery.split(key).every((segment) => segment === "")
       ? key
       : accumulatedQuery;
     typeAhead.current = { query, lastKeyAt: now };
