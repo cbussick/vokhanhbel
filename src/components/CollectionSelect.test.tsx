@@ -61,10 +61,17 @@ describe("CollectionSelect", () => {
 
     await user.keyboard("e");
     expect(screen.getByRole("listbox")).toBeVisible();
-    expect(screen.getByRole("option", { name: "Englisch" })).toHaveAttribute(
+
+    // Type-ahead moves the cursor only. The Collection stays selected until the
+    // Learner confirms, so aria-selected must not follow the cursor.
+    const englisch = screen.getByRole("option", { name: "Englisch" });
+    expect(englisch).toHaveAttribute("data-active", "true");
+    expect(englisch).toHaveAttribute("aria-selected", "false");
+    expect(screen.getByRole("option", { name: "Vietnamesisch" })).toHaveAttribute(
       "aria-selected",
       "true",
     );
+    expect(combobox).toHaveAttribute("aria-activedescendant", englisch.id);
     expect(combobox).toHaveTextContent("Vietnamesisch");
 
     await user.tab();

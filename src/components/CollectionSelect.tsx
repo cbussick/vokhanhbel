@@ -209,7 +209,8 @@ export function CollectionSelect({
                 key={collection.id}
                 role="option"
                 className={styles.option}
-                aria-selected={isActive}
+                aria-selected={collection.id === value}
+                data-active={isActive || undefined}
                 onPointerDown={(event) => {
                   event.preventDefault();
                   select(index);
