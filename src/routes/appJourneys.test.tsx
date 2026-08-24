@@ -495,8 +495,8 @@ describe("rendered app journeys", () => {
     try {
       await renderApp("/review");
       await user.click(await screen.findByRole("button", { name: "Review starten" }));
-      await user.click(screen.getByRole("button", { name: "Antwort zeigen" }));
-      const tutor = await screen.findByRole("button", { name: "Tutopher fragen" });
+      await user.click(await screen.findByRole("button", { name: "Antwort zeigen" }));
+      const tutor = await screen.findByRole("button", { name: "Mit Tutopher reden" });
 
       expect(tutor).toBeEnabled();
       await user.click(tutor);
@@ -914,6 +914,59 @@ describe("rendered app journeys", () => {
     expect(screen.queryByText("dddddddd-dddd-4ddd-8ddd-dddddddddddd")).not.toBeInTheDocument();
   });
 
+  it("uses message copy for the Tutor conversation controls", async () => {
+    const user = userEvent.setup();
+    await renderApp("/review");
+    await user.click(await screen.findByRole("button", { name: "Review starten" }));
+    await user.click(await screen.findByRole("button", { name: "Antwort zeigen" }));
+
+    const tutor = await screen.findByRole("button", { name: "Mit Tutopher reden" });
+    await user.click(tutor);
+
+    const composer = await screen.findByLabelText("Deine Nachricht");
+
+    expect(composer).toBeVisible();
+    expect(getComputedStyle(composer).resize).toBe("none");
+    expect(screen.getByRole("button", { name: "Senden" })).toBeVisible();
+  });
+
+  it("keeps the AI warning visible while showing OpenAI data flow only at the start", async () => {
+    const user = userEvent.setup();
+    mockServer.use(
+      http.post(
+        "/api/cards/:cardId/tutor-replies",
+        () =>
+          new HttpResponse(
+            'event: delta\ndata: {"text":"Ein Beispiel"}\n\nevent: done\ndata: {"truncated":false}\n\n',
+            { headers: { "content-type": "text/event-stream" } },
+          ),
+      ),
+    );
+    await renderApp("/review");
+    await user.click(await screen.findByRole("button", { name: "Review starten" }));
+    await user.click(await screen.findByRole("button", { name: "Antwort zeigen" }));
+    await user.click(await screen.findByRole("button", { name: "Mit Tutopher reden" }));
+
+    const dialog = screen.getByRole("dialog", { name: "Tutopher" });
+    const transcript = dialog.querySelector('[aria-live="polite"]');
+    const warning = within(dialog).getByText("Tutopher ist eine KI und kann Fehler machen.");
+    const dataFlow = within(dialog).getByText(
+      "Nachrichten werden zur Beantwortung an OpenAI gesendet.",
+    );
+
+    expect(transcript).not.toContainElement(warning);
+    expect(transcript).toContainElement(dataFlow);
+
+    await user.click(within(dialog).getByRole("button", { name: "Einfach erklären" }));
+
+    expect(await within(dialog).findByText("Ein Beispiel")).toBeVisible();
+    expect(within(dialog).getByText("Tutopher ist eine KI und kann Fehler machen.")).toBeVisible();
+    expect(
+      within(dialog).queryByText("Nachrichten werden zur Beantwortung an OpenAI gesendet."),
+    ).not.toBeInTheDocument();
+    expect(within(dialog).getByText("Khanh")).toBeVisible();
+  });
+
   it("discards a partial failed Tutor answer and retains the question for retry", async () => {
     const user = userEvent.setup();
     mockServer.use(
@@ -929,10 +982,10 @@ describe("rendered app journeys", () => {
     await renderApp("/review");
     await user.click(await screen.findByRole("button", { name: "Review starten" }));
     await user.click(screen.getByRole("button", { name: "Antwort zeigen" }));
-    await user.click(await screen.findByRole("button", { name: "Tutopher fragen" }));
-    const question = await screen.findByLabelText("Deine Frage");
+    await user.click(await screen.findByRole("button", { name: "Mit Tutopher reden" }));
+    const question = await screen.findByLabelText("Deine Nachricht");
     await user.type(question, "Warum ist das so?");
-    await user.click(screen.getByRole("button", { name: "Fragen" }));
+    await user.click(screen.getByRole("button", { name: "Senden" }));
 
     expect(await screen.findByRole("alert")).toHaveTextContent("Versuch es noch einmal");
     expect(screen.queryByText("Teilantwort")).not.toBeInTheDocument();
@@ -958,9 +1011,9 @@ describe("rendered app journeys", () => {
     await renderApp("/review");
     await user.click(await screen.findByRole("button", { name: "Review starten" }));
     await user.click(screen.getByRole("button", { name: "Antwort zeigen" }));
-    await user.click(await screen.findByRole("button", { name: "Tutopher fragen" }));
-    await user.type(await screen.findByLabelText("Deine Frage"), "Warum?");
-    await user.click(screen.getByRole("button", { name: "Fragen" }));
+    await user.click(await screen.findByRole("button", { name: "Mit Tutopher reden" }));
+    await user.type(await screen.findByLabelText("Deine Nachricht"), "Warum?");
+    await user.click(screen.getByRole("button", { name: "Senden" }));
 
     expect(await screen.findByText(/Du wurdest abgemeldet/)).toBeVisible();
     expect(screen.queryByRole("dialog", { name: "Tutopher" })).not.toBeInTheDocument();
@@ -984,9 +1037,9 @@ describe("rendered app journeys", () => {
     await renderApp("/review");
     await user.click(await screen.findByRole("button", { name: "Review starten" }));
     await user.click(screen.getByRole("button", { name: "Antwort zeigen" }));
-    await user.click(await screen.findByRole("button", { name: "Tutopher fragen" }));
-    await user.type(await screen.findByLabelText("Deine Frage"), "Warum?");
-    await user.click(screen.getByRole("button", { name: "Fragen" }));
+    await user.click(await screen.findByRole("button", { name: "Mit Tutopher reden" }));
+    await user.type(await screen.findByLabelText("Deine Nachricht"), "Warum?");
+    await user.click(screen.getByRole("button", { name: "Senden" }));
 
     expect(await screen.findByRole("alert")).toHaveTextContent("(2 s)");
     expect(screen.getByRole("button", { name: "Erneut versuchen" })).toBeDisabled();

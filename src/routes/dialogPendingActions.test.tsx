@@ -114,7 +114,7 @@ describe("shared dialog chrome and pending actions", () => {
 
     await user.click(await screen.findByRole("button", { name: "Review starten" }));
     await user.click(await screen.findByRole("button", { name: "Antwort zeigen" }));
-    await user.click(await screen.findByRole("button", { name: "Tutopher fragen" }));
+    await user.click(await screen.findByRole("button", { name: "Mit Tutopher reden" }));
 
     const dialog = screen.getByRole("dialog", { name: "Tutopher" });
     expect(within(dialog).getByRole("button", { name: "Schließen" })).toBeEnabled();
@@ -148,7 +148,7 @@ describe("shared dialog chrome and pending actions", () => {
 
     await user.click(await screen.findByRole("button", { name: "Review starten" }));
     await user.click(await screen.findByRole("button", { name: "Antwort zeigen" }));
-    await user.click(await screen.findByRole("button", { name: "Tutopher fragen" }));
+    await user.click(await screen.findByRole("button", { name: "Mit Tutopher reden" }));
 
     const dialog = screen.getByRole("dialog", { name: "Tutopher" });
     expect(within(dialog).getByText(/Tutopher kann Aufnahmen nicht anhören/)).toBeVisible();

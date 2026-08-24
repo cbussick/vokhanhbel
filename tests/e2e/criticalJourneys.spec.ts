@@ -550,8 +550,8 @@ test("completes Review, Tutor, repeat-ready summary, and Me", async ({ page }) =
   await page.goto("/review");
   await page.getByRole("button", { name: "Review starten" }).click();
   await page.getByRole("button", { name: "Antwort zeigen" }).click();
-  await expect(page.getByRole("button", { name: "Tutopher fragen" })).toBeVisible();
-  await page.getByRole("button", { name: "Tutopher fragen" }).click();
+  await expect(page.getByRole("button", { name: "Mit Tutopher reden" })).toBeVisible();
+  await page.getByRole("button", { name: "Mit Tutopher reden" }).click();
   await page.getByRole("button", { name: "Einfach erklären" }).click();
   await expect(page.getByText("Ein Apfel ist eine Frucht.")).toBeVisible();
   await page.getByRole("button", { name: "Schließen" }).click();
@@ -809,13 +809,15 @@ test("gives the Tutor dialog full-screen chrome and a pinned composer on mobile"
   await page.goto("/review");
   await page.getByRole("button", { name: "Review starten" }).click();
   await page.getByRole("button", { name: "Antwort zeigen" }).click();
-  await page.getByRole("button", { name: "Tutopher fragen" }).click();
+  await page.getByRole("button", { name: "Mit Tutopher reden" }).click();
 
   const dialog = page.getByRole("dialog", { name: "Tutopher" });
   await expectMobileFullscreenDialog(dialog, 320, 700);
 
-  const composerBox = await dialog.getByLabel("Deine Frage").boundingBox();
+  const composer = dialog.getByLabel("Deine Nachricht");
+  const composerBox = await composer.boundingBox();
   expect(composerBox).not.toBeNull();
+  await expect(composer).toHaveCSS("resize", "none");
 
   // A transcript long enough to scroll must not push the composer anywhere.
   for (let exchange = 1; exchange <= 4; exchange += 1) {
@@ -823,7 +825,7 @@ test("gives the Tutor dialog full-screen chrome and a pinned composer on mobile"
     await expect(dialog.getByText("Ein Apfel ist eine Frucht.")).toHaveCount(exchange);
   }
 
-  expect(await dialog.getByLabel("Deine Frage").boundingBox()).toEqual(composerBox);
+  expect(await composer.boundingBox()).toEqual(composerBox);
   await dialog.getByRole("button", { name: "Zurück" }).click();
   await expect(dialog).toBeHidden();
 });
@@ -864,7 +866,7 @@ for (const viewport of [
     await expect(page).toHaveScreenshot(`review-back-${viewport.name}.png`, {
       animations: "disabled",
     });
-    await page.getByRole("button", { name: "Tutopher fragen" }).click();
+    await page.getByRole("button", { name: "Mit Tutopher reden" }).click();
     await expect(page.getByRole("heading", { name: "Tutopher" })).toBeVisible();
     await expect(page).toHaveScreenshot(`tutor-${viewport.name}.png`, {
       animations: "disabled",
