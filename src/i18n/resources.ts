@@ -206,6 +206,7 @@ export const de = {
     tutor: {
       open: "Mit Tutopher reden",
       title: "Tutopher",
+      conversation: "Unterhaltung mit Tutopher",
       reliability: "Tutopher ist eine KI und kann Fehler machen.",
       dataFlow: "Nachrichten werden zur Beantwortung an OpenAI gesendet.",
       promptHint: "Tippe auf eine Frage – sie wird sofort gesendet.",
