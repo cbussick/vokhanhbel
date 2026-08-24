@@ -9,6 +9,7 @@ test-results/
 !.env.preview-migration.example
 !.env.production-migration.example
 .secrets/
+.scratch/
 *.dump
 *.dump.age
 .DS_Store
