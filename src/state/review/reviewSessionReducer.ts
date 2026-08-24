@@ -6,6 +6,7 @@ export type ReviewSubmissionIssue = "too-old" | "clock" | "deleted" | "conflict"
 interface ReviewSession {
   id: string;
   cards: Card[];
+  cardAttemptNumber: number;
   roundSubmissions: ReviewSubmission[];
   totalReviewSubmissions: number;
   optimisticPoints: number;
@@ -60,6 +61,7 @@ export function reviewSessionReducer(
         reviewSession: {
           id: action.reviewSessionId,
           cards: action.cards,
+          cardAttemptNumber: 1,
           roundSubmissions: [],
           totalReviewSubmissions: 0,
           optimisticPoints: 0,
@@ -76,6 +78,7 @@ export function reviewSessionReducer(
       if (state.status !== "reviewing") return state;
       const reviewSession = {
         ...state.reviewSession,
+        cardAttemptNumber: state.reviewSession.cardAttemptNumber + 1,
         roundSubmissions: [...state.reviewSession.roundSubmissions, action.submission],
         totalReviewSubmissions: state.reviewSession.totalReviewSubmissions + 1,
         optimisticPoints: state.reviewSession.optimisticPoints + action.submission.optimisticPoints,
@@ -96,7 +99,11 @@ export function reviewSessionReducer(
     case "cardSkipped": {
       if (state.status !== "reviewing") return state;
       const cards = state.reviewSession.cards.filter((_, index) => index !== state.currentIndex);
-      const reviewSession = { ...state.reviewSession, cards };
+      const reviewSession = {
+        ...state.reviewSession,
+        cards,
+        cardAttemptNumber: state.reviewSession.cardAttemptNumber + 1,
+      };
 
       if (cards.length === 0 || state.currentIndex >= cards.length)
         return { status: "summary", reviewSession };
@@ -123,6 +130,7 @@ export function reviewSessionReducer(
         reviewSession: {
           ...state.reviewSession,
           cards: forgotten,
+          cardAttemptNumber: state.reviewSession.cardAttemptNumber + 1,
           roundSubmissions: [],
           roundNumber: state.reviewSession.roundNumber + 1,
         },
@@ -142,6 +150,7 @@ export function reviewSessionReducer(
       );
       const reviewSession = {
         ...state.reviewSession,
+        cardAttemptNumber: state.reviewSession.cardAttemptNumber + 1,
         roundSubmissions,
         totalReviewSubmissions: Math.max(0, state.reviewSession.totalReviewSubmissions - 1),
         optimisticPoints: Math.max(

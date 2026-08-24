@@ -23,6 +23,13 @@ async function cardDialogReady() {
   return dialog;
 }
 
+function completedTutorReply(text: string) {
+  return new HttpResponse(
+    `event: delta\ndata: ${JSON.stringify({ text })}\n\nevent: done\ndata: {"truncated":false}\n\n`,
+    { headers: { "content-type": "text/event-stream" } },
+  );
+}
+
 describe("rendered app journeys", () => {
   it("logs in without trimming the shared password", async () => {
     const user = userEvent.setup();
@@ -912,6 +919,156 @@ describe("rendered app journeys", () => {
 
     expect(await screen.findByText(/Du wurdest abgemeldet/)).toBeVisible();
     expect(screen.queryByText("dddddddd-dddd-4ddd-8ddd-dddddddddddd")).not.toBeInTheDocument();
+  });
+
+  it("keeps the Tutor Conversation when the Learner closes and reopens the same Card", async () => {
+    const user = userEvent.setup();
+    mockServer.use(
+      http.post("/api/cards/:cardId/tutor-replies", () =>
+        completedTutorReply("Das ist die Antwort."),
+      ),
+    );
+    await renderApp("/review");
+    await user.click(await screen.findByRole("button", { name: "Review starten" }));
+    await user.click(await screen.findByRole("button", { name: "Antwort zeigen" }));
+    await user.click(await screen.findByRole("button", { name: "Tutopher fragen" }));
+    await user.type(await screen.findByLabelText("Deine Frage"), "Warum?");
+    await user.click(screen.getByRole("button", { name: "Fragen" }));
+    expect(await screen.findByText("Das ist die Antwort.")).toBeVisible();
+
+    await user.click(screen.getByRole("button", { name: "Schließen" }));
+    await user.click(screen.getByRole("button", { name: "Tutopher fragen" }));
+
+    expect(await screen.findByText("Warum?")).toBeVisible();
+    expect(screen.getByText("Das ist die Antwort.")).toBeVisible();
+  });
+
+  it("starts a fresh Tutor Conversation after advancing to another Card", async () => {
+    const user = userEvent.setup();
+    const secondCard = {
+      ...testCards[1]!,
+      dueAt: testCards[0]!.dueAt,
+      front: "Second due Card",
+    };
+    mockServer.use(
+      http.get("/api/cards", () => HttpResponse.json([testCards[0], secondCard])),
+      http.post("/api/cards/:cardId/tutor-replies", () => completedTutorReply("Erste Antwort")),
+    );
+    await renderApp("/review");
+    await user.click(await screen.findByRole("button", { name: "Review starten" }));
+    await user.click(await screen.findByRole("button", { name: "Antwort zeigen" }));
+    await user.click(await screen.findByRole("button", { name: "Tutopher fragen" }));
+    await user.type(await screen.findByLabelText("Deine Frage"), "Erste Frage");
+    await user.click(screen.getByRole("button", { name: "Fragen" }));
+    expect(await screen.findByText("Erste Antwort")).toBeVisible();
+    await user.click(screen.getByRole("button", { name: "Schließen" }));
+
+    await user.click(screen.getByRole("button", { name: /Gewusst/ }));
+    expect(await screen.findByText("Second due Card")).toBeVisible();
+    await user.click(screen.getByRole("button", { name: "Antwort zeigen" }));
+    await user.click(await screen.findByRole("button", { name: "Tutopher fragen" }));
+
+    expect(screen.queryByText("Erste Frage")).not.toBeInTheDocument();
+    expect(screen.queryByText("Erste Antwort")).not.toBeInTheDocument();
+  });
+
+  it("starts a fresh Tutor Conversation when a forgotten Card repeats", async () => {
+    const user = userEvent.setup();
+    mockServer.use(
+      http.post("/api/cards/:cardId/tutor-replies", () =>
+        completedTutorReply("Antwort aus Runde eins"),
+      ),
+    );
+    await renderApp("/review");
+    await user.click(await screen.findByRole("button", { name: "Review starten" }));
+    await user.click(await screen.findByRole("button", { name: "Antwort zeigen" }));
+    await user.click(await screen.findByRole("button", { name: "Tutopher fragen" }));
+    await user.type(await screen.findByLabelText("Deine Frage"), "Frage aus Runde eins");
+    await user.click(screen.getByRole("button", { name: "Fragen" }));
+    expect(await screen.findByText("Antwort aus Runde eins")).toBeVisible();
+    await user.click(screen.getByRole("button", { name: "Schließen" }));
+
+    await user.click(screen.getByRole("button", { name: "Vergessen" }));
+    await user.click(await screen.findByRole("button", { name: "Vergessene wiederholen" }));
+    await user.click(screen.getByRole("button", { name: "Antwort zeigen" }));
+    await user.click(await screen.findByRole("button", { name: "Tutopher fragen" }));
+
+    expect(screen.queryByText("Frage aus Runde eins")).not.toBeInTheDocument();
+    expect(screen.queryByText("Antwort aus Runde eins")).not.toBeInTheDocument();
+  });
+
+  it("aborts and rolls back a partial Tutor reply when the dialog closes", async () => {
+    const user = userEvent.setup();
+    let requestAborted = false;
+    mockServer.use(
+      http.post("/api/cards/:cardId/tutor-replies", ({ request }) => {
+        const stream = new ReadableStream<Uint8Array>({
+          start(controller) {
+            controller.enqueue(
+              new TextEncoder().encode('event: delta\ndata: {"text":"Teilantwort"}\n\n'),
+            );
+            request.signal.addEventListener(
+              "abort",
+              () => {
+                requestAborted = true;
+                controller.close();
+              },
+              { once: true },
+            );
+          },
+        });
+
+        return new HttpResponse(stream, { headers: { "content-type": "text/event-stream" } });
+      }),
+    );
+    await renderApp("/review");
+    await user.click(await screen.findByRole("button", { name: "Review starten" }));
+    await user.click(await screen.findByRole("button", { name: "Antwort zeigen" }));
+    await user.click(await screen.findByRole("button", { name: "Tutopher fragen" }));
+    await user.type(await screen.findByLabelText("Deine Frage"), "Abgebrochene Frage");
+    await user.click(screen.getByRole("button", { name: "Fragen" }));
+    expect(await screen.findByText("Teilantwort")).toBeVisible();
+
+    await user.click(screen.getByRole("button", { name: "Schließen" }));
+    await waitFor(() => expect(requestAborted).toBe(true));
+    await user.click(screen.getByRole("button", { name: "Tutopher fragen" }));
+
+    expect(screen.queryByText("Abgebrochene Frage")).not.toBeInTheDocument();
+    expect(screen.queryByText("Teilantwort")).not.toBeInTheDocument();
+  });
+
+  it("announces a Tutor reply only after streaming completes", async () => {
+    const user = userEvent.setup();
+    let finishReply!: () => void;
+    mockServer.use(
+      http.post("/api/cards/:cardId/tutor-replies", () => {
+        const stream = new ReadableStream<Uint8Array>({
+          start(controller) {
+            const encoder = new TextEncoder();
+            controller.enqueue(encoder.encode('event: delta\ndata: {"text":"Ganze Antwort"}\n\n'));
+            finishReply = () => {
+              controller.enqueue(encoder.encode('event: done\ndata: {"truncated":false}\n\n'));
+              controller.close();
+            };
+          },
+        });
+
+        return new HttpResponse(stream, { headers: { "content-type": "text/event-stream" } });
+      }),
+    );
+    await renderApp("/review");
+    await user.click(await screen.findByRole("button", { name: "Review starten" }));
+    await user.click(await screen.findByRole("button", { name: "Antwort zeigen" }));
+    await user.click(await screen.findByRole("button", { name: "Tutopher fragen" }));
+    await user.type(await screen.findByLabelText("Deine Frage"), "Bitte erklären");
+    await user.click(screen.getByRole("button", { name: "Fragen" }));
+
+    const partialReply = await screen.findByText("Ganze Antwort");
+    expect(partialReply.closest("div")).not.toHaveAttribute("aria-live");
+    expect(screen.getByRole("status")).toBeEmptyDOMElement();
+
+    act(() => finishReply());
+    expect(await screen.findByRole("status")).toHaveTextContent("Tutopher: Ganze Antwort");
   });
 
   it("discards a partial failed Tutor answer and retains the question for retry", async () => {

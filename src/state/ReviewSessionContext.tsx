@@ -1,4 +1,4 @@
-import { createContext, type ReactNode, useContext, useReducer } from "react";
+import { createContext, type ReactNode, useContext, useReducer, useState } from "react";
 import { apiPaths } from "../contracts/apiPaths";
 import type { Card } from "../contracts/card";
 import { problemTypes } from "../contracts/problem";
@@ -27,6 +27,7 @@ interface CardView {
   revealed: boolean;
   issue: ReviewSubmissionIssue | undefined;
   issueRequestId: string | undefined;
+  tutorConversation: TutorConversationMessage[];
 }
 
 interface SummaryView {
@@ -39,6 +40,11 @@ interface SummaryView {
 
 export type ReviewSessionView = IdleView | CardView | SummaryView;
 
+export interface TutorConversationMessage {
+  role: "user" | "assistant";
+  content: string;
+}
+
 interface ReviewSessionContextValue {
   view: ReviewSessionView;
   startReviewSession: (cards: Card[]) => void;
@@ -47,6 +53,9 @@ interface ReviewSessionContextValue {
   skipCard: () => void;
   repeatForgotten: () => void;
   leaveReviewSession: () => void;
+  updateTutorConversation: (
+    update: (messages: TutorConversationMessage[]) => TutorConversationMessage[],
+  ) => void;
 }
 
 const ReviewSessionContext = createContext<ReviewSessionContextValue | undefined>(undefined);
@@ -65,7 +74,16 @@ function getRequestId(error: unknown): string | undefined {
   return error instanceof ApiError ? error.requestId : undefined;
 }
 
-function toReviewSessionView(state: ReviewSessionState): ReviewSessionView {
+function getCardAttemptKey(state: ReviewSessionState): string | undefined {
+  if (state.status !== "reviewing") return undefined;
+
+  return `${state.reviewSession.id}:${state.reviewSession.cardAttemptNumber}`;
+}
+
+function toReviewSessionView(
+  state: ReviewSessionState,
+  tutorConversation: { attemptKey: string; messages: TutorConversationMessage[] },
+): ReviewSessionView {
   if (state.status === "idle") return { kind: "idle" };
   if (state.status === "summary") {
     return {
@@ -91,11 +109,17 @@ function toReviewSessionView(state: ReviewSessionState): ReviewSessionView {
     revealed: state.revealed,
     issue: state.issue,
     issueRequestId: state.issueRequestId,
+    tutorConversation:
+      tutorConversation.attemptKey === getCardAttemptKey(state) ? tutorConversation.messages : [],
   };
 }
 
 export function ReviewSessionProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(reviewSessionReducer, idleReviewSessionState);
+  const [tutorConversation, setTutorConversation] = useState<{
+    attemptKey: string;
+    messages: TutorConversationMessage[];
+  }>({ attemptKey: "", messages: [] });
   const { enqueueSubmission } = useReviewSubmissions();
 
   const handleRejectedReviewSubmission = (submission: ReviewSubmission, error: unknown) => {
@@ -171,15 +195,28 @@ export function ReviewSessionProvider({ children }: { children: ReactNode }) {
   const repeatForgotten = () => dispatch({ type: "forgottenRepeated" });
   const skipCard = () => dispatch({ type: "cardSkipped" });
   const leaveReviewSession = () => dispatch({ type: "reviewSessionLeft" });
+  const updateTutorConversation = (
+    update: (messages: TutorConversationMessage[]) => TutorConversationMessage[],
+  ) => {
+    const attemptKey = getCardAttemptKey(state);
+
+    if (!attemptKey) return;
+
+    setTutorConversation((current) => ({
+      attemptKey,
+      messages: update(current.attemptKey === attemptKey ? current.messages : []),
+    }));
+  };
 
   const value: ReviewSessionContextValue = {
-    view: toReviewSessionView(state),
+    view: toReviewSessionView(state, tutorConversation),
     startReviewSession,
     revealAnswer,
     gradeCard,
     skipCard,
     repeatForgotten,
     leaveReviewSession,
+    updateTutorConversation,
   };
 
   return <ReviewSessionContext.Provider value={value}>{children}</ReviewSessionContext.Provider>;
