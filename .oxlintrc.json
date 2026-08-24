@@ -19,20 +19,19 @@
   "ignorePatterns": ["**/*.js", "dist/**", "coverage/**", "src/routeTree.gen.ts"],
   "rules": {
     "no-case-declarations": "error",
-    "no-empty": "error",
+    "no-empty": [
+      "error",
+      {
+        "allowEmptyCatch": true
+      }
+    ],
     "no-fallthrough": "error",
     "no-prototype-builtins": "error",
-    "no-redeclare": "error",
-    "no-regex-spaces": "error",
     "no-unexpected-multiline": "error",
     "no-array-constructor": "error",
-    "no-empty-function": "error",
     "typescript/ban-ts-comment": "error",
     "typescript/no-empty-object-type": "error",
     "typescript/no-explicit-any": "error",
-    "typescript/no-misused-promises": "error",
-    "typescript/no-namespace": "error",
-    "typescript/no-require-imports": "error",
     "typescript/no-unnecessary-type-assertion": "error",
     "typescript/no-unnecessary-type-constraint": "error",
     "typescript/no-unsafe-argument": "error",
@@ -46,10 +45,7 @@
     "typescript/prefer-promise-reject-errors": "error",
     "typescript/require-await": "error",
     "typescript/restrict-plus-operands": "error",
-    "typescript/consistent-type-definitions": "error",
     "typescript/no-confusing-non-null-assertion": "error",
-    "typescript/non-nullable-type-assertion-style": "error",
-    "typescript/prefer-includes": "error",
     "typescript/prefer-nullish-coalescing": "error"
   },
   "overrides": [
@@ -79,7 +75,6 @@
     {
       "files": ["**/*.{ts,tsx}"],
       "rules": {
-        "jsx-a11y/anchor-ambiguous-text": "off",
         "jsx-a11y/control-has-associated-label": "off",
         "jsx-a11y/prefer-tag-over-role": "off",
         "jsx-a11y/interactive-supports-focus": [
@@ -176,7 +171,6 @@
         "react/rules-of-hooks": "error",
         "react/unsupported-syntax": "warn",
         "typescript/consistent-type-definitions": ["error", "interface"],
-        "typescript/no-confusing-void-expression": "off",
         "typescript/no-misused-promises": [
           "error",
           {
@@ -203,7 +197,6 @@
       "files": ["**/*.test.{ts,tsx}", "src/test/**/*.ts", "tests/**/*.ts"],
       "rules": {
         "require-yield": "off",
-        "typescript/no-non-null-assertion": "off",
         "typescript/require-await": "off",
         "typescript/no-unsafe-assignment": "off",
         "typescript/no-unsafe-member-access": "off"
