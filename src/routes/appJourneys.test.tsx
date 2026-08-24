@@ -30,6 +30,26 @@ function completedTutorReply(text: string) {
   );
 }
 
+function partialTutorReply(request: Request, onAbort: () => void) {
+  const stream = new ReadableStream<Uint8Array>({
+    start(controller) {
+      controller.enqueue(
+        new TextEncoder().encode('event: delta\ndata: {"text":"Teilantwort"}\n\n'),
+      );
+      request.signal.addEventListener(
+        "abort",
+        () => {
+          onAbort();
+          controller.close();
+        },
+        { once: true },
+      );
+    },
+  });
+
+  return new HttpResponse(stream, { headers: { "content-type": "text/event-stream" } });
+}
+
 describe("rendered app journeys", () => {
   it("logs in without trimming the shared password", async () => {
     const user = userEvent.setup();
@@ -1126,25 +1146,11 @@ describe("rendered app journeys", () => {
     const user = userEvent.setup();
     let requestAborted = false;
     mockServer.use(
-      http.post("/api/cards/:cardId/tutor-replies", ({ request }) => {
-        const stream = new ReadableStream<Uint8Array>({
-          start(controller) {
-            controller.enqueue(
-              new TextEncoder().encode('event: delta\ndata: {"text":"Teilantwort"}\n\n'),
-            );
-            request.signal.addEventListener(
-              "abort",
-              () => {
-                requestAborted = true;
-                controller.close();
-              },
-              { once: true },
-            );
-          },
-        });
-
-        return new HttpResponse(stream, { headers: { "content-type": "text/event-stream" } });
-      }),
+      http.post("/api/cards/:cardId/tutor-replies", ({ request }) =>
+        partialTutorReply(request, () => {
+          requestAborted = true;
+        }),
+      ),
     );
     await renderApp("/review");
     await user.click(await screen.findByRole("button", { name: "Review starten" }));
@@ -1160,6 +1166,30 @@ describe("rendered app journeys", () => {
 
     expect(screen.queryByText("Abgebrochene Frage")).not.toBeInTheDocument();
     expect(screen.queryByText("Teilantwort")).not.toBeInTheDocument();
+  });
+
+  it("aborts a partial Tutor reply when navigation unmounts the dialog", async () => {
+    const user = userEvent.setup();
+    let requestAborted = false;
+    mockServer.use(
+      http.post("/api/cards/:cardId/tutor-replies", ({ request }) =>
+        partialTutorReply(request, () => {
+          requestAborted = true;
+        }),
+      ),
+    );
+    const { router } = await renderApp("/review");
+    await user.click(await screen.findByRole("button", { name: "Review starten" }));
+    await user.click(await screen.findByRole("button", { name: "Antwort zeigen" }));
+    await user.click(await screen.findByRole("button", { name: "Mit Tutopher reden" }));
+    await user.type(await screen.findByLabelText("Deine Nachricht"), "Abgebrochene Frage");
+    await user.click(screen.getByRole("button", { name: "Senden" }));
+    expect(await screen.findByText("Teilantwort")).toBeVisible();
+
+    await act(async () => {
+      await router.navigate({ to: "/review" });
+    });
+    await waitFor(() => expect(requestAborted).toBe(true));
   });
 
   it("announces a Tutor reply only after streaming completes", async () => {

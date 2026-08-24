@@ -43,9 +43,7 @@ export function TutorDialog({
   const { t } = useTranslation();
 
   const dialogRef = useRef<HTMLDialogElement>(null);
-  const activeRequestRef = useRef<
-    { controller: AbortController; historyLength: number } | undefined
-  >(undefined);
+  const activeRequestRef = useRef<{ abort: () => void } | undefined>(undefined);
   const scrollerRef = useRef<HTMLDivElement>(null);
   const endRef = useRef<HTMLDivElement>(null);
 
@@ -97,7 +95,7 @@ export function TutorDialog({
     return () => window.clearInterval(timer);
   }, [retryAfter]);
 
-  useEffect(() => () => activeRequestRef.current?.controller.abort(), []);
+  useEffect(() => () => activeRequestRef.current?.abort(), []);
 
   // messages and thinking are deliberate triggers, not values the callback reads: they are what
   // makes the view follow a new Tutor reply. Removing them would only scroll when the Learner
@@ -108,13 +106,7 @@ export function TutorDialog({
   }, [messages, following, thinking]);
 
   const close = () => {
-    const activeRequest = activeRequestRef.current;
-
-    if (activeRequest) {
-      activeRequest.controller.abort();
-      updateMessages((items) => items.slice(0, activeRequest.historyLength));
-      activeRequestRef.current = undefined;
-    }
+    activeRequestRef.current?.abort();
 
     dialogRef.current?.close();
     onClose();
@@ -129,7 +121,13 @@ export function TutorDialog({
     const input: TutorInput = { message: trimmed, messages };
     const controller = new AbortController();
 
-    activeRequestRef.current = { controller, historyLength };
+    activeRequestRef.current = {
+      abort: () => {
+        controller.abort();
+        updateMessages((items) => items.slice(0, historyLength));
+        activeRequestRef.current = undefined;
+      },
+    };
     setQuestion("");
     setAnnouncement("");
     setTruncated(false);
