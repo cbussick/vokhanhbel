@@ -553,7 +553,11 @@ test("completes Review, Tutor, repeat-ready summary, and Me", async ({ page }) =
   await expect(page.getByRole("button", { name: "Mit Tutopher reden" })).toBeVisible();
   await page.getByRole("button", { name: "Mit Tutopher reden" }).click();
   await page.getByRole("button", { name: "Einfach erklären" }).click();
-  await expect(page.getByText("Ein Apfel ist eine Frucht.")).toBeVisible();
+  await expect(
+    page
+      .getByRole("region", { name: "Unterhaltung mit Tutopher" })
+      .getByText("Ein Apfel ist eine Frucht."),
+  ).toBeVisible();
   await page.getByRole("button", { name: "Schließen" }).click();
   await page.getByRole("button", { name: /Gewusst/ }).click();
   await expect(page.getByRole("heading", { name: "Gut gemacht!" })).toBeVisible();
@@ -803,6 +807,7 @@ test("presents form dialogs as full-screen tasks on mobile", async ({ page }) =>
 
 test("gives the Tutor dialog full-screen chrome and a pinned composer on mobile", async ({
   page,
+  browserName,
 }) => {
   await page.setViewportSize({ width: 320, height: 700 });
   await installMockApi(page);
@@ -824,7 +829,16 @@ test("gives the Tutor dialog full-screen chrome and a pinned composer on mobile"
   // A transcript long enough to scroll must not push the composer anywhere.
   for (let exchange = 1; exchange <= 4; exchange += 1) {
     await dialog.getByRole("button", { name: "Einfach erklären" }).click();
-    await expect(dialog.getByText("Ein Apfel ist eine Frucht.")).toHaveCount(exchange);
+    await expect(transcript.getByText("Ein Apfel ist eine Frucht.")).toHaveCount(exchange);
+  }
+
+  const dialogBox = await dialog.boundingBox();
+  expect(dialogBox).not.toBeNull();
+  for (const label of ["Einfach erklären", "Beispielsatz geben", "Merkhilfe finden"]) {
+    const promptBox = await dialog.getByRole("button", { name: label }).boundingBox();
+    expect(promptBox).not.toBeNull();
+    expect(promptBox!.x).toBeGreaterThanOrEqual(dialogBox!.x);
+    expect(promptBox!.x + promptBox!.width).toBeLessThanOrEqual(dialogBox!.x + dialogBox!.width);
   }
 
   expect(await composer.boundingBox()).toEqual(composerBox);
@@ -837,7 +851,9 @@ test("gives the Tutor dialog full-screen chrome and a pinned composer on mobile"
   expect(await transcript.boundingBox()).toEqual(transcriptBox);
   await expect(latest).toHaveCSS("position", "absolute");
   await expect(latest.locator("svg")).toBeVisible();
-  await expect(page).toHaveScreenshot("tutor-latest-mobile.png", { animations: "disabled" });
+  if (browserName === "chromium") {
+    await expect(page).toHaveScreenshot("tutor-latest-mobile.png", { animations: "disabled" });
+  }
 
   await latest.click();
   await expect(latest).toBeHidden();

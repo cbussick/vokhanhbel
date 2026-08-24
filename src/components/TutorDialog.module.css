@@ -12,6 +12,7 @@
 }
 
 .conversation {
+  min-inline-size: 0;
   block-size: 100%;
   display: grid;
   grid-template-rows: auto minmax(0, 1fr) auto;
@@ -37,6 +38,7 @@
 
 .transcript {
   position: relative;
+  min-inline-size: 0;
   min-block-size: 0;
 }
 
@@ -130,10 +132,12 @@
   box-shadow: var(--shadow-medium);
   color: var(--color-primary-text);
   font-weight: 800;
+  white-space: nowrap;
   translate: -50% 0;
 }
 
 .latest svg {
+  flex-shrink: 0;
   inline-size: 1.25rem;
   block-size: 1.25rem;
   fill: none;
@@ -144,15 +148,14 @@
 }
 
 .prompts {
+  min-inline-size: 0;
   display: flex;
+  flex-wrap: wrap;
   gap: var(--space-2);
-  overflow-x: auto;
 }
 
 .emptyPrompts {
-  flex-wrap: wrap;
   justify-content: center;
-  overflow: visible;
 }
 
 .prompts button {
@@ -165,6 +168,7 @@
 }
 
 .composer {
+  min-inline-size: 0;
   display: grid;
   grid-template-columns: 1fr auto;
   gap: var(--space-2);
@@ -177,6 +181,7 @@
 }
 
 .composer textarea {
+  min-inline-size: 0;
   min-block-size: 52px;
   max-block-size: 8rem;
   resize: none;
