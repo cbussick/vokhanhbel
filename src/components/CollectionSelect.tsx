@@ -1,11 +1,10 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { Collection } from "../contracts/collection";
+import { nextTypeAheadState, type TypeAheadState } from "../lib/typeAhead";
 import { AddIcon } from "./AddIcon";
 import { CollectionIcon } from "./CollectionIcon";
 import styles from "./CollectionSelect.module.css";
-
-const typeAheadResetMilliseconds = 500;
 
 export function CollectionSelect({
   id,
@@ -28,7 +27,7 @@ export function CollectionSelect({
   const listboxId = useId();
   const rootRef = useRef<HTMLDivElement>(null);
   const optionRefs = useRef<(HTMLLIElement | null)[]>([]);
-  const typeAhead = useRef({ query: "", lastKeyAt: 0 });
+  const typeAhead = useRef<TypeAheadState>({ query: "", lastKeyAt: 0 });
   const [isOpen, setIsOpen] = useState(false);
   const canCreate = Boolean(onCreate);
   const createIndex = collections.length;
@@ -85,15 +84,8 @@ export function CollectionSelect({
   };
 
   const matchTypeAhead = (key: string) => {
-    const now = Date.now();
-    const accumulatedQuery =
-      now - typeAhead.current.lastKeyAt > typeAheadResetMilliseconds
-        ? key
-        : `${typeAhead.current.query}${key}`;
-    const query = accumulatedQuery.split(key).every((segment) => segment === "")
-      ? key
-      : accumulatedQuery;
-    typeAhead.current = { query, lastKeyAt: now };
+    typeAhead.current = nextTypeAheadState(typeAhead.current, key);
+    const { query } = typeAhead.current;
 
     const startIndex = isOpen ? activeIndex : Math.max(selectedIndex, 0);
     const matchOffset = Array.from({ length: collections.length }, (_, offset) =>
