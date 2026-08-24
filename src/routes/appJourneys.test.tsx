@@ -1159,7 +1159,7 @@ describe("rendered app journeys", () => {
     expect(await screen.findByRole("status")).toHaveTextContent("Tutopher: Ganze Antwort");
   });
 
-  it("keeps the AI warning visible while showing OpenAI data flow only at the start", async () => {
+  it("guides a fresh Tutor Conversation and keeps prompt chips available after a reply", async () => {
     const user = userEvent.setup();
     mockServer.use(
       http.post("/api/cards/:cardId/tutor-replies", () => completedTutorReply("Ein Beispiel")),
@@ -1171,22 +1171,32 @@ describe("rendered app journeys", () => {
 
     const dialog = screen.getByRole("dialog", { name: "Tutopher" });
     const warning = within(dialog).getByText("Tutopher ist eine KI und kann Fehler machen.");
+    const promptHint = within(dialog).getByText("Tippe auf eine Frage – sie wird sofort gesendet.");
     const dataFlow = within(dialog).getByText(
       "Nachrichten werden zur Beantwortung an OpenAI gesendet.",
     );
     const transcript = dataFlow.parentElement;
+    const emptyStateAvatar = dialog.querySelector('svg[viewBox="0 0 64 64"]');
 
     expect(transcript).not.toContainElement(warning);
     expect(transcript).toContainElement(dataFlow);
+    expect(promptHint).toBeVisible();
+    expect(emptyStateAvatar).toBeVisible();
 
     await user.click(within(dialog).getByRole("button", { name: "Einfach erklären" }));
 
-    expect(await within(dialog).findByText("Ein Beispiel")).toBeVisible();
+    const reply = await within(dialog).findByText("Ein Beispiel");
+    const replyArticle = reply.closest("article");
+
     expect(warning).toBeVisible();
     expect(
       within(dialog).queryByText("Nachrichten werden zur Beantwortung an OpenAI gesendet."),
     ).not.toBeInTheDocument();
     expect(within(dialog).getByText("Khanh")).toBeVisible();
+    expect(within(dialog).getByRole("button", { name: "Einfach erklären" })).toBeEnabled();
+    expect(replyArticle).toHaveAccessibleName("Tutopher");
+    expect(replyArticle?.querySelector("svg")).toBeVisible();
+    expect(within(replyArticle as HTMLElement).queryByText("Tutopher")).not.toBeInTheDocument();
   });
 
   it("discards a partial failed Tutor answer and retains the question for retry", async () => {

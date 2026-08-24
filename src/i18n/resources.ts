@@ -208,6 +208,7 @@ export const de = {
       title: "Tutopher",
       reliability: "Tutopher ist eine KI und kann Fehler machen.",
       dataFlow: "Nachrichten werden zur Beantwortung an OpenAI gesendet.",
+      promptHint: "Tippe auf eine Frage – sie wird sofort gesendet.",
       simple: "Einfach erklären",
       example: "Beispielsatz geben",
       memory: "Merkhilfe finden",

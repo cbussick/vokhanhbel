@@ -49,29 +49,56 @@
   scroll-behavior: auto;
 }
 
+.emptyState {
+  min-block-size: 100%;
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  text-align: center;
+}
+
+.promptHint {
+  max-inline-size: 24rem;
+  font-family: var(--font-display);
+  font-size: var(--font-xl);
+  font-weight: 700;
+  line-height: 1.3;
+}
+
 .messages article {
   max-inline-size: 88%;
-  padding: var(--space-3);
-  border-radius: var(--radius-medium);
   white-space: pre-line;
   overflow-wrap: anywhere;
 }
 
-.messages article strong {
-  font-size: var(--font-xs);
-}
-
-.messages article p {
-  margin-block-start: var(--space-1);
-}
-
 .user {
   justify-self: end;
+  padding: var(--space-3);
+  border-radius: var(--radius-medium);
   background: var(--color-primary);
 }
 
+.user strong {
+  font-size: var(--font-xs);
+}
+
+.user p {
+  margin-block-start: var(--space-1);
+}
+
 .assistant {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
   justify-self: start;
+}
+
+.reply {
+  min-block-size: 2.25rem;
+  padding: var(--space-3);
+  border-radius: var(--radius-medium);
   background: var(--color-divider);
 }
 
@@ -97,6 +124,12 @@
   display: flex;
   gap: var(--space-2);
   overflow-x: auto;
+}
+
+.emptyPrompts {
+  flex-wrap: wrap;
+  justify-content: center;
+  overflow: visible;
 }
 
 .prompts button {
