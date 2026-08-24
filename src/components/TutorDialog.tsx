@@ -6,12 +6,10 @@ import { problemSchema, problemTypes } from "../contracts/problem";
 import { tutorLimits, tutorStreamEventSchema, type TutorInput } from "../contracts/tutor";
 import { useOnlineStatus } from "../lib/browserState";
 import { publishSessionExpired } from "../lib/sessionEvents";
+import type { TutorConversationMessage } from "../state/ReviewSessionContext";
+import { Dialog } from "./Dialog";
+import { TutopherAvatar } from "./TutopherAvatar";
 import styles from "./TutorDialog.module.css";
-
-interface Message {
-  role: "user" | "assistant";
-  content: string;
-}
 
 type RequestState =
   | { status: "idle" }
@@ -29,17 +27,29 @@ class TutorRequestError extends Error {
   }
 }
 
-export function TutorDialog({ card, onClose }: { card: Card; onClose: () => void }) {
+export function TutorDialog({
+  card,
+  messages,
+  updateMessages,
+  onClose,
+}: {
+  card: Card;
+  messages: TutorConversationMessage[];
+  updateMessages: (
+    update: (messages: TutorConversationMessage[]) => TutorConversationMessage[],
+  ) => void;
+  onClose: () => void;
+}) {
   const { t } = useTranslation();
 
   const dialogRef = useRef<HTMLDialogElement>(null);
-  const abortRef = useRef<AbortController | undefined>(undefined);
+  const activeRequestRef = useRef<{ abort: () => void } | undefined>(undefined);
   const scrollerRef = useRef<HTMLDivElement>(null);
   const endRef = useRef<HTMLDivElement>(null);
 
-  const [messages, setMessages] = useState<Message[]>([]);
   const [question, setQuestion] = useState("");
   const [request, setRequest] = useState<RequestState>({ status: "idle" });
+  const [announcement, setAnnouncement] = useState("");
   const [truncated, setTruncated] = useState(false);
   const [following, setFollowing] = useState(true);
 
@@ -51,10 +61,13 @@ export function TutorDialog({ card, onClose }: { card: Card; onClose: () => void
   const thinking = request.status === "thinking";
   const error = request.status === "error" ? request.message : undefined;
   const retryAfter = request.status === "error" ? request.retryAfter : 0;
-
-  useEffect(() => {
-    dialogRef.current?.showModal();
-  }, []);
+  const remainingLearnerMessages = Math.max(
+    0,
+    (tutorLimits.conversationMessageCeiling - messages.length) / 2,
+  );
+  const atConversationCeiling = remainingLearnerMessages === 0;
+  const conversationFull = atConversationCeiling && !pending;
+  const composerDisabled = pending || !online || retryAfter > 0 || atConversationCeiling;
 
   useEffect(() => {
     if (request.status !== "submitting") return;
@@ -82,7 +95,7 @@ export function TutorDialog({ card, onClose }: { card: Card; onClose: () => void
     return () => window.clearInterval(timer);
   }, [retryAfter]);
 
-  useEffect(() => () => abortRef.current?.abort(), []);
+  useEffect(() => () => activeRequestRef.current?.abort(), []);
 
   // messages and thinking are deliberate triggers, not values the callback reads: they are what
   // makes the view follow a new Tutor reply. Removing them would only scroll when the Learner
@@ -93,7 +106,8 @@ export function TutorDialog({ card, onClose }: { card: Card; onClose: () => void
   }, [messages, following, thinking]);
 
   const close = () => {
-    abortRef.current?.abort();
+    activeRequestRef.current?.abort();
+
     dialogRef.current?.close();
     onClose();
   };
@@ -101,18 +115,24 @@ export function TutorDialog({ card, onClose }: { card: Card; onClose: () => void
   const send = async (text = question) => {
     const trimmed = text.trim();
 
-    if (!trimmed || pending || !online || retryAfter > 0) return;
+    if (!trimmed || composerDisabled) return;
 
-    const history = messages.slice(-tutorLimits.conversationMessages);
     const historyLength = messages.length;
-    const input: TutorInput = { message: trimmed, messages: history };
+    const input: TutorInput = { message: trimmed, messages };
     const controller = new AbortController();
 
-    abortRef.current = controller;
+    activeRequestRef.current = {
+      abort: () => {
+        controller.abort();
+        updateMessages((items) => items.slice(0, historyLength));
+        activeRequestRef.current = undefined;
+      },
+    };
     setQuestion("");
+    setAnnouncement("");
     setTruncated(false);
     setRequest({ status: "submitting" });
-    setMessages((items) => [
+    updateMessages((items) => [
       ...items,
       { role: "user", content: trimmed },
       { role: "assistant", content: "" },
@@ -150,10 +170,12 @@ export function TutorDialog({ card, onClose }: { card: Card; onClose: () => void
       const decoder = new TextDecoder();
       let buffer = "";
       let completed = false;
+      let assistantReply = "";
 
       while (true) {
         const { value, done } = await reader.read();
 
+        if (controller.signal.aborted) return;
         if (done) break;
 
         buffer += decoder.decode(value, { stream: true });
@@ -169,8 +191,9 @@ export function TutorDialog({ card, onClose }: { card: Card; onClose: () => void
           const streamEvent = tutorStreamEventSchema.parse({ event, data });
 
           if (streamEvent.event === "delta") {
+            assistantReply += streamEvent.data.text;
             setRequest((state) => (state.status === "streaming" ? state : { status: "streaming" }));
-            setMessages((items) =>
+            updateMessages((items) =>
               items.map((message, index) =>
                 index === items.length - 1
                   ? { ...message, content: message.content + streamEvent.data.text }
@@ -185,13 +208,16 @@ export function TutorDialog({ card, onClose }: { card: Card; onClose: () => void
       }
 
       if (!completed) throw new Error("failed");
+      activeRequestRef.current = undefined;
+      setAnnouncement(`${t("tutor.title")}: ${assistantReply}`);
       setRequest({ status: "idle" });
     } catch (value) {
       if (controller.signal.aborted) return;
 
+      activeRequestRef.current = undefined;
       const code = value instanceof Error ? value.message : "failed";
 
-      setMessages((items) => items.slice(0, historyLength));
+      updateMessages((items) => items.slice(0, historyLength));
       setQuestion(trimmed);
       setRequest({
         status: "error",
@@ -219,98 +245,33 @@ export function TutorDialog({ card, onClose }: { card: Card; onClose: () => void
     setFollowing(true);
   };
 
+  const startOver = () => {
+    updateMessages(() => []);
+    setQuestion("");
+    setRequest({ status: "idle" });
+    setAnnouncement("");
+    setTruncated(false);
+    setFollowing(true);
+  };
+
   if (!card.front.text || !card.back.text) {
     return (
-      <dialog
-        ref={dialogRef}
-        className={styles.dialog}
-        onCancel={(event) => {
-          event.preventDefault();
-          close();
-        }}
-        aria-labelledby="tutor-title"
-      >
-        <section className={`${styles.sheet} ${styles.explanation}`}>
-          <header>
-            <h2 id="tutor-title">{t("tutor.title")}</h2>
-            <button type="button" onClick={close} aria-label={t("common.close")}>
-              ×
-            </button>
-          </header>
-          <p>{t("tutor.audioOnly")}</p>
-          <button type="button" onClick={close}>
-            {t("common.close")}
-          </button>
-        </section>
-      </dialog>
+      <Dialog dialogRef={dialogRef} titleId="tutor-title" title={t("tutor.title")} onClose={close}>
+        <p>{t("tutor.audioOnly")}</p>
+      </Dialog>
     );
   }
 
   return (
-    <dialog
-      ref={dialogRef}
-      className={styles.dialog}
-      onCancel={(event) => {
-        event.preventDefault();
-        close();
-      }}
-      aria-labelledby="tutor-title"
-    >
-      <section className={styles.sheet}>
-        <header>
-          <h2 id="tutor-title">{t("tutor.title")}</h2>
-          <button type="button" onClick={close} aria-label={t("common.close")}>
-            ×
-          </button>
-        </header>
-        <p className={styles.disclosure}>{t("tutor.disclosure")}</p>
-        <div ref={scrollerRef} className={styles.messages} onScroll={onScroll} aria-live="polite">
-          {messages.map((message, index) => (
-            <article
-              key={`${message.role}-${index}`}
-              className={message.role === "user" ? styles.user : styles.assistant}
-            >
-              <strong>{message.role === "user" ? "Khanh" : t("tutor.title")}</strong>
-              {message.content && <p>{message.content}</p>}
-            </article>
-          ))}
-          {thinking && <p className={styles.thinking}>{t("tutor.thinking")}</p>}
-          {truncated && <p className={styles.notice}>{t("tutor.truncated")}</p>}
-          {error && (
-            <div className={styles.error} role="alert">
-              <p>
-                {error}
-                {retryAfter > 0 ? ` (${retryAfter} s)` : ""}
-              </p>
-              <button
-                type="button"
-                disabled={retryAfter > 0 || !online}
-                onClick={() => void send()}
-              >
-                {t("common.retry")}
-              </button>
-            </div>
-          )}
-          <div ref={endRef} />
-        </div>
-        {!following && (
-          <button type="button" className={styles.latest} onClick={latest}>
-            {t("tutor.latest")}
-          </button>
-        )}
-        <div className={styles.prompts}>
-          {(["simple", "example", "memory"] as const).map((key) => (
-            <button
-              key={key}
-              type="button"
-              disabled={pending}
-              onClick={() => void send(t(`tutor.${key}`))}
-            >
-              {t(`tutor.${key}`)}
-            </button>
-          ))}
-        </div>
+    <Dialog
+      dialogRef={dialogRef}
+      className={styles.tutorDialog}
+      titleId="tutor-title"
+      title={t("tutor.title")}
+      onClose={close}
+      footer={
         <form
+          className={styles.composer}
           onSubmit={(event) => {
             event.preventDefault();
             void send();
@@ -319,18 +280,115 @@ export function TutorDialog({ card, onClose }: { card: Card; onClose: () => void
           <label htmlFor="tutor-question">{t("tutor.question")}</label>
           <textarea
             id="tutor-question"
+            aria-describedby={conversationFull ? "tutor-conversation-full" : undefined}
             minLength={1}
             maxLength={tutorLimits.messageCharacters}
             value={question}
             onChange={(event) => setQuestion(event.target.value)}
-            disabled={pending || !online || retryAfter > 0}
+            disabled={composerDisabled}
           />
-          <button type="submit" disabled={pending || !question.trim() || !online || retryAfter > 0}>
+          <button type="submit" disabled={composerDisabled || !question.trim()}>
             {t("tutor.send")}
           </button>
           {!online && <p>{t("tutor.offline")}</p>}
+          {conversationFull && (
+            <>
+              <p id="tutor-conversation-full">{t("tutor.conversationFull")}</p>
+              <button type="button" onClick={startOver}>
+                {t("tutor.startOver")}
+              </button>
+            </>
+          )}
         </form>
-      </section>
-    </dialog>
+      }
+    >
+      <div className={styles.conversation}>
+        <p className={styles.disclosure}>{t("tutor.reliability")}</p>
+        <div className={styles.transcript}>
+          <div
+            ref={scrollerRef}
+            className={styles.messages}
+            role="region"
+            aria-label={t("tutor.conversation")}
+            onScroll={onScroll}
+          >
+            {messages.length === 0 && (
+              <div className={styles.emptyState}>
+                <TutopherAvatar size="large" />
+                <p className={styles.promptHint}>{t("tutor.promptHint")}</p>
+                <p className={styles.disclosure}>{t("tutor.dataFlow")}</p>
+              </div>
+            )}
+            {messages.map((message, index) => (
+              <article
+                key={`${message.role}-${index}`}
+                className={message.role === "user" ? styles.user : styles.assistant}
+                aria-label={message.role === "assistant" ? t("tutor.title") : undefined}
+              >
+                {message.role === "user" ? (
+                  <>
+                    <strong>Khanh</strong>
+                    {message.content && <p>{message.content}</p>}
+                  </>
+                ) : (
+                  <>
+                    <TutopherAvatar size="small" />
+                    <div className={styles.reply}>
+                      {message.content && <p>{message.content}</p>}
+                    </div>
+                  </>
+                )}
+              </article>
+            ))}
+            {thinking && <p className={styles.thinking}>{t("tutor.thinking")}</p>}
+            {truncated && <p className={styles.notice}>{t("tutor.truncated")}</p>}
+            {error && (
+              <div className={styles.error} role="alert">
+                <p>
+                  {error}
+                  {retryAfter > 0 ? ` (${retryAfter} s)` : ""}
+                </p>
+                <button
+                  type="button"
+                  disabled={retryAfter > 0 || !online}
+                  onClick={() => void send()}
+                >
+                  {t("common.retry")}
+                </button>
+              </div>
+            )}
+            <div ref={endRef} />
+          </div>
+          {!following && (
+            <button type="button" className={styles.latest} onClick={latest}>
+              <svg aria-hidden="true" viewBox="0 0 24 24">
+                <path d="m5 9 7 7 7-7" />
+              </svg>
+              {t("tutor.latest")}
+            </button>
+          )}
+        </div>
+        <p className={styles.visuallyHidden} role="status" aria-atomic="true">
+          {announcement}
+        </p>
+        {remainingLearnerMessages > 0 && remainingLearnerMessages <= 3 && (
+          <p className={styles.notice}>
+            {t("tutor.remainingMessages", { count: remainingLearnerMessages })}
+          </p>
+        )}
+        <div className={`${styles.prompts} ${messages.length === 0 ? styles.emptyPrompts : ""}`}>
+          {(["simple", "example", "memory"] as const).map((key) => (
+            <button
+              key={key}
+              type="button"
+              disabled={composerDisabled}
+              onClick={() => void send(t(`tutor.${key}`))}
+            >
+              {t(`tutor.${key}`)}
+            </button>
+          ))}
+        </div>
+      </div>
+    </Dialog>
   );
 }

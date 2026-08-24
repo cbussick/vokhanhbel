@@ -59,8 +59,12 @@ The household's total score, always derived as the sum of points awarded across 
 _Avoid_: Score, total
 
 **Tutor**:
-The AI explanation capability a Learner reaches from a Card: German-language, rate-limited, tool-free, and holding no conversation beyond the current exchange. Names the capability itself — its endpoint, contracts, problem types, and server code.
+The AI explanation capability a Learner reaches from a Card: German-language, rate-limited, tool-free, and never retained outside the browser. Names the capability itself — its endpoint, contracts, problem types, and server code.
 _Avoid_: Assistant, bot, chatbot
+
+**Tutor Conversation**:
+The messages exchanged between the Learner and Tutopher about one Card, held only in the browser and discarded once the Learner leaves that Card. Bounded in length, so the Learner cannot continue past the limit without starting over.
+_Avoid_: Chat, thread, history, session
 
 **Tutopher**:
 The Tutor's persona name. Belongs in user-facing copy, the mascot, and the system prompt — not in paths, identifiers, or contracts, which name the Tutor concept so the persona can be renamed without touching them.

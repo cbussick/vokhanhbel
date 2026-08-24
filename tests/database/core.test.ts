@@ -336,7 +336,7 @@ describe("PostgreSQL application behavior", () => {
   it("serializes concurrent Tutor allowance checks at both limits", async () => {
     const sessionHash = "session-boundary";
     await getPool().query(
-      `INSERT INTO ai_usage (session_hash) SELECT $1 FROM generate_series(1, 29)`,
+      `INSERT INTO ai_usage (session_hash) SELECT $1 FROM generate_series(1, 59)`,
       [sessionHash],
     );
     const sessionBoundary = await Promise.allSettled([

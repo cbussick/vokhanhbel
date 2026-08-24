@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { apiPaths } from "../contracts/apiPaths";
 import { problemTypes } from "../contracts/problem";
@@ -15,7 +15,7 @@ import {
 import { apiRequest, ApiError } from "../lib/apiClient";
 import { useOnlineStatus } from "../lib/browserState";
 import { queryKeys } from "../lib/queryKeys";
-import { FormDialogContent, getFormDialogClassName } from "./FormDialogContent";
+import { Dialog } from "./Dialog";
 import { PendingActionContent } from "./PendingActionContent";
 import { TopicIcon } from "./TopicIcon";
 import styles from "./Dialog.module.css";
@@ -44,14 +44,6 @@ export function TopicFormDialog({
   const [icon, setIcon] = useState<TopicIconKey>(topic?.icon ?? defaultTopicIcon);
   const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
   const [error, setError] = useState<string>();
-
-  useEffect(() => {
-    const dialog = dialogRef.current;
-
-    if (!dialog) return;
-    dialog.showModal();
-    requestAnimationFrame(() => nameRef.current?.focus());
-  }, []);
 
   const describeError = (value: unknown, fallback: string) => {
     if (!(value instanceof ApiError)) return fallback;
@@ -128,141 +120,120 @@ export function TopicFormDialog({
   };
 
   return (
-    <dialog
-      ref={dialogRef}
-      className={getFormDialogClassName(isConfirmingDelete)}
-      onCancel={(event) => {
-        event.preventDefault();
-
-        if (isPending) return;
-
-        if (isConfirmingDelete) {
-          setIsConfirmingDelete(false);
-
-          return;
-        }
-
-        close();
-      }}
-      aria-labelledby="topic-dialog-title"
+    <Dialog
+      dialogRef={dialogRef}
+      initialFocusRef={nameRef}
+      titleId="topic-dialog-title"
+      title={t(topic ? "topics.renameTitle" : "topics.create")}
+      busy={isPending}
+      isConfirming={isConfirmingDelete}
+      onDismissConfirmation={() => setIsConfirmingDelete(false)}
+      onClose={close}
     >
-      <FormDialogContent
-        titleId="topic-dialog-title"
-        title={t(topic ? "topics.renameTitle" : "topics.create")}
-        busy={isPending}
-        compact={isConfirmingDelete}
-        onClose={close}
-      >
-        {isConfirmingDelete ? (
-          <div className={styles.confirm}>
-            <p>{t("topics.deleteConfirm", { name: topic?.name ?? "" })}</p>
-            <div className={styles.actions}>
+      {isConfirmingDelete ? (
+        <div className={styles.confirm}>
+          <p>{t("topics.deleteConfirm", { name: topic?.name ?? "" })}</p>
+          <div className={styles.actions}>
+            <button
+              type="button"
+              className={styles.secondary}
+              disabled={remove.isPending}
+              onClick={() => setIsConfirmingDelete(false)}
+            >
+              {t("common.cancel")}
+            </button>
+            <button
+              type="button"
+              className={styles.danger}
+              aria-busy={remove.isPending}
+              aria-disabled={remove.isPending}
+              onClick={() => {
+                if (!remove.isPending) remove.mutate();
+              }}
+            >
+              <PendingActionContent
+                pending={remove.isPending}
+                label={t("topics.delete")}
+                pendingLabel={t("common.deleting")}
+              />
+            </button>
+          </div>
+        </div>
+      ) : (
+        <form onSubmit={submit} noValidate>
+          <label htmlFor="topic-name" className={styles.fieldHeading}>
+            {t("topics.name")}
+          </label>
+          <span id="topic-name-hint" className={styles.hint}>
+            {t("topics.nameHint")}
+          </span>
+          <input
+            ref={nameRef}
+            id="topic-name"
+            aria-describedby="topic-name-hint"
+            required
+            maxLength={60}
+            value={name}
+            disabled={isPending}
+            onChange={(event) => setName(event.target.value)}
+          />
+          <fieldset className={styles.iconChoices} disabled={isPending}>
+            <legend className={styles.fieldHeading}>{t("topics.icon")}</legend>
+            {topicIconKeys.map((key) => (
+              <div key={key}>
+                <input
+                  type="radio"
+                  id={`topic-icon-${key}`}
+                  name="topic-icon"
+                  value={key}
+                  checked={icon === key}
+                  onChange={() => setIcon(key)}
+                />
+                <label htmlFor={`topic-icon-${key}`}>
+                  <TopicIcon icon={key} />
+                  {t(`topics.icons.${key}`)}
+                </label>
+              </div>
+            ))}
+          </fieldset>
+          {error && (
+            <p role="alert" className={styles.error}>
+              {error}
+            </p>
+          )}
+          <div className={styles.actions}>
+            {topic && (
               <button
                 type="button"
-                className={styles.secondary}
-                disabled={remove.isPending}
-                onClick={() => setIsConfirmingDelete(false)}
-              >
-                {t("common.cancel")}
-              </button>
-              <button
-                type="button"
-                className={styles.danger}
-                aria-busy={remove.isPending}
-                aria-disabled={remove.isPending}
+                className={styles.deleteLink}
+                disabled={isPending}
                 onClick={() => {
-                  if (!remove.isPending) remove.mutate();
+                  setError(undefined);
+                  setIsConfirmingDelete(true);
                 }}
               >
-                <PendingActionContent
-                  pending={remove.isPending}
-                  label={t("topics.delete")}
-                  pendingLabel={t("common.deleting")}
-                />
+                {t("topics.delete")}
               </button>
-            </div>
-          </div>
-        ) : (
-          <form onSubmit={submit} noValidate>
-            <label htmlFor="topic-name" className={styles.fieldHeading}>
-              {t("topics.name")}
-            </label>
-            <span id="topic-name-hint" className={styles.hint}>
-              {t("topics.nameHint")}
-            </span>
-            <input
-              ref={nameRef}
-              id="topic-name"
-              aria-describedby="topic-name-hint"
-              required
-              maxLength={60}
-              value={name}
-              disabled={isPending}
-              onChange={(event) => setName(event.target.value)}
-            />
-            <fieldset className={styles.iconChoices} disabled={isPending}>
-              <legend className={styles.fieldHeading}>{t("topics.icon")}</legend>
-              {topicIconKeys.map((key) => (
-                <div key={key}>
-                  <input
-                    type="radio"
-                    id={`topic-icon-${key}`}
-                    name="topic-icon"
-                    value={key}
-                    checked={icon === key}
-                    onChange={() => setIcon(key)}
-                  />
-                  <label htmlFor={`topic-icon-${key}`}>
-                    <TopicIcon icon={key} />
-                    {t(`topics.icons.${key}`)}
-                  </label>
-                </div>
-              ))}
-            </fieldset>
-            {error && (
-              <p role="alert" className={styles.error}>
-                {error}
-              </p>
             )}
-            <div className={styles.actions}>
-              {topic && (
-                <button
-                  type="button"
-                  className={styles.deleteLink}
-                  disabled={isPending}
-                  onClick={() => {
-                    setError(undefined);
-                    setIsConfirmingDelete(true);
-                  }}
-                >
-                  {t("topics.delete")}
-                </button>
-              )}
-              <button
-                type="button"
-                className={styles.secondary}
-                disabled={isPending}
-                onClick={close}
-              >
-                {t("common.cancel")}
-              </button>
-              <button
-                type="submit"
-                className={styles.primary}
-                aria-busy={save.isPending}
-                aria-disabled={save.isPending}
-                disabled={!name.trim()}
-              >
-                <PendingActionContent
-                  pending={save.isPending}
-                  label={t("common.save")}
-                  pendingLabel={t("common.saving")}
-                />
-              </button>
-            </div>
-          </form>
-        )}
-      </FormDialogContent>
-    </dialog>
+            <button type="button" className={styles.secondary} disabled={isPending} onClick={close}>
+              {t("common.cancel")}
+            </button>
+            <button
+              type="submit"
+              className={styles.primary}
+              aria-busy={save.isPending}
+              aria-disabled={save.isPending}
+              disabled={!name.trim()}
+            >
+              <PendingActionContent
+                pending={save.isPending}
+                label={t("common.save")}
+                pendingLabel={t("common.saving")}
+              />
+            </button>
+          </div>
+        </form>
+      )}
+    </Dialog>
   );
 }

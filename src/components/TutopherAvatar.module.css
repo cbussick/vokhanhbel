@@ -1,0 +1,18 @@
+.avatar {
+  flex: 0 0 auto;
+}
+
+.small {
+  inline-size: 2.25rem;
+  block-size: 2.25rem;
+}
+
+.medium {
+  inline-size: 4.75rem;
+  block-size: 4.75rem;
+}
+
+.large {
+  inline-size: 7rem;
+  block-size: 7rem;
+}
