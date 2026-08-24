@@ -280,8 +280,9 @@ export function TutorDialog({
       }
     >
       <div className={styles.conversation}>
-        <p className={styles.disclosure}>{t("tutor.disclosure")}</p>
+        <p className={styles.disclosure}>{t("tutor.reliability")}</p>
         <div ref={scrollerRef} className={styles.messages} onScroll={onScroll}>
+          {messages.length === 0 && <p className={styles.disclosure}>{t("tutor.dataFlow")}</p>}
           {messages.map((message, index) => (
             <article
               key={`${message.role}-${index}`}
