@@ -977,3 +977,55 @@ for (const viewport of [
     });
   });
 }
+
+for (const viewport of [
+  { name: "mobile", width: 390, height: 844 },
+  { name: "tablet", width: 768, height: 900 },
+  { name: "desktop", width: 1440, height: 1000 },
+] as const) {
+  test(`answers a multiple-choice Exercise accessibly at ${viewport.name} width`, async ({
+    page,
+    browserName,
+  }) => {
+    test.skip(browserName !== "chromium", "One browser owns the cross-platform visual baselines.");
+    await page.setViewportSize(viewport);
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    const state = await installMockApi(page);
+
+    // Four Cards in one Collection with distinct backs: each is eligible for multiple choice.
+    state.cards = [
+      createCard("der Apfel", "the apple"),
+      createCard("die Birne", "the pear"),
+      createCard("der Pfirsich", "the peach"),
+      createCard("die Pflaume", "the plum"),
+    ];
+    await page.goto("/review");
+    await page.getByRole("button", { name: "Review starten" }).click();
+
+    const wrongOption = page.getByRole("button", { name: "the pear" });
+    const correctOption = page.getByRole("button", { name: "the apple" });
+
+    await expect(page.getByText("der Apfel")).toBeVisible();
+    await expect(wrongOption).toBeVisible();
+    await expectNoSeriousAxeViolations(page);
+    await expect(page).toHaveScreenshot(`review-multiple-choice-unanswered-${viewport.name}.png`, {
+      animations: "disabled",
+    });
+
+    await wrongOption.click();
+    await expect(wrongOption).toBeDisabled();
+    await expect(page.getByRole("button", { name: "Weiter" })).toBeHidden();
+    await expectNoSeriousAxeViolations(page);
+    await expect(page).toHaveScreenshot(`review-multiple-choice-retry-${viewport.name}.png`, {
+      animations: "disabled",
+    });
+
+    await correctOption.click();
+    await expect(page.getByRole("button", { name: "Weiter" })).toBeVisible();
+    await expect(page.getByText("Richtig!")).toBeVisible();
+    await expectNoSeriousAxeViolations(page);
+    await expect(page).toHaveScreenshot(`review-multiple-choice-resolved-${viewport.name}.png`, {
+      animations: "disabled",
+    });
+  });
+}

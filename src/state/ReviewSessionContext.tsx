@@ -3,6 +3,7 @@ import { apiPaths } from "../contracts/apiPaths";
 import type { Card } from "../contracts/card";
 import { problemTypes } from "../contracts/problem";
 import type { ReviewSubmissionInput } from "../contracts/review";
+import { planExercises } from "../domain/exercisePlanner";
 import type { Grade } from "../domain/review";
 import { getPointsForGrade, reviewSessionSize } from "../domain/review";
 import { ApiError } from "../lib/apiClient";
@@ -19,8 +20,8 @@ interface IdleView {
   kind: "idle";
 }
 
-interface CardView {
-  kind: "card";
+interface FlipExerciseView {
+  kind: "flip";
   currentCard: Card;
   position: number;
   total: number;
@@ -28,6 +29,28 @@ interface CardView {
   issue: ReviewSubmissionIssue | undefined;
   issueRequestId: string | undefined;
   tutorConversation: TutorConversationMessage[];
+}
+
+export interface MultipleChoiceOptionView {
+  id: string;
+  text: string;
+  /** Answered wrong already: shown red and unselectable, whether or not the Exercise has resolved. */
+  dead: boolean;
+  /** The right answer, shown green — never true before the Exercise has resolved. */
+  revealedCorrect: boolean;
+}
+
+interface MultipleChoiceExerciseView {
+  kind: "multipleChoice";
+  currentCard: Card;
+  position: number;
+  total: number;
+  options: MultipleChoiceOptionView[];
+  resolved: boolean;
+  /** Whether the final verdict was correct — only meaningful once `resolved` is true. */
+  correct: boolean;
+  issue: ReviewSubmissionIssue | undefined;
+  issueRequestId: string | undefined;
 }
 
 interface SummaryView {
@@ -38,7 +61,11 @@ interface SummaryView {
   canRepeatForgotten: boolean;
 }
 
-export type ReviewSessionView = IdleView | CardView | SummaryView;
+export type ReviewSessionView =
+  | IdleView
+  | FlipExerciseView
+  | MultipleChoiceExerciseView
+  | SummaryView;
 
 export interface TutorConversationMessage {
   role: "user" | "assistant";
@@ -50,6 +77,8 @@ interface ReviewSessionContextValue {
   startReviewSession: (cards: Card[]) => void;
   revealAnswer: () => void;
   gradeCard: (grade: Grade) => void;
+  chooseOption: (optionId: string) => void;
+  advanceExercise: () => void;
   skipCard: () => void;
   repeatForgotten: () => void;
   leaveReviewSession: () => void;
@@ -97,20 +126,46 @@ function toReviewSessionView(
     };
   }
 
-  const currentCard = state.reviewSession.cards[state.currentIndex];
+  const exercise = state.reviewSession.exercises[state.currentIndex];
+  const currentCard = exercise?.cards[0];
 
-  if (!currentCard) return { kind: "idle" };
+  if (!exercise || !currentCard) return { kind: "idle" };
+
+  const position = state.currentIndex + 1;
+  const total = state.reviewSession.exercises.length;
+
+  if (exercise.kind === "flip") {
+    return {
+      kind: "flip",
+      currentCard,
+      position,
+      total,
+      revealed: state.revealed,
+      issue: state.issue,
+      issueRequestId: state.issueRequestId,
+      tutorConversation:
+        tutorConversation.attemptKey === getCardAttemptKey(state) ? tutorConversation.messages : [],
+    };
+  }
+
+  const deadOptionIds = state.multipleChoice?.deadOptionIds ?? [];
+  const resolvedSubmission = state.multipleChoice?.resolvedSubmission;
 
   return {
-    kind: "card",
+    kind: "multipleChoice",
     currentCard,
-    position: state.currentIndex + 1,
-    total: state.reviewSession.cards.length,
-    revealed: state.revealed,
+    position,
+    total,
+    resolved: Boolean(resolvedSubmission),
+    correct: resolvedSubmission?.input.grade !== "forgot",
+    options: exercise.options.map((option) => ({
+      id: option.cardId,
+      text: option.text,
+      dead: deadOptionIds.includes(option.cardId),
+      revealedCorrect: Boolean(resolvedSubmission) && option.correct,
+    })),
     issue: state.issue,
     issueRequestId: state.issueRequestId,
-    tutorConversation:
-      tutorConversation.attemptKey === getCardAttemptKey(state) ? tutorConversation.messages : [],
   };
 }
 
@@ -138,7 +193,7 @@ export function ReviewSessionProvider({ children }: { children: ReactNode }) {
     dispatch({
       type: "reviewSessionStarted",
       reviewSessionId: crypto.randomUUID(),
-      cards: initialQueue,
+      exercises: planExercises(initialQueue, Math.random),
     });
     const audioIds = initialQueue.flatMap((card) =>
       [card.front.audio?.id, card.back.audio?.id].filter((id): id is string => Boolean(id)),
@@ -168,7 +223,11 @@ export function ReviewSessionProvider({ children }: { children: ReactNode }) {
     )
       return;
 
-    const card = state.reviewSession.cards[state.currentIndex];
+    const exercise = state.reviewSession.exercises[state.currentIndex];
+
+    if (!exercise || exercise.kind !== "flip") return;
+
+    const card = exercise.cards[0];
 
     if (!card) return;
 
@@ -185,13 +244,63 @@ export function ReviewSessionProvider({ children }: { children: ReactNode }) {
       reviewSessionId: state.reviewSession.id,
       card,
       optimisticPoints: points,
-      cardIndex: state.currentIndex,
+      exerciseIndex: state.currentIndex,
     };
 
     dispatch({ type: "cardGraded", submission });
     enqueueSubmission(submission, handleRejectedReviewSubmission);
   };
 
+  const chooseOption = (optionId: string) => {
+    if (state.status !== "reviewing" || state.issue === "clock" || state.issue === "conflict")
+      return;
+
+    const exercise = state.reviewSession.exercises[state.currentIndex];
+
+    if (!exercise || exercise.kind !== "multipleChoice") return;
+
+    const deadOptionIds = state.multipleChoice?.deadOptionIds ?? [];
+
+    if (state.multipleChoice?.resolvedSubmission || deadOptionIds.includes(optionId)) return;
+
+    const option = exercise.options.find((candidate) => candidate.cardId === optionId);
+    const card = exercise.cards[0];
+
+    if (!option || !card) return;
+
+    // A first wrong pick just knocks the option out and re-asks; the Exercise stays open.
+    if (!option.correct && deadOptionIds.length === 0) {
+      dispatch({ type: "multipleChoiceOptionMissed", optionId });
+
+      return;
+    }
+
+    const grade: Grade = option.correct
+      ? deadOptionIds.length === 0
+        ? "knew_it"
+        : "almost"
+      : "forgot";
+    const points = getPointsForGrade(grade);
+    const input = {
+      id: crypto.randomUUID(),
+      cardId: card.id,
+      grade,
+      reviewedAt: new Date().toISOString(),
+    } satisfies ReviewSubmissionInput;
+
+    const submission: ReviewSubmission = {
+      input,
+      reviewSessionId: state.reviewSession.id,
+      card,
+      optimisticPoints: points,
+      exerciseIndex: state.currentIndex,
+    };
+
+    dispatch({ type: "multipleChoiceResolved", optionId, correct: option.correct, submission });
+    enqueueSubmission(submission, handleRejectedReviewSubmission);
+  };
+
+  const advanceExercise = () => dispatch({ type: "exerciseAdvanced" });
   const repeatForgotten = () => dispatch({ type: "forgottenRepeated" });
   const skipCard = () => dispatch({ type: "cardSkipped" });
   const leaveReviewSession = () => dispatch({ type: "reviewSessionLeft" });
@@ -213,6 +322,8 @@ export function ReviewSessionProvider({ children }: { children: ReactNode }) {
     startReviewSession,
     revealAnswer,
     gradeCard,
+    chooseOption,
+    advanceExercise,
     skipCard,
     repeatForgotten,
     leaveReviewSession,

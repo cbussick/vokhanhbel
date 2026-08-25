@@ -453,6 +453,169 @@ describe("rendered app journeys", () => {
     await waitFor(() => expect(recordedGrade).toBe("knew_it"));
   });
 
+  function multipleChoiceCard(id: string, front: string, back: string) {
+    return {
+      ...testCards[0]!,
+      id,
+      front,
+      back,
+    };
+  }
+
+  const multipleChoiceCards = [
+    multipleChoiceCard("33333333-3333-4333-8333-333333333331", "eins", "one"),
+    multipleChoiceCard("33333333-3333-4333-8333-333333333332", "zwei", "two"),
+    multipleChoiceCard("33333333-3333-4333-8333-333333333333", "drei", "three"),
+    multipleChoiceCard("33333333-3333-4333-8333-333333333334", "vier", "four"),
+  ];
+
+  it("records knew_it and resolves a multiple-choice Exercise on the first correct attempt", async () => {
+    const user = userEvent.setup();
+    let recordedGrade = "";
+    mockServer.use(
+      http.get("/api/cards", () => HttpResponse.json(multipleChoiceCards)),
+      http.post("/api/reviews", async ({ request }) => {
+        const input = (await request.json()) as { grade: string };
+        recordedGrade = input.grade;
+
+        return HttpResponse.json({
+          review: { id: crypto.randomUUID(), pointsAwarded: 10, boxBefore: 0, boxAfter: 1 },
+          card: { ...multipleChoiceCards[0], box: 1 },
+        });
+      }),
+    );
+    await renderApp("/review");
+    await user.click(await screen.findByRole("button", { name: "Review starten" }));
+    expect(await screen.findByText("eins")).toBeVisible();
+    expect(screen.queryByRole("button", { name: "Mit Tutopher reden" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "one" })).toBeVisible();
+    expect(screen.getByRole("button", { name: "two" })).toBeVisible();
+    expect(screen.getByRole("button", { name: "three" })).toBeVisible();
+    expect(screen.getByRole("button", { name: "four" })).toBeVisible();
+
+    await user.click(screen.getByRole("button", { name: "one" }));
+    expect(await screen.findByText("Richtig!")).toBeVisible();
+    expect(screen.getByRole("button", { name: /one.*richtig/ })).toBeDisabled();
+    await waitFor(() => expect(recordedGrade).toBe("knew_it"));
+    expect(screen.getByText("1 / 4")).toBeVisible();
+
+    await user.click(screen.getByRole("button", { name: "Weiter" }));
+    expect(screen.getByText("2 / 4")).toBeVisible();
+  });
+
+  it("kills a wrong option, re-asks, and records almost when the retry is correct", async () => {
+    const user = userEvent.setup();
+    let recordedGrade = "";
+    mockServer.use(
+      http.get("/api/cards", () => HttpResponse.json(multipleChoiceCards)),
+      http.post("/api/reviews", async ({ request }) => {
+        const input = (await request.json()) as { grade: string };
+        recordedGrade = input.grade;
+
+        return HttpResponse.json({
+          review: { id: crypto.randomUUID(), pointsAwarded: 5, boxBefore: 0, boxAfter: 0 },
+          card: { ...multipleChoiceCards[0], box: 0 },
+        });
+      }),
+    );
+    await renderApp("/review");
+    await user.click(await screen.findByRole("button", { name: "Review starten" }));
+    expect(await screen.findByText("eins")).toBeVisible();
+
+    await user.click(screen.getByRole("button", { name: "two" }));
+    const deadOption = await screen.findByRole("button", { name: /two.*falsch/ });
+
+    expect(deadOption).toBeDisabled();
+    expect(screen.queryByText("Richtig!")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "one" })).toBeEnabled();
+
+    await user.click(screen.getByRole("button", { name: "one" }));
+    expect(await screen.findByText("Richtig!")).toBeVisible();
+    await waitFor(() => expect(recordedGrade).toBe("almost"));
+
+    await user.click(screen.getByRole("button", { name: "Weiter" }));
+    expect(screen.getByText("2 / 4")).toBeVisible();
+  });
+
+  it("records forgot and reveals the correct option, never selected, after two misses", async () => {
+    const user = userEvent.setup();
+    let recordedGrade = "";
+    let reviews = 0;
+    mockServer.use(
+      http.get("/api/cards", () => HttpResponse.json(multipleChoiceCards)),
+      http.post("/api/reviews", async ({ request }) => {
+        reviews += 1;
+        const input = (await request.json()) as { grade: string };
+        recordedGrade = input.grade;
+
+        return HttpResponse.json({
+          review: { id: crypto.randomUUID(), pointsAwarded: 1, boxBefore: 2, boxAfter: 0 },
+          card: { ...multipleChoiceCards[0], box: 0 },
+        });
+      }),
+    );
+    await renderApp("/review");
+    await user.click(await screen.findByRole("button", { name: "Review starten" }));
+    expect(await screen.findByText("eins")).toBeVisible();
+
+    await user.click(screen.getByRole("button", { name: "two" }));
+    await user.click(await screen.findByRole("button", { name: "three" }));
+
+    expect(await screen.findByText("Leider falsch.")).toBeVisible();
+    expect(screen.getByRole("button", { name: /one.*richtig/ })).toBeVisible();
+    expect(screen.getByRole("button", { name: /two.*falsch/ })).toBeVisible();
+    expect(screen.getByRole("button", { name: /three.*falsch/ })).toBeVisible();
+    await waitFor(() => expect(recordedGrade).toBe("forgot"));
+    expect(reviews).toBe(1);
+
+    await user.click(screen.getByRole("button", { name: "Weiter" }));
+    expect(screen.getByText("2 / 4")).toBeVisible();
+  });
+
+  it("plans a mix of flip Cards and multiple-choice Exercises across Collections in one Session", async () => {
+    const user = userEvent.setup();
+    const soloCard = {
+      ...testCards[0]!,
+      id: "44444444-4444-4444-8444-444444444444",
+      collectionId: testCollections[1]!.id,
+      front: "hello",
+      back: "hallo",
+    };
+    let reviews = 0;
+    mockServer.use(
+      http.get("/api/cards", () => HttpResponse.json([...multipleChoiceCards, soloCard])),
+      http.post("/api/reviews", async ({ request }) => {
+        reviews += 1;
+        const input = (await request.json()) as { grade: string };
+
+        return HttpResponse.json({
+          review: { id: crypto.randomUUID(), pointsAwarded: 10, boxBefore: 0, boxAfter: 1 },
+          card: { ...multipleChoiceCards[0], box: 1, grade: input.grade },
+        });
+      }),
+    );
+    await renderApp("/review");
+    await user.click(await screen.findByRole("button", { name: "Review starten" }));
+    expect(await screen.findByText("eins")).toBeVisible();
+    expect(screen.getByText("1 / 5")).toBeVisible();
+    await user.click(screen.getByRole("button", { name: "one" }));
+    await user.click(await screen.findByRole("button", { name: "Weiter" }));
+    await user.click(await screen.findByRole("button", { name: "two" }));
+    await user.click(await screen.findByRole("button", { name: "Weiter" }));
+    await user.click(await screen.findByRole("button", { name: "three" }));
+    await user.click(await screen.findByRole("button", { name: "Weiter" }));
+    await user.click(await screen.findByRole("button", { name: "four" }));
+    await user.click(await screen.findByRole("button", { name: "Weiter" }));
+
+    expect(await screen.findByText("hello")).toBeVisible();
+    expect(screen.queryByRole("button", { name: "one" })).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Antwort zeigen" }));
+    await user.click(await screen.findByRole("button", { name: /Gewusst/ }));
+
+    expect(await screen.findByRole("heading", { name: "Gut gemacht!" })).toBeVisible();
+    expect(reviews).toBe(5);
+  });
+
   it("prefetches Review audio at low priority and skips an unavailable audio-only Card without grading", async () => {
     const user = userEvent.setup();
     const audioId = "88888888-8888-4888-8888-888888888888";
