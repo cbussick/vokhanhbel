@@ -54,12 +54,24 @@ The client-side, non-persisted queue of due cards being studied in one sitting, 
 summary. Covers one Collection, one Topic, or all Collections.
 _Avoid_: Session (reserved for the auth session), study session
 
+**Exercise**:
+One task presented inside a Review Session. An Exercise covers one or more Cards and produces one
+Review for each Card it grades. A retry stays part of the same Exercise. The Learner grades some
+Exercises; the app grades others.
+_Avoid_: Question, task, activity, drill, quiz
+
+**Streak**:
+The number of consecutive days on which the Learner completed at least one Exercise. A day on which
+no Card was due neither extends nor breaks the Streak. Always derived, never stored as its own
+counter.
+_Avoid_: Series, chain, combo
+
 **Points**:
 The household's total score, always derived as the sum of points awarded across all Reviews, never stored as its own counter.
 _Avoid_: Score, total
 
 **Tutor**:
-The AI explanation capability a Learner reaches from a Card: German-language, rate-limited, tool-free, and holding no conversation beyond the current exchange. Names the capability itself — its endpoint, contracts, problem types, and server code.
+The AI explanation capability a Learner reaches from a Card or from a resolved Exercise: German-language, rate-limited, tool-free, and holding no conversation beyond the current exchange. Names the capability itself — its endpoint, contracts, problem types, and server code.
 _Avoid_: Assistant, bot, chatbot
 
 **Tutopher**:

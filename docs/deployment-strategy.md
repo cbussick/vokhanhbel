@@ -10,6 +10,13 @@ The `main-no-direct-push` ruleset blocks direct pushes, force-pushes, and deleti
 
 Vercel Deployment Checks are not required. Merging still starts the production deployment immediately.
 
+## Serverless function budget
+
+The Vercel plan allows 12 serverless functions, and `api/` already contains exactly 12 files. There
+is no headroom: a new file under `api/` fails the production deployment. Add a route by rewriting it
+onto an existing function in `vercel.json`, as `/api/topics/:topicId` already does, or by replacing a
+function file rather than adding one.
+
 ## Releasing a database migration
 
 Because merging into `main` starts the production deployment, apply a database
