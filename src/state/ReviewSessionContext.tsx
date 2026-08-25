@@ -74,7 +74,7 @@ export interface TutorConversationMessage {
 
 interface ReviewSessionContextValue {
   view: ReviewSessionView;
-  startReviewSession: (cards: Card[]) => void;
+  startReviewSession: (dueCards: Card[], pool: Card[]) => void;
   revealAnswer: () => void;
   gradeCard: (grade: Grade) => void;
   chooseOption: (optionId: string) => void;
@@ -186,14 +186,14 @@ export function ReviewSessionProvider({ children }: { children: ReactNode }) {
     });
   };
 
-  const startReviewSession = (cards: Card[]) => {
-    const initialQueue = cards.slice(0, reviewSessionSize);
+  const startReviewSession = (dueCards: Card[], pool: Card[]) => {
+    const initialQueue = dueCards.slice(0, reviewSessionSize);
 
     if (initialQueue.length === 0) return;
     dispatch({
       type: "reviewSessionStarted",
       reviewSessionId: crypto.randomUUID(),
-      exercises: planExercises(initialQueue, Math.random),
+      exercises: planExercises(initialQueue, pool, Math.random),
     });
     const audioIds = initialQueue.flatMap((card) =>
       [card.front.audio?.id, card.back.audio?.id].filter((id): id is string => Boolean(id)),

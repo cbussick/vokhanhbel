@@ -572,7 +572,7 @@ describe("rendered app journeys", () => {
     expect(screen.getByText("2 / 4")).toBeVisible();
   });
 
-  it("plans a mix of flip Cards and multiple-choice Exercises across Collections in one Session", async () => {
+  it("plans a mix of flip Cards and multiple-choice Exercises across Collections in one Session, demoting the third consecutive multiple choice to a flip Card", async () => {
     const user = userEvent.setup();
     const soloCard = {
       ...testCards[0]!,
@@ -602,8 +602,14 @@ describe("rendered app journeys", () => {
     await user.click(await screen.findByRole("button", { name: "Weiter" }));
     await user.click(await screen.findByRole("button", { name: "two" }));
     await user.click(await screen.findByRole("button", { name: "Weiter" }));
-    await user.click(await screen.findByRole("button", { name: "three" }));
-    await user.click(await screen.findByRole("button", { name: "Weiter" }));
+
+    // "drei" would be the third consecutive multiple-choice Exercise, so it is demoted to a flip
+    // Card instead — the no-three-in-a-row rule at work.
+    expect(await screen.findByText("drei")).toBeVisible();
+    expect(screen.queryByRole("button", { name: "three" })).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Antwort zeigen" }));
+    await user.click(await screen.findByRole("button", { name: /Gewusst/ }));
+
     await user.click(await screen.findByRole("button", { name: "four" }));
     await user.click(await screen.findByRole("button", { name: "Weiter" }));
 
@@ -614,6 +620,42 @@ describe("rendered app journeys", () => {
 
     expect(await screen.findByRole("heading", { name: "Gut gemacht!" })).toBeVisible();
     expect(reviews).toBe(5);
+  });
+
+  it("completes a Session entirely as flip Cards when the Sammlung is too small for multiple choice", async () => {
+    const user = userEvent.setup();
+    const tinyCollectionCards = [
+      { ...testCards[0]!, id: "55555555-5555-4555-8555-555555555551", front: "eins", back: "one" },
+      { ...testCards[0]!, id: "55555555-5555-4555-8555-555555555552", front: "zwei", back: "two" },
+      {
+        ...testCards[0]!,
+        id: "55555555-5555-4555-8555-555555555553",
+        front: "drei",
+        back: "three",
+      },
+    ];
+    mockServer.use(
+      http.get("/api/cards", () => HttpResponse.json(tinyCollectionCards)),
+      http.post("/api/reviews", async ({ request }) => {
+        const input = (await request.json()) as { grade: string };
+
+        return HttpResponse.json({
+          review: { id: crypto.randomUUID(), pointsAwarded: 10, boxBefore: 0, boxAfter: 1 },
+          card: { ...tinyCollectionCards[0], box: 1, grade: input.grade },
+        });
+      }),
+    );
+    await renderApp("/review");
+    await user.click(await screen.findByRole("button", { name: "Review starten" }));
+
+    for (const front of ["eins", "zwei", "drei"]) {
+      expect(await screen.findByText(front)).toBeVisible();
+      expect(screen.queryByText("Wähle die richtige Übersetzung")).not.toBeInTheDocument();
+      await user.click(screen.getByRole("button", { name: "Antwort zeigen" }));
+      await user.click(await screen.findByRole("button", { name: /Gewusst/ }));
+    }
+
+    expect(await screen.findByRole("heading", { name: "Gut gemacht!" })).toBeVisible();
   });
 
   it("prefetches Review audio at low priority and skips an unavailable audio-only Card without grading", async () => {
