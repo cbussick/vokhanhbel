@@ -1,10 +1,12 @@
 /* eslint-disable jsx-a11y/no-noninteractive-tabindex -- visible Card faces are intentionally keyboard-scrollable regions */
 import { useTranslation } from "react-i18next";
 import type { Grade } from "../../domain/review";
+import { issueBlocksInput } from "../../state/review/reviewSessionReducer";
 import type { FlipExerciseView } from "../../state/ReviewSessionContext";
 import { useReviewSession } from "../../state/ReviewSessionContext";
 import { CardFace } from "../audio/CardFace";
 import { TutorDialog } from "../TutorDialog";
+import { audioOnlyFaceUnavailable } from "./audioOnlyFace";
 import { AudioUnavailableNotice } from "./AudioUnavailableNotice";
 import { ExerciseScreen } from "./ExerciseScreen";
 import { TutorButton } from "./TutorButton";
@@ -47,10 +49,9 @@ export function FlipCardExercise({
   const { t } = useTranslation();
   const reviewSession = useReviewSession();
   const card = view.currentCard;
-  const frontRequiredUnavailable =
-    !card.front.text && Boolean(card.front.audio) && !frontAudioAvailable;
+  const frontRequiredUnavailable = audioOnlyFaceUnavailable(card.front, frontAudioAvailable);
   const backRequiredUnavailable =
-    view.revealed && !card.back.text && Boolean(card.back.audio) && !backAudioAvailable;
+    view.revealed && audioOnlyFaceUnavailable(card.back, backAudioAvailable);
 
   return (
     <ExerciseScreen
@@ -112,9 +113,7 @@ export function FlipCardExercise({
           <TutorButton onClick={onOpenTutor} disabled={tutorDisabled} />
           <fieldset
             className={styles.grades}
-            disabled={
-              backRequiredUnavailable || view.issue === "clock" || view.issue === "conflict"
-            }
+            disabled={backRequiredUnavailable || issueBlocksInput(view.issue)}
           >
             <legend>{t("review.grading")}</legend>
             <button type="button" onClick={() => onGrade("forgot")}>

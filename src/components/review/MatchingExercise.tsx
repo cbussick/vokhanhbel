@@ -1,5 +1,6 @@
 import { useTranslation } from "react-i18next";
 import type { Card } from "../../contracts/card";
+import { issueBlocksInput } from "../../state/review/reviewSessionReducer";
 import type { MatchingEntryView, MatchingExerciseView } from "../../state/ReviewSessionContext";
 import { useReviewSession } from "../../state/ReviewSessionContext";
 import { TutorDialog } from "../TutorDialog";
@@ -79,7 +80,7 @@ export function MatchingExercise({
 }) {
   const { t } = useTranslation();
   const reviewSession = useReviewSession();
-  const issueBlocksInput = view.issue === "clock" || view.issue === "conflict";
+  const inputBlocked = issueBlocksInput(view.issue);
 
   // A matched entry only responds once the whole board has resolved, and then it opens Tutopher
   // instead of attempting another pair — the Learner has nothing left to match it against.
@@ -89,12 +90,12 @@ export function MatchingExercise({
 
   const tapFront = (entry: MatchingEntryView) => {
     if (entry.matched) return openTutorForMatched(entry);
-    if (!issueBlocksInput) onSelectFront(entry.cardId);
+    if (!inputBlocked) onSelectFront(entry.cardId);
   };
 
   const tapBack = (entry: MatchingEntryView) => {
     if (entry.matched) return openTutorForMatched(entry);
-    if (!issueBlocksInput && selectedFrontCardId) onAttemptPair(selectedFrontCardId, entry.cardId);
+    if (!inputBlocked && selectedFrontCardId) onAttemptPair(selectedFrontCardId, entry.cardId);
   };
 
   return (
@@ -120,7 +121,7 @@ export function MatchingExercise({
     >
       <p className={styles.optionsLegend}>{t("review.matchingLegend")}</p>
       <div className={styles.matchingBoard}>
-        <fieldset className={styles.matchingColumn} disabled={issueBlocksInput}>
+        <fieldset className={styles.matchingColumn} disabled={inputBlocked}>
           <legend>{t("review.matchingFrontColumn")}</legend>
           {view.front.map((entry) => (
             <MatchingEntryButton
@@ -132,7 +133,7 @@ export function MatchingExercise({
             />
           ))}
         </fieldset>
-        <fieldset className={styles.matchingColumn} disabled={issueBlocksInput}>
+        <fieldset className={styles.matchingColumn} disabled={inputBlocked}>
           <legend>{t("review.matchingBackColumn")}</legend>
           {view.back.map((entry) => (
             <MatchingEntryButton

@@ -4,7 +4,7 @@ import { apiPaths } from "../contracts/apiPaths";
 import type { Card } from "../contracts/card";
 import { problemSchema, problemTypes } from "../contracts/problem";
 import { tutorLimits, tutorStreamEventSchema, type TutorInput } from "../contracts/tutor";
-import { useOnlineStatus } from "../lib/browserState";
+import { prefersReducedMotion, useOnlineStatus } from "../lib/browserState";
 import { publishSessionExpired } from "../lib/sessionEvents";
 import type { TutorConversationMessage, TutorExerciseContext } from "../state/ReviewSessionContext";
 import { Dialog } from "./Dialog";
@@ -249,7 +249,7 @@ export function TutorDialog({
   };
 
   const latest = () => {
-    const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const reduceMotion = prefersReducedMotion();
     endRef.current?.scrollIntoView?.({ behavior: reduceMotion ? "auto" : "smooth" });
     setFollowing(true);
   };

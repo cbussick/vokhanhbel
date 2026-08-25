@@ -8,7 +8,7 @@ import { MultipleChoiceExercise } from "../components/review/MultipleChoiceExerc
 import { SessionSummary } from "../components/review/SessionSummary";
 import { SwipeExercise } from "../components/review/SwipeExercise";
 import type { Grade } from "../domain/review";
-import { useOnlineStatus } from "../lib/browserState";
+import { prefersReducedMotion, useOnlineStatus } from "../lib/browserState";
 import { statsQuery } from "../lib/queries";
 import { useReviewSession } from "../state/ReviewSessionContext";
 
@@ -76,7 +76,7 @@ function ReviewSessionRoute() {
 
     reviewSession.revealAnswer();
 
-    const duration = matchMedia("(prefers-reduced-motion: reduce)").matches ? 120 : 250;
+    const duration = prefersReducedMotion() ? 120 : 250;
 
     window.setTimeout(() => setRevealComplete(true), duration);
   };

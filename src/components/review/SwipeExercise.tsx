@@ -1,19 +1,15 @@
 import { useRef, useState, type PointerEvent } from "react";
 import { useTranslation } from "react-i18next";
-import type { MultipleChoiceOptionView, SwipeExerciseView } from "../../state/ReviewSessionContext";
+import { prefersReducedMotion } from "../../lib/browserState";
+import { issueBlocksInput } from "../../state/review/reviewSessionReducer";
+import type { SwipeExerciseView } from "../../state/ReviewSessionContext";
 import { useReviewSession } from "../../state/ReviewSessionContext";
 import { CardFace } from "../audio/CardFace";
 import { TutorDialog } from "../TutorDialog";
 import { ExerciseScreen } from "./ExerciseScreen";
-import { OptionOutcome, optionModifierClassName } from "./optionAppearance";
+import { OptionOutcome, optionModifierClassName, type OptionVerdict } from "./optionAppearance";
 import { TutorButton } from "./TutorButton";
 import styles from "./reviewSession.module.css";
-
-/** Whether motion should resolve instantly rather than animate — read fresh each time, since the
- * Learner can change this OS setting without reloading the app. */
-function prefersReducedMotion(): boolean {
-  return matchMedia("(prefers-reduced-motion: reduce)").matches;
-}
 
 /** How long the fly-off/spring-back CSS transition takes, so the local "still flying" state clears
  * in step with it. Zero under reduced motion, so the outgoing Card is simply gone next paint. */
@@ -68,8 +64,8 @@ export function SwipeExercise({
   const leftTargetRef = useRef<HTMLButtonElement>(null);
   const rightTargetRef = useRef<HTMLButtonElement>(null);
 
-  const issueBlocksInput = view.issue === "clock" || view.issue === "conflict";
-  const interactive = !view.resolved && !issueBlocksInput;
+  const inputBlocked = issueBlocksInput(view.issue);
+  const interactive = !view.resolved && !inputBlocked;
 
   const flyOff = (cardId: string, direction: "left" | "right") => {
     setFlying({ cardId, direction });
@@ -229,13 +225,10 @@ export function SwipeExercise({
           ),
         )}
       </div>
-      <fieldset className={styles.swipeTargets} disabled={view.resolved || issueBlocksInput}>
+      <fieldset className={styles.swipeTargets} disabled={view.resolved || inputBlocked}>
         <legend className={styles.visuallyHidden}>{t("review.swipeLegend")}</legend>
         {view.options.map((option, index) => {
-          const shimOption: MultipleChoiceOptionView = {
-            id: option.cardId,
-            text: option.text,
-            audio: null,
+          const verdict: OptionVerdict = {
             dead: !option.correct && view.resolved && !view.correct,
             revealedCorrect: view.resolved && option.correct,
           };
@@ -248,11 +241,11 @@ export function SwipeExercise({
               type="button"
               className={`${styles.option} ${styles.swipeTarget} ${
                 dragHoverSide === side ? styles.swipeTargetHover : ""
-              } ${optionModifierClassName(shimOption)}`}
+              } ${optionModifierClassName(verdict)}`}
               onClick={() => commit(option.cardId)}
             >
               {option.text}
-              <OptionOutcome option={shimOption} />
+              <OptionOutcome verdict={verdict} />
             </button>
           );
         })}

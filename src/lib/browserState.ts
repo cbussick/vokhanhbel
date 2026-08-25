@@ -16,6 +16,14 @@ function subscribeToOnlineState(onChange: () => void): () => void {
   };
 }
 
+/**
+ * Whether motion should resolve instantly rather than animate. Read fresh at each call rather than
+ * cached, since the Learner can change this OS setting without reloading the app.
+ */
+export function prefersReducedMotion(): boolean {
+  return matchMedia("(prefers-reduced-motion: reduce)").matches;
+}
+
 export function useOnlineStatus(): boolean {
   return useSyncExternalStore(
     subscribeToOnlineState,

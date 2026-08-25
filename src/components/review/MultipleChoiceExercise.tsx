@@ -1,8 +1,10 @@
 import { useTranslation } from "react-i18next";
+import { issueBlocksInput } from "../../state/review/reviewSessionReducer";
 import type { MultipleChoiceExerciseView } from "../../state/ReviewSessionContext";
 import { useReviewSession } from "../../state/ReviewSessionContext";
 import { CardFace } from "../audio/CardFace";
 import { TutorDialog } from "../TutorDialog";
+import { audioOnlyFaceUnavailable } from "./audioOnlyFace";
 import { AudioUnavailableNotice } from "./AudioUnavailableNotice";
 import { ExerciseScreen } from "./ExerciseScreen";
 import { MultipleChoiceOptions } from "./MultipleChoiceOptions";
@@ -45,8 +47,7 @@ export function MultipleChoiceExercise({
   const { t } = useTranslation();
   const reviewSession = useReviewSession();
   const card = view.currentCard;
-  const frontRequiredUnavailable =
-    !card.front.text && Boolean(card.front.audio) && !frontAudioAvailable;
+  const frontRequiredUnavailable = audioOnlyFaceUnavailable(card.front, frontAudioAvailable);
   // While any audio option has failed to load, guessing between the ones the Learner can still hear
   // would record a Grade she never gave — so grading stays blocked until every option recovers.
   const optionsAudioUnavailable = !view.resolved && unavailableOptionIds.size > 0;
@@ -81,7 +82,7 @@ export function MultipleChoiceExercise({
       <MultipleChoiceOptions
         options={view.options}
         resolved={view.resolved}
-        disabled={frontRequiredUnavailable || view.issue === "clock" || view.issue === "conflict"}
+        disabled={frontRequiredUnavailable || issueBlocksInput(view.issue)}
         audioUnavailable={optionsAudioUnavailable}
         onOptionAvailabilityChange={onOptionAvailabilityChange}
         onChoose={reviewSession.chooseOption}

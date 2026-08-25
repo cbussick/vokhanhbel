@@ -55,7 +55,7 @@ export function MultipleChoiceOptions({
                 onClick={() => onChoose(option.id)}
               >
                 {t("review.chooseOption", { index: index + 1 })}
-                <OptionOutcome option={option} />
+                <OptionOutcome verdict={option} />
               </button>
             </div>
           ) : (
@@ -67,7 +67,7 @@ export function MultipleChoiceOptions({
               onClick={() => onChoose(option.id)}
             >
               {option.text}
-              <OptionOutcome option={option} />
+              <OptionOutcome verdict={option} />
             </button>
           ),
         )}

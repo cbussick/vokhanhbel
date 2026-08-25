@@ -7,6 +7,15 @@ import type { ReviewSubmission } from "./reviewSubmission";
 
 export type ReviewSubmissionIssue = "too-old" | "clock" | "deleted" | "conflict";
 
+/**
+ * Whether an issue stops the Learner answering until it clears. A wrong device clock or a
+ * conflicting Review would both record a Grade that cannot be trusted, so input waits; `too-old`
+ * and `deleted` instead reshape the queue and leave her free to carry on.
+ */
+export function issueBlocksInput(issue: ReviewSubmissionIssue | undefined): boolean {
+  return issue === "clock" || issue === "conflict";
+}
+
 /** A matching Exercise falling below this many un-graded pairs sends what's left to flip Cards. */
 const matchingMinimumPairs = 2;
 
