@@ -21,6 +21,23 @@ function optionClassName(option: MultipleChoiceOptionView): string {
   return `${styles.option}`;
 }
 
+function TutorButton({ onClick, disabled }: { onClick: () => void; disabled: boolean }) {
+  const { t } = useTranslation();
+
+  return (
+    <button type="button" className={styles.tutorButton} onClick={onClick} disabled={disabled}>
+      <svg aria-hidden="true" viewBox="0 0 24 24">
+        <path d="M12 2.5c.7 4.5 2.9 6.7 7.4 7.4-4.5.7-6.7 2.9-7.4 7.4-.7-4.5-2.9-6.7-7.4-7.4 4.5-.7 6.7-2.9 7.4-7.4Z" />
+        <path
+          d="M19 15.5c.35 2.2 1.45 3.3 3.65 3.65-2.2.35-3.3 1.45-3.65 3.65-.35-2.2-1.45-3.3-3.65-3.65 2.2-.35 3.3-1.45 3.65-3.65Z"
+          opacity=".65"
+        />
+      </svg>
+      {t("tutor.open")}
+    </button>
+  );
+}
+
 function MultipleChoiceOptions({
   options,
   resolved,
@@ -151,6 +168,8 @@ function ReviewSessionRoute() {
     !backAudioAvailable;
   const requiredAudioUnavailable = frontRequiredUnavailable || backRequiredUnavailable;
 
+  const tutorButtonDisabled = !online && Boolean(card.front.text) && Boolean(card.back.text);
+
   const grade = (value: Grade) => {
     reviewSession.gradeCard(value);
     resetFaceState();
@@ -237,21 +256,10 @@ function ReviewSessionRoute() {
                 )}
                 {view.revealed && revealComplete && (
                   <>
-                    <button
-                      type="button"
-                      className={styles.tutorButton}
+                    <TutorButton
                       onClick={() => setTutorOpen(true)}
-                      disabled={!online && Boolean(card.front.text) && Boolean(card.back.text)}
-                    >
-                      <svg aria-hidden="true" viewBox="0 0 24 24">
-                        <path d="M12 2.5c.7 4.5 2.9 6.7 7.4 7.4-4.5.7-6.7 2.9-7.4 7.4-.7-4.5-2.9-6.7-7.4-7.4 4.5-.7 6.7-2.9 7.4-7.4Z" />
-                        <path
-                          d="M19 15.5c.35 2.2 1.45 3.3 3.65 3.65-2.2.35-3.3 1.45-3.65 3.65-.35-2.2-1.45-3.3-3.65-3.65 2.2-.35 3.3-1.45 3.65-3.65Z"
-                          opacity=".65"
-                        />
-                      </svg>
-                      {t("tutor.open")}
-                    </button>
+                      disabled={tutorButtonDisabled}
+                    />
                     <fieldset
                       className={styles.grades}
                       disabled={
@@ -296,6 +304,10 @@ function ReviewSessionRoute() {
                     <p className={styles.outcome} role="status">
                       {t(view.correct ? "review.answerCorrect" : "review.answerWrong")}
                     </p>
+                    <TutorButton
+                      onClick={() => setTutorOpen(true)}
+                      disabled={tutorButtonDisabled}
+                    />
                     <button type="button" className={styles.revealButton} onClick={advance}>
                       {t("review.continue")}
                     </button>
@@ -312,9 +324,10 @@ function ReviewSessionRoute() {
               </div>
             )}
           </div>
-          {tutorOpen && view.kind === "flip" && (
+          {tutorOpen && (view.kind === "flip" || view.resolved) && (
             <TutorDialog
               card={card}
+              exercise={view.tutorExercise}
               messages={view.tutorConversation}
               updateMessages={reviewSession.updateTutorConversation}
               onClose={() => setTutorOpen(false)}

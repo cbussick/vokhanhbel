@@ -130,11 +130,18 @@ describe("PostgreSQL application behavior", () => {
       sessionHash,
     );
     const streamTutorReply = vi.fn();
+    const exerciseCards = [{ cardId: card.id, outcome: null }];
 
     await expect(
       createTutorStream(
-        card.id,
-        { message: "Hilf mir", messages: [] },
+        { subjectCardId: card.id, exerciseCards, chosenOptionText: null },
+        {
+          message: "Hilf mir",
+          messages: [],
+          subjectCardId: card.id,
+          exerciseCards,
+          chosenOptionText: null,
+        },
         sessionHash,
         { streamTutorReply },
         new AbortController().signal,

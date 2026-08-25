@@ -6,7 +6,7 @@ import { problemSchema, problemTypes } from "../contracts/problem";
 import { tutorLimits, tutorStreamEventSchema, type TutorInput } from "../contracts/tutor";
 import { useOnlineStatus } from "../lib/browserState";
 import { publishSessionExpired } from "../lib/sessionEvents";
-import type { TutorConversationMessage } from "../state/ReviewSessionContext";
+import type { TutorConversationMessage, TutorExerciseContext } from "../state/ReviewSessionContext";
 import { Dialog } from "./Dialog";
 import { TutopherAvatar } from "./TutopherAvatar";
 import styles from "./TutorDialog.module.css";
@@ -29,11 +29,14 @@ class TutorRequestError extends Error {
 
 export function TutorDialog({
   card,
+  exercise,
   messages,
   updateMessages,
   onClose,
 }: {
+  /** The Card the dialog is anchored to — always one of `exercise.cards`. */
   card: Card;
+  exercise: TutorExerciseContext;
   messages: TutorConversationMessage[];
   updateMessages: (
     update: (messages: TutorConversationMessage[]) => TutorConversationMessage[],
@@ -118,7 +121,13 @@ export function TutorDialog({
     if (!trimmed || composerDisabled) return;
 
     const historyLength = messages.length;
-    const input: TutorInput = { message: trimmed, messages };
+    const input: TutorInput = {
+      message: trimmed,
+      messages,
+      subjectCardId: card.id,
+      exerciseCards: exercise.cards,
+      chosenOptionText: exercise.chosenOptionText,
+    };
     const controller = new AbortController();
 
     activeRequestRef.current = {
@@ -139,7 +148,7 @@ export function TutorDialog({
     ]);
 
     try {
-      const response = await fetch(apiPaths.tutorReplies(card.id), {
+      const response = await fetch(apiPaths.tutorReplies, {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify(input),

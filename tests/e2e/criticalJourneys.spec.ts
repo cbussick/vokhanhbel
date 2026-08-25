@@ -1021,11 +1021,30 @@ for (const viewport of [
     });
 
     await correctOption.click();
-    await expect(page.getByRole("button", { name: "Weiter" })).toBeVisible();
+    const tutorButton = page.getByRole("button", { name: "Mit Tutopher reden" });
+    const continueButton = page.getByRole("button", { name: "Weiter" });
+
+    await expect(continueButton).toBeVisible();
     await expect(page.getByText("Richtig!")).toBeVisible();
+    // The outcome is announced through a live region, not only shown as text.
+    await expect(page.getByRole("status")).toHaveText("Richtig!");
+    // Colour is not the only signal: each option also carries an accessible-name label.
+    await expect(correctOption).toHaveAccessibleName(/richtig/);
+    await expect(wrongOption).toHaveAccessibleName(/falsch/);
     await expectNoSeriousAxeViolations(page);
     await expect(page).toHaveScreenshot(`review-multiple-choice-resolved-${viewport.name}.png`, {
       animations: "disabled",
     });
+
+    // Both controls the resolved state offers are keyboard reachable and operable.
+    await tutorButton.focus();
+    await expect(tutorButton).toBeFocused();
+    await page.keyboard.press("Enter");
+    await expect(page.getByRole("dialog", { name: "Tutopher" })).toBeVisible();
+    await page
+      .getByRole("button", { name: viewport.name === "mobile" ? "Zurück" : "Schließen" })
+      .click();
+    await continueButton.focus();
+    await expect(continueButton).toBeFocused();
   });
 }

@@ -229,12 +229,83 @@ describe("public contracts", () => {
       role: index % 2 === 0 ? ("user" as const) : ("assistant" as const),
       content: `Nachricht ${index + 1}`,
     }));
+    const subjectCardId = crypto.randomUUID();
+    const base = {
+      subjectCardId,
+      exerciseCards: [{ cardId: subjectCardId, outcome: null }],
+      chosenOptionText: null,
+    };
 
-    expect(tutorInputSchema.safeParse({ message: "Noch eine Frage", messages }).success).toBe(true);
+    expect(
+      tutorInputSchema.safeParse({ message: "Noch eine Frage", messages, ...base }).success,
+    ).toBe(true);
     expect(
       tutorInputSchema.safeParse({
         message: "Eine Frage zu viel",
         messages: [...messages, { role: "user", content: "Nachricht 17" }],
+        ...base,
+      }).success,
+    ).toBe(false);
+  });
+
+  it("carries the Exercise a resolved multiple-choice Card produced, verdict and chosen option included", () => {
+    const subjectCardId = crypto.randomUUID();
+
+    expect(
+      tutorInputSchema.parse({
+        message: "Warum ist das falsch?",
+        messages: [],
+        subjectCardId,
+        exerciseCards: [{ cardId: subjectCardId, outcome: "forgot" }],
+        chosenOptionText: "the peach",
+      }),
+    ).toMatchObject({
+      exerciseCards: [{ cardId: subjectCardId, outcome: "forgot" }],
+      chosenOptionText: "the peach",
+    });
+  });
+
+  it("accepts a flip Card's Exercise, which sends no outcome and no chosen option", () => {
+    const subjectCardId = crypto.randomUUID();
+
+    expect(
+      tutorInputSchema.safeParse({
+        message: "Was bedeutet das?",
+        messages: [],
+        subjectCardId,
+        exerciseCards: [{ cardId: subjectCardId, outcome: null }],
+        chosenOptionText: null,
+      }).success,
+    ).toBe(true);
+  });
+
+  it("rejects a Tutor request missing the subject Card or Exercise Cards", () => {
+    const subjectCardId = crypto.randomUUID();
+
+    expect(
+      tutorInputSchema.safeParse({
+        message: "Frage",
+        messages: [],
+        exerciseCards: [{ cardId: subjectCardId, outcome: null }],
+        chosenOptionText: null,
+      }).success,
+    ).toBe(false);
+    expect(
+      tutorInputSchema.safeParse({
+        message: "Frage",
+        messages: [],
+        subjectCardId,
+        exerciseCards: [],
+        chosenOptionText: null,
+      }).success,
+    ).toBe(false);
+    expect(
+      tutorInputSchema.safeParse({
+        message: "Frage",
+        messages: [],
+        subjectCardId,
+        exerciseCards: [{ cardId: subjectCardId, outcome: "invalid-grade" }],
+        chosenOptionText: null,
       }).success,
     ).toBe(false);
   });

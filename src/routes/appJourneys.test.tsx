@@ -498,6 +498,7 @@ describe("rendered app journeys", () => {
     expect(screen.getByRole("button", { name: /one.*richtig/ })).toBeDisabled();
     await waitFor(() => expect(recordedGrade).toBe("knew_it"));
     expect(screen.getByText("1 / 4")).toBeVisible();
+    expect(await screen.findByRole("button", { name: "Mit Tutopher reden" })).toBeEnabled();
 
     await user.click(screen.getByRole("button", { name: "Weiter" }));
     expect(screen.getByText("2 / 4")).toBeVisible();
@@ -541,6 +542,7 @@ describe("rendered app journeys", () => {
     const user = userEvent.setup();
     let recordedGrade = "";
     let reviews = 0;
+    let tutorRequestBody: unknown;
     mockServer.use(
       http.get("/api/cards", () => HttpResponse.json(multipleChoiceCards)),
       http.post("/api/reviews", async ({ request }) => {
@@ -552,6 +554,11 @@ describe("rendered app journeys", () => {
           review: { id: crypto.randomUUID(), pointsAwarded: 1, boxBefore: 2, boxAfter: 0 },
           card: { ...multipleChoiceCards[0], box: 0 },
         });
+      }),
+      http.post("/api/tutor-replies", async ({ request }) => {
+        tutorRequestBody = await request.json();
+
+        return completedTutorReply("Weil du „three“ statt „one“ gewählt hast.");
       }),
     );
     await renderApp("/review");
@@ -568,8 +575,59 @@ describe("rendered app journeys", () => {
     await waitFor(() => expect(recordedGrade).toBe("forgot"));
     expect(reviews).toBe(1);
 
+    // A wrong resolution offers Tutopher too, and carries the Exercise's verdict and the option
+    // that was actually chosen (the second, resolving pick — not the first knocked-out guess).
+    await user.click(await screen.findByRole("button", { name: "Mit Tutopher reden" }));
+    await user.click(await screen.findByRole("button", { name: "Beispielsatz geben" }));
+    await waitFor(() =>
+      expect(tutorRequestBody).toMatchObject({
+        subjectCardId: multipleChoiceCards[0]!.id,
+        exerciseCards: [{ cardId: multipleChoiceCards[0]!.id, outcome: "forgot" }],
+        chosenOptionText: "three",
+      }),
+    );
+    await user.click(screen.getByRole("button", { name: "Schließen" }));
+
     await user.click(screen.getByRole("button", { name: "Weiter" }));
     expect(screen.getByText("2 / 4")).toBeVisible();
+  });
+
+  it("keeps the resolved multiple-choice Tutor explanation local when the subject Card's front is audio-only", async () => {
+    const user = userEvent.setup();
+    const audioId = "88888888-8888-4888-8888-888888888887";
+    const metadata = { durationMs: 1_000, contentType: "audio/wav" as const, byteSize: 8_044 };
+    const audioFrontCards = multipleChoiceCards.map((exerciseCard, index) =>
+      index === 0
+        ? { ...exerciseCard, front: { text: null, audio: { ...metadata, id: audioId } } }
+        : exerciseCard,
+    );
+    let tutorRequests = 0;
+    mockServer.use(
+      http.get("/api/cards", () => HttpResponse.json(audioFrontCards)),
+      http.get(`/api/audio/${audioId}`, () => new HttpResponse(new Uint8Array([1]))),
+      http.post("/api/reviews", () =>
+        HttpResponse.json({
+          review: { id: crypto.randomUUID(), pointsAwarded: 10, boxBefore: 0, boxAfter: 1 },
+          card: { ...audioFrontCards[0], box: 1 },
+        }),
+      ),
+      http.post("/api/tutor-replies", () => {
+        tutorRequests += 1;
+
+        return HttpResponse.json({});
+      }),
+    );
+    await renderApp("/review");
+    await user.click(await screen.findByRole("button", { name: "Review starten" }));
+    await user.click(await screen.findByRole("button", { name: "one" }));
+    expect(await screen.findByText("Richtig!")).toBeVisible();
+
+    const tutor = await screen.findByRole("button", { name: "Mit Tutopher reden" });
+
+    expect(tutor).toBeEnabled();
+    await user.click(tutor);
+    expect(await screen.findByText(/Tutopher kann Aufnahmen nicht anhören/)).toBeVisible();
+    expect(tutorRequests).toBe(0);
   });
 
   it("plans a mix of flip Cards and multiple-choice Exercises across Collections in one Session", async () => {
@@ -675,7 +733,7 @@ describe("rendered app journeys", () => {
     mockServer.use(
       http.get("/api/cards", () => HttpResponse.json([audioCard])),
       http.get("/api/audio/:audioId", () => new HttpResponse(new Uint8Array([1]))),
-      http.post("/api/cards/:cardId/tutor-replies", () => {
+      http.post("/api/tutor-replies", () => {
         tutorRequests += 1;
 
         return HttpResponse.json({});
@@ -1118,6 +1176,32 @@ describe("rendered app journeys", () => {
     expect(screen.getByRole("button", { name: "Senden" })).toBeVisible();
   });
 
+  it("sends a flip Card's Exercise with no outcome and no chosen option", async () => {
+    const user = userEvent.setup();
+    let tutorRequestBody: unknown;
+    mockServer.use(
+      http.post("/api/tutor-replies", async ({ request }) => {
+        tutorRequestBody = await request.json();
+
+        return completedTutorReply("Antwort");
+      }),
+    );
+    await renderApp("/review");
+    await user.click(await screen.findByRole("button", { name: "Review starten" }));
+    await user.click(await screen.findByRole("button", { name: "Antwort zeigen" }));
+    await user.click(await screen.findByRole("button", { name: "Mit Tutopher reden" }));
+    await user.type(await screen.findByLabelText("Deine Nachricht"), "Warum?");
+    await user.click(screen.getByRole("button", { name: "Senden" }));
+
+    await waitFor(() =>
+      expect(tutorRequestBody).toMatchObject({
+        subjectCardId: testCards[0]!.id,
+        exerciseCards: [{ cardId: testCards[0]!.id, outcome: null }],
+        chosenOptionText: null,
+      }),
+    );
+  });
+
   it("offers a floating return to the newest Tutor message only while browsing earlier messages", async () => {
     const user = userEvent.setup();
     await renderApp("/review");
@@ -1158,9 +1242,7 @@ describe("rendered app journeys", () => {
   it("keeps the Tutor Conversation when the Learner closes and reopens the same Card", async () => {
     const user = userEvent.setup();
     mockServer.use(
-      http.post("/api/cards/:cardId/tutor-replies", () =>
-        completedTutorReply("Das ist die Antwort."),
-      ),
+      http.post("/api/tutor-replies", () => completedTutorReply("Das ist die Antwort.")),
     );
     await renderApp("/review");
     await user.click(await screen.findByRole("button", { name: "Review starten" }));
@@ -1184,7 +1266,7 @@ describe("rendered app journeys", () => {
       messages: Array<{ role: "user" | "assistant"; content: string }>;
     }> = [];
     mockServer.use(
-      http.post("/api/cards/:cardId/tutor-replies", async ({ request }) => {
+      http.post("/api/tutor-replies", async ({ request }) => {
         requests.push((await request.json()) as (typeof requests)[number]);
 
         return completedTutorReply(`Antwort ${requests.length}`);
@@ -1213,6 +1295,9 @@ describe("rendered app journeys", () => {
     expect(requests).toHaveLength(8);
     expect(requests[7]).toEqual({
       message: "Nachricht 8",
+      subjectCardId: testCards[0]!.id,
+      exerciseCards: [{ cardId: testCards[0]!.id, outcome: null }],
+      chosenOptionText: null,
       messages: [
         { role: "user", content: "Nachricht 1" },
         { role: "assistant", content: "Antwort 1" },
@@ -1260,7 +1345,7 @@ describe("rendered app journeys", () => {
     };
     mockServer.use(
       http.get("/api/cards", () => HttpResponse.json([testCards[0], secondCard])),
-      http.post("/api/cards/:cardId/tutor-replies", () => completedTutorReply("Erste Antwort")),
+      http.post("/api/tutor-replies", () => completedTutorReply("Erste Antwort")),
     );
     await renderApp("/review");
     await user.click(await screen.findByRole("button", { name: "Review starten" }));
@@ -1283,9 +1368,7 @@ describe("rendered app journeys", () => {
   it("starts a fresh Tutor Conversation when a forgotten Card repeats", async () => {
     const user = userEvent.setup();
     mockServer.use(
-      http.post("/api/cards/:cardId/tutor-replies", () =>
-        completedTutorReply("Antwort aus Runde eins"),
-      ),
+      http.post("/api/tutor-replies", () => completedTutorReply("Antwort aus Runde eins")),
     );
     await renderApp("/review");
     await user.click(await screen.findByRole("button", { name: "Review starten" }));
@@ -1309,7 +1392,7 @@ describe("rendered app journeys", () => {
     const user = userEvent.setup();
     let requestAborted = false;
     mockServer.use(
-      http.post("/api/cards/:cardId/tutor-replies", ({ request }) =>
+      http.post("/api/tutor-replies", ({ request }) =>
         partialTutorReply(request, () => {
           requestAborted = true;
         }),
@@ -1335,7 +1418,7 @@ describe("rendered app journeys", () => {
     const user = userEvent.setup();
     let requestAborted = false;
     mockServer.use(
-      http.post("/api/cards/:cardId/tutor-replies", ({ request }) =>
+      http.post("/api/tutor-replies", ({ request }) =>
         partialTutorReply(request, () => {
           requestAborted = true;
         }),
@@ -1359,7 +1442,7 @@ describe("rendered app journeys", () => {
     const user = userEvent.setup();
     let finishReply!: () => void;
     mockServer.use(
-      http.post("/api/cards/:cardId/tutor-replies", () => {
+      http.post("/api/tutor-replies", () => {
         const stream = new ReadableStream<Uint8Array>({
           start(controller) {
             const encoder = new TextEncoder();
@@ -1391,9 +1474,7 @@ describe("rendered app journeys", () => {
 
   it("guides a fresh Tutor Conversation and keeps prompt chips available after a reply", async () => {
     const user = userEvent.setup();
-    mockServer.use(
-      http.post("/api/cards/:cardId/tutor-replies", () => completedTutorReply("Ein Beispiel")),
-    );
+    mockServer.use(http.post("/api/tutor-replies", () => completedTutorReply("Ein Beispiel")));
     await renderApp("/review");
     await user.click(await screen.findByRole("button", { name: "Review starten" }));
     await user.click(await screen.findByRole("button", { name: "Antwort zeigen" }));
@@ -1433,7 +1514,7 @@ describe("rendered app journeys", () => {
     const user = userEvent.setup();
     mockServer.use(
       http.post(
-        "/api/cards/:cardId/tutor-replies",
+        "/api/tutor-replies",
         () =>
           new HttpResponse(
             'event: delta\ndata: {"text":"Teilantwort"}\n\nevent: error\ndata: {"type":"/problems/tutor-failed"}\n\n',
@@ -1458,7 +1539,7 @@ describe("rendered app journeys", () => {
   it("expires the shared Session when a Tutor request returns 401", async () => {
     const user = userEvent.setup();
     mockServer.use(
-      http.post("/api/cards/:cardId/tutor-replies", () =>
+      http.post("/api/tutor-replies", () =>
         HttpResponse.json(
           {
             type: "/problems/unauthenticated",
@@ -1484,7 +1565,7 @@ describe("rendered app journeys", () => {
   it("uses the Tutor limit Retry-After integer as a disabled retry countdown", async () => {
     const user = userEvent.setup();
     mockServer.use(
-      http.post("/api/cards/:cardId/tutor-replies", () =>
+      http.post("/api/tutor-replies", () =>
         HttpResponse.json(
           {
             type: "/problems/tutor-session-limit",

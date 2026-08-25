@@ -29,6 +29,7 @@ interface FlipExerciseView {
   issue: ReviewSubmissionIssue | undefined;
   issueRequestId: string | undefined;
   tutorConversation: TutorConversationMessage[];
+  tutorExercise: TutorExerciseContext;
 }
 
 export interface MultipleChoiceOptionView {
@@ -51,6 +52,8 @@ interface MultipleChoiceExerciseView {
   correct: boolean;
   issue: ReviewSubmissionIssue | undefined;
   issueRequestId: string | undefined;
+  tutorConversation: TutorConversationMessage[];
+  tutorExercise: TutorExerciseContext;
 }
 
 interface SummaryView {
@@ -70,6 +73,16 @@ export type ReviewSessionView =
 export interface TutorConversationMessage {
   role: "user" | "assistant";
   content: string;
+}
+
+/**
+ * The resolved Exercise as the Tutor request describes it: every Card it covered with the Grade
+ * each resolved to (null for a flip Card's self-graded outcome), and the option text the Learner
+ * chose (null for a flip Card, which has none). Mirrors `TutorInput`'s exercise fields.
+ */
+export interface TutorExerciseContext {
+  cards: { cardId: string; outcome: Grade | null }[];
+  chosenOptionText: string | null;
 }
 
 interface ReviewSessionContextValue {
@@ -103,10 +116,10 @@ function getRequestId(error: unknown): string | undefined {
   return error instanceof ApiError ? error.requestId : undefined;
 }
 
-function getCardAttemptKey(state: ReviewSessionState): string | undefined {
+function getExerciseAttemptKey(state: ReviewSessionState): string | undefined {
   if (state.status !== "reviewing") return undefined;
 
-  return `${state.reviewSession.id}:${state.reviewSession.cardAttemptNumber}`;
+  return `${state.reviewSession.id}:${state.reviewSession.exerciseAttemptNumber}`;
 }
 
 function toReviewSessionView(
@@ -133,6 +146,8 @@ function toReviewSessionView(
 
   const position = state.currentIndex + 1;
   const total = state.reviewSession.exercises.length;
+  const conversation =
+    tutorConversation.attemptKey === getExerciseAttemptKey(state) ? tutorConversation.messages : [];
 
   if (exercise.kind === "flip") {
     return {
@@ -143,13 +158,16 @@ function toReviewSessionView(
       revealed: state.revealed,
       issue: state.issue,
       issueRequestId: state.issueRequestId,
-      tutorConversation:
-        tutorConversation.attemptKey === getCardAttemptKey(state) ? tutorConversation.messages : [],
+      tutorConversation: conversation,
+      tutorExercise: { cards: [{ cardId: currentCard.id, outcome: null }], chosenOptionText: null },
     };
   }
 
   const deadOptionIds = state.multipleChoice?.deadOptionIds ?? [];
   const resolvedSubmission = state.multipleChoice?.resolvedSubmission;
+  const chosenOption = exercise.options.find(
+    (option) => option.cardId === state.multipleChoice?.resolvedOptionId,
+  );
 
   return {
     kind: "multipleChoice",
@@ -166,6 +184,11 @@ function toReviewSessionView(
     })),
     issue: state.issue,
     issueRequestId: state.issueRequestId,
+    tutorConversation: conversation,
+    tutorExercise: {
+      cards: [{ cardId: currentCard.id, outcome: resolvedSubmission?.input.grade ?? null }],
+      chosenOptionText: chosenOption?.text ?? null,
+    },
   };
 }
 
@@ -307,7 +330,7 @@ export function ReviewSessionProvider({ children }: { children: ReactNode }) {
   const updateTutorConversation = (
     update: (messages: TutorConversationMessage[]) => TutorConversationMessage[],
   ) => {
-    const attemptKey = getCardAttemptKey(state);
+    const attemptKey = getExerciseAttemptKey(state);
 
     if (!attemptKey) return;
 
