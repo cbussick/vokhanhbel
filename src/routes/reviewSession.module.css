@@ -285,10 +285,12 @@
   color: #fff;
 }
 
+/* No `color: #fff` here, unlike .optionDead: white on --color-success is 2.4:1 and fails WCAG AA,
+   while the inherited --color-text is 5.2:1. This matches the green grade button, which has always
+   left its text colour alone for the same reason. */
 .optionCorrect {
   border-color: var(--color-success);
   background: var(--color-success);
-  color: #fff;
 }
 
 .audioOption {
@@ -347,10 +349,10 @@
   background: color-mix(in srgb, var(--color-primary) 12%, var(--color-surface));
 }
 
+/* Text colour left inherited, as in .optionCorrect: white on --color-success fails WCAG AA. */
 .matchingEntryMatched {
   border-color: var(--color-success);
   background: var(--color-success);
-  color: #fff;
 }
 
 .swipeDeck {

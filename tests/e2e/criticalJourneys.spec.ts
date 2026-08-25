@@ -61,6 +61,24 @@ async function json(route: Route, body: unknown, status = 200) {
 }
 
 async function installMockApi(page: Page, authenticated = true) {
+  // The Exercise planner shuffles options, matching columns and the Swipe deck with `Math.random`,
+  // and the summary confetti places its pieces the same way. Left unseeded, that content lands
+  // somewhere new on every run, so every visual baseline covering an Exercise would be unstable by
+  // construction. Seeding it here keeps the app's own code untouched and makes a planned Session
+  // reproducible, which is also what lets these tests name the option they expect to be correct.
+  await page.addInitScript(() => {
+    let seed = 0x2f6e2b1;
+
+    Math.random = () => {
+      seed = (seed + 0x6d2b79f5) | 0;
+
+      let mixed = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+
+      mixed = (mixed + Math.imul(mixed ^ (mixed >>> 7), 61 | mixed)) ^ mixed;
+
+      return ((mixed ^ (mixed >>> 14)) >>> 0) / 4_294_967_296;
+    };
+  });
   const state = { authenticated, cards: [createCard()] };
   await page.route("**/api/**", async (route) => {
     const request = route.request();
@@ -744,7 +762,10 @@ test("uses desktop space for route content without overstretching focused work",
 
   await page.getByRole("link", { name: /Wiederholen/ }).click();
   await page.getByRole("button", { name: "Review starten" }).click();
-  await expect(page.getByRole("button", { name: "Antwort zeigen" })).toBeVisible();
+  // The progress indicator, not a flip Card's "Antwort zeigen": these three Cards can supply one
+  // distractor but not three, so the planner now gives them Swipe rather than falling back to flip.
+  // This test is about the focused layout's width, which every Exercise kind shares.
+  await expect(page.getByRole("progressbar")).toBeVisible();
 
   const focusedMainBox = await page.locator("main").boundingBox();
   const layoutWidth = await page.evaluate<number>("document.body.clientWidth");
@@ -999,12 +1020,15 @@ for (const viewport of [
     await page.emulateMedia({ reducedMotion: "reduce" });
     const state = await installMockApi(page);
 
-    // Four Cards in one Collection with distinct backs: each is eligible for multiple choice.
+    // Four Cards in one Collection with distinct backs, so each is eligible for multiple choice.
+    // The last two deliberately share a front: a matching board needs four Cards with no repeated
+    // text in either column, so the repeat leaves only three candidates and keeps matching — which
+    // the planner would otherwise pick ahead of multiple choice — out of this Session entirely.
     state.cards = [
       createCard("der Apfel", "the apple"),
       createCard("die Birne", "the pear"),
       createCard("der Pfirsich", "the peach"),
-      createCard("die Pflaume", "the plum"),
+      createCard("der Pfirsich", "the plum"),
     ];
     await page.goto("/review");
     await page.getByRole("button", { name: "Review starten" }).click();
