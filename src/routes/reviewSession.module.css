@@ -224,6 +224,78 @@
   --grade-background: var(--color-success);
 }
 
+.visuallyHidden {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.promptFace {
+  display: grid;
+  place-items: center;
+  flex: 1 1 0;
+  min-block-size: 12rem;
+  padding: var(--space-6);
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-large);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-medium);
+}
+
+.options {
+  display: grid;
+  gap: var(--space-3);
+  padding: 0;
+  border: 0;
+}
+
+.optionsLegend {
+  padding: 0;
+  color: var(--color-text-secondary);
+  font-size: var(--font-sm);
+  font-weight: 600;
+}
+
+.optionsGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--space-2);
+}
+
+.option {
+  min-block-size: 56px;
+  display: grid;
+  place-items: center;
+  padding: var(--space-2);
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-medium);
+  background: var(--color-surface);
+  font-weight: 700;
+  text-align: center;
+}
+
+.optionDead {
+  border-color: var(--color-danger);
+  background: var(--color-danger);
+  color: #fff;
+}
+
+.optionCorrect {
+  border-color: var(--color-success);
+  background: var(--color-success);
+  color: #fff;
+}
+
+.outcome {
+  font-weight: 800;
+  text-align: center;
+}
+
 .issue {
   padding: var(--space-3);
   border: 1px solid var(--color-danger);
@@ -351,5 +423,9 @@
 
   .grades button:hover:not(:disabled) {
     background: color-mix(in srgb, var(--grade-background) 80%, white);
+  }
+
+  .option:hover:not(:disabled) {
+    background: var(--color-surface-hover);
   }
 }

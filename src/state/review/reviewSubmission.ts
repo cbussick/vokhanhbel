@@ -6,5 +6,5 @@ export interface ReviewSubmission {
   reviewSessionId: string;
   card: Card;
   optimisticPoints: number;
-  cardIndex: number;
+  exerciseIndex: number;
 }
