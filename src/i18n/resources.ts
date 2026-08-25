@@ -183,6 +183,7 @@ export const de = {
       matchingMatched: "zugeordnet",
       matchingMismatch: "Das ist kein Paar. Versuch es noch einmal.",
       matchingResolved: "Alle Paare gefunden!",
+      swipeLegend: "Ziehe die Karte zur richtigen Antwort oder tippe sie an",
       continue: "Weiter",
       close: "Review beenden",
       summary: "Gut gemacht!",

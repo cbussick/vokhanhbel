@@ -4,6 +4,7 @@ import {
   planExercises,
   type MatchingExercise,
   type MultipleChoiceExercise,
+  type SwipeExercise,
 } from "./exercisePlanner.js";
 
 const collectionA = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
@@ -73,7 +74,7 @@ describe("planExercises", () => {
     expect(new Set(multipleChoice.options.map((option) => option.cardId)).size).toBe(4);
   });
 
-  it("falls back to a flip Card when fewer than three distinct sibling backs are available", () => {
+  it("falls back to a flip Card when fewer than three distinct sibling backs are available and no Swipe deck can form", () => {
     const target = card({ id: "1", back: text("die Katze") });
     const siblings = [
       card({ id: "2", back: text("der Hund") }),
@@ -81,7 +82,9 @@ describe("planExercises", () => {
     ];
     const pool = [target, ...siblings];
 
-    const plan = planExercises(pool, pool, zero);
+    // Only `target` is due — the siblings supply distractors from `pool` but never form a Swipe
+    // deck of their own, since Swipe's own coverage of this shortfall is exercised separately below.
+    const plan = planExercises([target], pool, zero);
     const exercise = plan.find((planned) => planned.cards[0]!.id === "1")!;
 
     expect(exercise).toEqual({ kind: "flip", id: "1", cards: [target] });
@@ -156,10 +159,12 @@ describe("planExercises", () => {
   });
 
   it("plans one Exercise per due Card, in the same order", () => {
+    // Each in its own Sammlung, so none can supply another a distractor — nothing here is eligible
+    // for multiple choice, Swipe, or matching, leaving plain per-Card flip planning to show through.
     const cards = [
-      card({ id: "1", back: text("eins") }),
-      card({ id: "2", back: text("zwei") }),
-      card({ id: "3", back: text("drei") }),
+      card({ id: "1", collectionId: collectionA, back: text("eins") }),
+      card({ id: "2", collectionId: collectionB, back: text("zwei") }),
+      card({ id: "3", collectionId: "ffffffff-ffff-4fff-8fff-ffffffffffff", back: text("drei") }),
     ];
 
     const plan = planExercises(cards, cards, zero);
@@ -174,13 +179,15 @@ describe("planExercises", () => {
       card({ id: "3", back: text("das Pferd") }),
       card({ id: "4", back: text("die Kuh") }),
     ];
-    const cards = [target, ...siblings];
+    const pool = [target, ...siblings];
 
-    const first = planExercises(cards, cards, sequence([0, 0, 0, 0])) as [
+    // Only `target` is due, so nothing here competes for a grouped Exercise — this is purely about
+    // whether the injected random source changes one multiple-choice Exercise's option order.
+    const first = planExercises([target], pool, sequence([0, 0, 0, 0])) as [
       MultipleChoiceExercise,
       ...MultipleChoiceExercise[],
     ];
-    const second = planExercises(cards, cards, sequence([0.99, 0.5, 0.9, 0.1]));
+    const second = planExercises([target], pool, sequence([0.99, 0.5, 0.9, 0.1]));
     const secondExercise = second.find(
       (planned) => planned.cards[0]!.id === "1",
     )! as MultipleChoiceExercise;
@@ -327,16 +334,15 @@ describe("planExercises", () => {
     expect(distractorIds).not.toContain("4");
   });
 
-  it("still produces a complete Review Session, entirely of flip Cards, in a Sammlung with fewer than four text Cards", () => {
-    const cards = [
-      card({ id: "1", back: text("eins") }),
-      card({ id: "2", back: text("zwei") }),
-      card({ id: "3", back: text("drei") }),
-    ];
+  it("still produces a complete Review Session, entirely of flip Cards, in a Sammlung too small even for Swipe", () => {
+    // Two Cards: too few for matching (needs four) and too few for a Swipe deck (needs three) — see
+    // the "swipe" describe block below for the case where a third such Card turns this interactive
+    // instead of falling all the way back to flip.
+    const cards = [card({ id: "1", back: text("eins") }), card({ id: "2", back: text("zwei") })];
 
     const plan = planExercises(cards, cards, zero);
 
-    expect(plan).toHaveLength(3);
+    expect(plan).toHaveLength(2);
     expect(plan.every((exercise) => exercise.kind === "flip")).toBe(true);
   });
 
@@ -635,6 +641,136 @@ describe("planExercises", () => {
       const plan = planExercises(cards, cards, zero);
 
       expect(plan.map((exercise) => exercise.kind)).toEqual(["flip", "matching"]);
+    });
+  });
+
+  describe("swipe", () => {
+    // Three Cards, isolated in their own Sammlung so each sees only the other two as distractor
+    // candidates — exactly one short of multiple choice's three, and enough for Swipe's one.
+    const swipeCollection = "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee";
+
+    function swipeReadyCard(id: string, back: string) {
+      return card({ id, collectionId: swipeCollection, back: text(back) });
+    }
+
+    it("groups three Cards that can each supply one distractor but not three into one Swipe deck", () => {
+      const cards = [
+        swipeReadyCard("1", "eins"),
+        swipeReadyCard("2", "zwei"),
+        swipeReadyCard("3", "drei"),
+      ];
+
+      const plan = planExercises(cards, cards, zero);
+
+      expect(plan).toHaveLength(1);
+      const exercise = plan[0] as SwipeExercise;
+
+      expect(exercise.kind).toBe("swipe");
+      expect(exercise.cards.map((swiped) => swiped.id)).toEqual(["1", "2", "3"]);
+      expect(exercise.deck).toHaveLength(3);
+      for (const deckCard of exercise.deck) {
+        expect(deckCard.options).toHaveLength(2);
+        expect(deckCard.options.filter((option) => option.correct)).toHaveLength(1);
+      }
+    });
+
+    it("offers Swipe ahead of falling back to the flip Card", () => {
+      const cards = [
+        swipeReadyCard("1", "eins"),
+        swipeReadyCard("2", "zwei"),
+        swipeReadyCard("3", "drei"),
+      ];
+
+      const plan = planExercises(cards, cards, zero);
+
+      expect(plan.every((exercise) => exercise.kind !== "flip")).toBe(true);
+    });
+
+    it("falls back to flip Cards when fewer than three Cards are Swipe-eligible", () => {
+      const cards = [swipeReadyCard("1", "eins"), swipeReadyCard("2", "zwei")];
+
+      const plan = planExercises(cards, cards, zero);
+
+      expect(plan.map((exercise) => exercise.kind)).toEqual(["flip", "flip"]);
+    });
+
+    it("leaves a Card that can supply three distractors to multiple choice instead of claiming it for Swipe", () => {
+      const target = card({ id: "1", back: text("die Katze") });
+      const siblings = [
+        card({ id: "2", back: text("der Hund") }),
+        card({ id: "3", back: text("das Pferd") }),
+        card({ id: "4", back: text("die Kuh") }),
+      ];
+      const pool = [target, ...siblings];
+
+      const plan = planExercises(pool, pool, zero);
+
+      expect(plan.every((exercise) => exercise.kind !== "swipe")).toBe(true);
+      expect(plan.find((exercise) => exercise.cards[0]!.id === "1")!.kind).toBe("multipleChoice");
+    });
+
+    it("never offers Swipe to a Card whose back is a recording", () => {
+      const audioTarget = card({ id: "1", collectionId: swipeCollection, back: audio("audio-1") });
+      const cards = [
+        audioTarget,
+        swipeReadyCard("2", "zwei"),
+        swipeReadyCard("3", "drei"),
+        swipeReadyCard("4", "vier"),
+      ];
+
+      const plan = planExercises(cards, cards, zero);
+
+      expect(plan.find((exercise) => exercise.cards[0]!.id === "1")!.kind).not.toBe("swipe");
+      const swipeExercise = plan.find((exercise) => exercise.kind === "swipe");
+
+      expect(swipeExercise?.cards.some((swiped) => swiped.id === "1")).toBe(false);
+    });
+
+    describe("alternation with matching", () => {
+      // Four Cards eligible for matching (text on both faces, distinct front and back) plus three
+      // more, isolated in their own Sammlung and missing front text, so they can only ever be
+      // Swipe's — never matching's, since matching requires front text too. Either grouped kind can
+      // be planned from this due queue; which one actually is depends only on `previousGroupedKind`.
+      const matchingCards = [
+        card({ id: "m1", front: text("eins"), back: text("one") }),
+        card({ id: "m2", front: text("zwei"), back: text("two") }),
+        card({ id: "m3", front: text("drei"), back: text("three") }),
+        card({ id: "m4", front: text("vier"), back: text("four") }),
+      ];
+      const swipeCards = [
+        swipeReadyCard("s1", "fuenf"),
+        swipeReadyCard("s2", "sechs"),
+        swipeReadyCard("s3", "sieben"),
+      ];
+      const cards = [...matchingCards, ...swipeCards];
+
+      it("plans matching when no previous Session's grouped kind is on record", () => {
+        const plan = planExercises(cards, cards, zero);
+
+        expect(plan.some((exercise) => exercise.kind === "matching")).toBe(true);
+        expect(plan.some((exercise) => exercise.kind === "swipe")).toBe(false);
+      });
+
+      it("plans Swipe when the previous Session's grouped kind was matching", () => {
+        const plan = planExercises(cards, cards, zero, "matching");
+
+        expect(plan.some((exercise) => exercise.kind === "swipe")).toBe(true);
+        expect(plan.some((exercise) => exercise.kind === "matching")).toBe(false);
+      });
+
+      it("plans matching when the previous Session's grouped kind was Swipe", () => {
+        const plan = planExercises(cards, cards, zero, "swipe");
+
+        expect(plan.some((exercise) => exercise.kind === "matching")).toBe(true);
+        expect(plan.some((exercise) => exercise.kind === "swipe")).toBe(false);
+      });
+
+      it("still plans the only kind available even when it is not the preferred one", () => {
+        // No matching-eligible Cards here at all, so matching can never win regardless of preference.
+        const plan = planExercises(swipeCards, swipeCards, zero, "swipe");
+
+        expect(plan.some((exercise) => exercise.kind === "swipe")).toBe(true);
+      });
     });
   });
 });

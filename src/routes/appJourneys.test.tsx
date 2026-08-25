@@ -913,6 +913,187 @@ describe("rendered app journeys", () => {
     );
   });
 
+  function swipeCard(id: string, front: string, back: string) {
+    return { ...testCards[0]!, id, front, back };
+  }
+
+  // "zwei" and "drei" share a back, so whichever the shuffle picks as "eins"'s one distractor, the
+  // visible text is always "haus" — and "haus" is excluded as a distractor for whichever of "zwei"
+  // or "drei" is being planned, since it would equal that Card's own correct back, leaving "eins"'s
+  // "one" as their only candidate. Every option pair is therefore deterministic regardless of the
+  // random source, without needing to control it directly.
+  const swipeCards = [
+    swipeCard("77777777-7777-4777-8777-777777777771", "eins", "one"),
+    swipeCard("77777777-7777-4777-8777-777777777772", "zwei", "haus"),
+    swipeCard("77777777-7777-4777-8777-777777777773", "drei", "haus"),
+  ];
+
+  it("records knew_it, shows the resolution, and only advances after Weiter on a correct tap", async () => {
+    const user = userEvent.setup();
+    let recordedGrade = "";
+    mockServer.use(
+      http.get("/api/cards", () => HttpResponse.json(swipeCards)),
+      http.post("/api/reviews", async ({ request }) => {
+        const input = (await request.json()) as { grade: string };
+        recordedGrade = input.grade;
+
+        return HttpResponse.json({
+          review: { id: crypto.randomUUID(), pointsAwarded: 10, boxBefore: 0, boxAfter: 1 },
+          card: { ...swipeCards[0], box: 1 },
+        });
+      }),
+    );
+    await renderApp("/review");
+    await user.click(await screen.findByRole("button", { name: "Review starten" }));
+
+    expect(await screen.findByText("eins")).toBeVisible();
+    expect(screen.getByText("1 / 1")).toBeVisible();
+
+    await user.click(screen.getByRole("button", { name: "one" }));
+
+    expect(await screen.findByText("Richtig!")).toBeVisible();
+    expect(screen.getByRole("button", { name: /one.*richtig/ })).toBeVisible();
+    await waitFor(() => expect(recordedGrade).toBe("knew_it"));
+    // Still on "eins" — every Exercise here pauses on its resolution until Weiter, Swipe included.
+    expect(screen.getByText("eins")).toBeVisible();
+
+    await user.click(screen.getByRole("button", { name: "Weiter" }));
+    expect(await screen.findByText("zwei")).toBeVisible();
+  });
+
+  it("records forgot, shows the correct answer, and only advances after Weiter on a wrong tap", async () => {
+    const user = userEvent.setup();
+    let recordedGrade = "";
+    mockServer.use(
+      http.get("/api/cards", () => HttpResponse.json(swipeCards)),
+      http.post("/api/reviews", async ({ request }) => {
+        const input = (await request.json()) as { grade: string };
+        recordedGrade = input.grade;
+
+        return HttpResponse.json({
+          review: { id: crypto.randomUUID(), pointsAwarded: 1, boxBefore: 2, boxAfter: 0 },
+          card: { ...swipeCards[0], box: 0 },
+        });
+      }),
+    );
+    await renderApp("/review");
+    await user.click(await screen.findByRole("button", { name: "Review starten" }));
+    expect(await screen.findByText("eins")).toBeVisible();
+
+    await user.click(screen.getByRole("button", { name: "haus" }));
+
+    expect(await screen.findByText("Leider falsch.")).toBeVisible();
+    expect(screen.getByRole("button", { name: /one.*richtig/ })).toBeVisible();
+    expect(screen.getByRole("button", { name: /haus.*falsch/ })).toBeVisible();
+    await waitFor(() => expect(recordedGrade).toBe("forgot"));
+    expect(screen.getByText("eins")).toBeVisible();
+
+    await user.click(screen.getByRole("button", { name: "Weiter" }));
+    expect(await screen.findByText("zwei")).toBeVisible();
+  });
+
+  it("counts a whole Swipe deck as one Exercise and offers Tutopher for each Card's own chosen answer as it resolves", async () => {
+    const user = userEvent.setup();
+    const recordedGrades: string[] = [];
+    let tutorRequestBody: unknown;
+    mockServer.use(
+      http.get("/api/cards", () => HttpResponse.json(swipeCards)),
+      http.post("/api/reviews", async ({ request }) => {
+        const input = (await request.json()) as { grade: string };
+        recordedGrades.push(input.grade);
+
+        return HttpResponse.json({
+          review: { id: crypto.randomUUID(), pointsAwarded: 10, boxBefore: 0, boxAfter: 1 },
+          card: { ...swipeCards[0], box: 1 },
+        });
+      }),
+      http.post("/api/tutor-replies", async ({ request }) => {
+        tutorRequestBody = await request.json();
+
+        return completedTutorReply("„eins“ heißt „one“.");
+      }),
+    );
+    await renderApp("/review");
+    await user.click(await screen.findByRole("button", { name: "Review starten" }));
+    expect(await screen.findByText("eins")).toBeVisible();
+    expect(screen.getByText("1 / 1")).toBeVisible();
+
+    await user.click(screen.getByRole("button", { name: "one" }));
+    await user.click(screen.getByRole("button", { name: "Mit Tutopher reden" }));
+    await user.click(await screen.findByRole("button", { name: "Beispielsatz geben" }));
+    await waitFor(() =>
+      expect(tutorRequestBody).toMatchObject({
+        subjectCardId: swipeCards[0]!.id,
+        // The whole deck is one Exercise, so Tutopher hears about every Card in it — the ones not
+        // yet resolved send no verdict, just like an ungraded flip Card would.
+        exerciseCards: [
+          { cardId: swipeCards[0]!.id, outcome: "knew_it" },
+          { cardId: swipeCards[1]!.id, outcome: null },
+          { cardId: swipeCards[2]!.id, outcome: null },
+        ],
+        chosenOptionText: "one",
+      }),
+    );
+    await user.click(screen.getByRole("button", { name: "Schließen" }));
+    await user.click(screen.getByRole("button", { name: "Weiter" }));
+    await screen.findByText("zwei");
+
+    // "one" is the wrong pick for "zwei" — its own correct back is "haus".
+    await user.click(screen.getByRole("button", { name: "one" }));
+    await user.click(screen.getByRole("button", { name: "Mit Tutopher reden" }));
+    await user.click(await screen.findByRole("button", { name: "Beispielsatz geben" }));
+    await waitFor(() =>
+      expect(tutorRequestBody).toMatchObject({
+        subjectCardId: swipeCards[1]!.id,
+        exerciseCards: [
+          { cardId: swipeCards[0]!.id, outcome: "knew_it" },
+          { cardId: swipeCards[1]!.id, outcome: "forgot" },
+          { cardId: swipeCards[2]!.id, outcome: null },
+        ],
+        chosenOptionText: "one",
+      }),
+    );
+    await user.click(screen.getByRole("button", { name: "Schließen" }));
+    await user.click(screen.getByRole("button", { name: "Weiter" }));
+    await screen.findByText("drei");
+
+    await user.click(screen.getByRole("button", { name: "haus" }));
+    await user.click(screen.getByRole("button", { name: "Weiter" }));
+
+    expect(await screen.findByRole("heading", { name: "Gut gemacht!" })).toBeVisible();
+    expect(summaryStat("Reviews")).toHaveTextContent("3");
+    await waitFor(() => expect(recordedGrades).toEqual(["knew_it", "forgot", "knew_it"]));
+  });
+
+  it("keeps the Review for the Card already swiped and drops nothing else when leaving mid-deck", async () => {
+    const user = userEvent.setup();
+    let reviews = 0;
+    mockServer.use(
+      http.get("/api/cards", () => HttpResponse.json(swipeCards)),
+      http.post("/api/reviews", () => {
+        reviews += 1;
+
+        return HttpResponse.json({
+          review: { id: crypto.randomUUID(), pointsAwarded: 10, boxBefore: 0, boxAfter: 1 },
+          card: { ...swipeCards[0], box: 1 },
+        });
+      }),
+    );
+    await renderApp("/review");
+    await user.click(await screen.findByRole("button", { name: "Review starten" }));
+    expect(await screen.findByText("eins")).toBeVisible();
+
+    await user.click(screen.getByRole("button", { name: "one" }));
+    await waitFor(() => expect(reviews).toBe(1));
+    // Still on "eins"'s own resolution, never having tapped Weiter — the Review is already sent
+    // regardless, which is exactly what leaving here is meant to prove keeps it.
+    expect(screen.getByText("eins")).toBeVisible();
+
+    await user.click(screen.getByRole("button", { name: "Review beenden" }));
+    expect(await screen.findByRole("button", { name: "Review starten" })).toBeVisible();
+    expect(reviews).toBe(1);
+  });
+
   it("plans a mix of flip Cards and multiple-choice Exercises across Collections in one Session, demoting the third consecutive multiple choice to a flip Card", async () => {
     const user = userEvent.setup();
     const soloCard = {
@@ -963,17 +1144,14 @@ describe("rendered app journeys", () => {
     expect(reviews).toBe(5);
   });
 
-  it("completes a Session entirely as flip Cards when the Sammlung is too small for multiple choice", async () => {
+  it("completes a Session entirely as flip Cards when the Sammlung is too small for multiple choice or Swipe", async () => {
     const user = userEvent.setup();
+    // Two Cards: too few for multiple choice (needs three distractors) and too few for a Swipe deck
+    // (needs three Cards) — see the Swipe journeys above for the case where a third such Card turns
+    // this interactive instead of falling all the way back to flip.
     const tinyCollectionCards = [
       { ...testCards[0]!, id: "55555555-5555-4555-8555-555555555551", front: "eins", back: "one" },
       { ...testCards[0]!, id: "55555555-5555-4555-8555-555555555552", front: "zwei", back: "two" },
-      {
-        ...testCards[0]!,
-        id: "55555555-5555-4555-8555-555555555553",
-        front: "drei",
-        back: "three",
-      },
     ];
     mockServer.use(
       http.get("/api/cards", () => HttpResponse.json(tinyCollectionCards)),
@@ -989,7 +1167,7 @@ describe("rendered app journeys", () => {
     await renderApp("/review");
     await user.click(await screen.findByRole("button", { name: "Review starten" }));
 
-    for (const front of ["eins", "zwei", "drei"]) {
+    for (const front of ["eins", "zwei"]) {
       expect(await screen.findByText(front)).toBeVisible();
       expect(screen.queryByText("Wähle die richtige Übersetzung")).not.toBeInTheDocument();
       await user.click(screen.getByRole("button", { name: "Antwort zeigen" }));
