@@ -291,6 +291,24 @@
   color: #fff;
 }
 
+.audioOption {
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-2);
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-medium);
+  background: var(--color-surface);
+}
+
+.chooseOption {
+  min-block-size: 44px;
+  border: 0;
+  border-radius: var(--radius-medium);
+  background: var(--color-primary);
+  color: var(--color-primary-text);
+  font-weight: 700;
+}
+
 .outcome {
   font-weight: 800;
   text-align: center;
@@ -468,5 +486,9 @@
 
   .option:hover:not(:disabled) {
     background: var(--color-surface-hover);
+  }
+
+  .chooseOption:hover:not(:disabled) {
+    background: var(--color-primary-hover);
   }
 }

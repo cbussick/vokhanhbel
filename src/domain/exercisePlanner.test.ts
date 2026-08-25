@@ -64,7 +64,7 @@ describe("planExercises", () => {
 
     expect(multipleChoice.options).toHaveLength(4);
     expect(multipleChoice.options.filter((option) => option.correct)).toEqual([
-      { cardId: "1", text: "die Katze", correct: true },
+      { cardId: "1", text: "die Katze", audio: null, correct: true },
     ]);
     expect(new Set(multipleChoice.options.map((option) => option.cardId)).size).toBe(4);
   });
@@ -131,7 +131,7 @@ describe("planExercises", () => {
     const exercise = plan.find(
       (planned) => planned.cards[0]!.id === "1",
     )! as MultipleChoiceExercise;
-    const backs = exercise.options.map((option) => option.text.trim().toLowerCase());
+    const backs = exercise.options.map((option) => option.text!.trim().toLowerCase());
 
     expect(new Set(backs).size).toBe(backs.length);
   });
@@ -336,7 +336,7 @@ describe("planExercises", () => {
     expect(plan.every((exercise) => exercise.kind === "flip")).toBe(true);
   });
 
-  it("still produces a complete Review Session in a Sammlung where most Cards carry recordings", () => {
+  it("plans audio multiple-choice Exercises in a Sammlung where most Cards carry recordings, still completing the Session", () => {
     const cards = [
       card({ id: "1", back: text("eins") }),
       card({ id: "2", back: audio("audio-2") }),
@@ -348,7 +348,114 @@ describe("planExercises", () => {
     const plan = planExercises(cards, cards, zero);
 
     expect(plan).toHaveLength(5);
-    expect(plan.every((exercise) => exercise.kind === "flip")).toBe(true);
+    // The lone text Card has no text sibling at all, so it falls back to flip; every audio-backed
+    // Card has three audio siblings and is offered audio options instead of also falling back.
+    expect(plan.find((exercise) => exercise.cards[0]!.id === "1")!.kind).toBe("flip");
+    expect(plan.some((exercise) => exercise.kind === "multipleChoice")).toBe(true);
+  });
+
+  describe("audio distractor pool", () => {
+    it("plans an audio multiple-choice Exercise for a Card with three sibling recordings in its Sammlung", () => {
+      const target = card({ id: "1", back: audio("audio-1") });
+      const siblings = [
+        card({ id: "2", back: audio("audio-2") }),
+        card({ id: "3", back: audio("audio-3") }),
+        card({ id: "4", back: audio("audio-4") }),
+      ];
+      const pool = [target, ...siblings];
+
+      const plan = planExercises(pool, pool, zero);
+      const exercise = plan.find(
+        (planned) => planned.cards[0]!.id === "1",
+      )! as MultipleChoiceExercise;
+
+      expect(exercise.kind).toBe("multipleChoice");
+      expect(exercise.options).toHaveLength(4);
+      expect(exercise.options.every((option) => option.text === null && option.audio)).toBe(true);
+      expect(exercise.options.filter((option) => option.correct)).toEqual([
+        {
+          cardId: "1",
+          text: null,
+          audio: { id: "audio-1", durationMs: 1_000, contentType: "audio/wav", byteSize: 8_044 },
+          correct: true,
+        },
+      ]);
+      expect(new Set(exercise.options.map((option) => option.cardId)).size).toBe(4);
+    });
+
+    it("falls back to a flip Card when fewer than three sibling recordings are available", () => {
+      const target = card({ id: "1", back: audio("audio-1") });
+      const siblings = [
+        card({ id: "2", back: audio("audio-2") }),
+        card({ id: "3", back: audio("audio-3") }),
+      ];
+      const pool = [target, ...siblings];
+
+      const plan = planExercises(pool, pool, zero);
+      const exercise = plan.find((planned) => planned.cards[0]!.id === "1")!;
+
+      expect(exercise).toEqual({ kind: "flip", id: "1", cards: [target] });
+    });
+
+    it("excludes distractor candidates whose back is text-only, matching the correct back's audio modality", () => {
+      const target = card({ id: "1", back: audio("audio-1") });
+      const textOnly = [card({ id: "2", back: text("Text") })];
+      const audioSiblings = [
+        card({ id: "3", back: audio("audio-3") }),
+        card({ id: "4", back: audio("audio-4") }),
+      ];
+      const pool = [target, ...textOnly, ...audioSiblings];
+
+      const plan = planExercises([target], pool, zero);
+
+      // Only two audio siblings are available, so three distractors can't be found.
+      expect(plan[0]!.kind).toBe("flip");
+    });
+
+    it("falls back rather than repeating an option when two siblings share the same recording", () => {
+      const target = card({ id: "1", back: audio("audio-1") });
+      const siblings = [
+        card({ id: "2", back: audio("audio-2") }),
+        card({ id: "3", back: audio("audio-2") }), // the same recording as "2"
+        card({ id: "4", back: audio("audio-4") }),
+      ];
+      const pool = [target, ...siblings];
+
+      const plan = planExercises([target], pool, zero);
+
+      // Only two distinct recordings ("audio-2" and "audio-4") are available among the siblings.
+      expect(plan[0]!.kind).toBe("flip");
+    });
+
+    it("never offers text and audio options in the same Exercise", () => {
+      const audioTarget = card({ id: "1", back: audio("audio-1") });
+      const audioSiblings = [
+        card({ id: "2", back: audio("audio-2") }),
+        card({ id: "3", back: audio("audio-3") }),
+        card({ id: "4", back: audio("audio-4") }),
+      ];
+      const textTarget = card({ id: "5", back: text("fünf") });
+      const textSiblings = [
+        card({ id: "6", back: text("sechs") }),
+        card({ id: "7", back: text("sieben") }),
+        card({ id: "8", back: text("acht") }),
+      ];
+      const pool = [audioTarget, ...audioSiblings, textTarget, ...textSiblings];
+
+      // Each planned on its own, so the no-three-in-a-row rule (covered separately below) cannot
+      // demote either — this test is only about modality never mixing within one Exercise's pool.
+      const audioExercise = planExercises([audioTarget], pool, zero)[0] as MultipleChoiceExercise;
+      const textExercise = planExercises([textTarget], pool, zero)[0] as MultipleChoiceExercise;
+
+      expect(audioExercise.kind).toBe("multipleChoice");
+      expect(textExercise.kind).toBe("multipleChoice");
+      expect(
+        audioExercise.options.every((option) => option.audio !== null && option.text === null),
+      ).toBe(true);
+      expect(
+        textExercise.options.every((option) => option.text !== null && option.audio === null),
+      ).toBe(true);
+    });
   });
 
   describe("no-three-in-a-row", () => {

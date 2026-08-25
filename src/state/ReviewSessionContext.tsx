@@ -1,6 +1,6 @@
 import { createContext, type ReactNode, useContext, useReducer, useState } from "react";
 import { apiPaths } from "../contracts/apiPaths";
-import type { Card } from "../contracts/card";
+import type { AudioMetadata, Card } from "../contracts/card";
 import { problemTypes } from "../contracts/problem";
 import type { ReviewSubmissionInput } from "../contracts/review";
 import { planExercises } from "../domain/exercisePlanner";
@@ -34,7 +34,9 @@ interface FlipExerciseView {
 
 export interface MultipleChoiceOptionView {
   id: string;
-  text: string;
+  /** Exactly one is set, matching every other option's modality in the same Exercise. */
+  text: string | null;
+  audio: AudioMetadata | null;
   /** Answered wrong already: shown red and unselectable, whether or not the Exercise has resolved. */
   dead: boolean;
   /** The right answer, shown green — never true before the Exercise has resolved. */
@@ -179,6 +181,7 @@ function toReviewSessionView(
     options: exercise.options.map((option) => ({
       id: option.cardId,
       text: option.text,
+      audio: option.audio,
       dead: deadOptionIds.includes(option.cardId),
       revealedCorrect: Boolean(resolvedSubmission) && option.correct,
     })),

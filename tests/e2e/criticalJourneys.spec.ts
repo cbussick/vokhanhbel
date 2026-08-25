@@ -1055,3 +1055,65 @@ for (const viewport of [
     await expect(continueButton).toBeFocused();
   });
 }
+
+for (const viewport of [
+  { name: "mobile", width: 390, height: 844 },
+  { name: "tablet", width: 768, height: 900 },
+  { name: "desktop", width: 1440, height: 1000 },
+] as const) {
+  test(`answers an audio multiple-choice Exercise accessibly at ${viewport.name} width`, async ({
+    page,
+    browserName,
+  }) => {
+    test.skip(browserName !== "chromium", "One browser owns the cross-platform visual baselines.");
+    await page.setViewportSize(viewport);
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    const state = await installMockApi(page);
+
+    // Four Cards in one Collection, each with a recorded back and no back text: every one is
+    // eligible to supply the others' audio distractors (VOK-17).
+    state.cards = [
+      createCard("der Apfel", { text: null, audio: audio("88888888-8888-4888-8888-888888888895") }),
+      createCard("die Birne", { text: null, audio: audio("88888888-8888-4888-8888-888888888896") }),
+      createCard("der Pfirsich", {
+        text: null,
+        audio: audio("88888888-8888-4888-8888-888888888897"),
+      }),
+      createCard("die Pflaume", {
+        text: null,
+        audio: audio("88888888-8888-4888-8888-888888888898"),
+      }),
+    ];
+    await page.goto("/review");
+    await page.getByRole("button", { name: "Review starten" }).click();
+
+    const option = (index: number) => page.getByRole("button", { name: `Option ${index} wählen` });
+    const weiter = page.getByRole("button", { name: "Weiter" });
+
+    await expect(page.getByText("der Apfel")).toBeVisible();
+    await expect(option(4)).toBeVisible();
+    await expectNoSeriousAxeViolations(page);
+    await expect(page).toHaveScreenshot(
+      `review-multiple-choice-audio-unanswered-${viewport.name}.png`,
+      { animations: "disabled" },
+    );
+
+    // Audio options carry no readable answer, so which one is correct is unknown here — but a
+    // first wrong pick only knocks that option out and re-asks (ADR-0014), and a second pick,
+    // right or wrong, always resolves the Exercise. Two clicks reach the resolved state either way.
+    await option(1).click();
+    await Promise.race([
+      weiter.waitFor({ state: "visible" }),
+      page.getByRole("button", { name: "Option 1 wählen", disabled: true }).waitFor({
+        state: "visible",
+      }),
+    ]);
+    if (!(await weiter.isVisible())) await option(2).click();
+    await expect(weiter).toBeVisible();
+    await expectNoSeriousAxeViolations(page);
+    await expect(page).toHaveScreenshot(
+      `review-multiple-choice-audio-resolved-${viewport.name}.png`,
+      { animations: "disabled" },
+    );
+  });
+}

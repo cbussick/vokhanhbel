@@ -1,15 +1,23 @@
-import type { Card } from "../contracts/card.js";
+import type { AudioMetadata, Card } from "../contracts/card.js";
 import { normalizeCardText } from "./cardText.js";
 
 /** Returns a float in [0, 1), like `Math.random`. Injected so a plan is assertable in a test. */
 export type RandomSource = () => number;
 
 export interface MultipleChoiceOption {
-  /** The id of the Card whose back supplied this option's text. */
+  /** The id of the Card whose back supplied this option. */
   cardId: string;
-  text: string;
   correct: boolean;
+  /**
+   * Exactly one of `text`/`audio` is set, and every option in one Exercise shares the same one —
+   * modality never mixes within an Exercise, matching the correct answer's back.
+   */
+  text: string | null;
+  audio: AudioMetadata | null;
 }
+
+/** The kind of back an Exercise's options are drawn from. Never mixed within one Exercise. */
+type Modality = "text" | "audio";
 
 export interface FlipExercise {
   kind: "flip";
@@ -43,21 +51,35 @@ function shuffle<T>(items: T[], random: RandomSource): T[] {
   return shuffled;
 }
 
+/** The card face has a back in the given modality: non-empty text, or a recording. */
+function hasBack(card: Card, modality: Modality): boolean {
+  return modality === "text" ? Boolean(card.back.text) : Boolean(card.back.audio);
+}
+
+/**
+ * A back's identity for de-duplication: normalized text for a text back, the recording's id for
+ * an audio one. Two Cards may legitimately share either.
+ */
+function backIdentity(card: Card, modality: Modality): string {
+  return modality === "text" ? normalizeCardText(card.back.text ?? "") : card.back.audio!.id;
+}
+
 /**
  * Splits `pool` into the two tiers distractors are drawn from, in priority order: the Cards sharing
  * a Thema with `card`, then the rest of its Sammlung. Never crosses into another Sammlung. A Card in
  * several Themen draws candidates from all of them, since membership is checked with `some`.
  *
- * Only text-back Cards are eligible: this wave matches modality by construction (a text back is
- * offered text options only) because audio options don't exist yet — see VOK-17.
+ * Only Cards whose back matches `modality` are eligible — a text back draws text-back siblings, an
+ * audio back draws audio-back siblings — so text and audio options never appear in the same
+ * Exercise.
  */
-function distractorTiers(card: Card, pool: Card[]) {
+function distractorTiers(card: Card, pool: Card[], modality: Modality) {
   const eligible = pool.filter(
     (candidate) =>
       candidate.id !== card.id &&
       candidate.deletedAt === null &&
       candidate.collectionId === card.collectionId &&
-      candidate.back.text,
+      hasBack(candidate, modality),
   );
   const sharesThema = (candidate: Card) =>
     candidate.topicIds.some((topicId) => card.topicIds.includes(topicId));
@@ -70,16 +92,19 @@ function distractorTiers(card: Card, pool: Card[]) {
 
 /**
  * Distractors for `card`: up to three Cards from `pool`, Thema first and then the rest of the
- * Sammlung, whose back text differs — after Card-list normalization — from the correct back and
- * from every distractor already chosen. Two Cards may legitimately share a back, so this is
- * checked rather than assumed.
+ * Sammlung, whose back — after Card-list normalization for text, or by recording id for audio —
+ * differs from the correct back and from every distractor already chosen.
  *
  * The matching helper (VOK-18) is the next thing likely to touch this function.
  */
-function findDistractors(card: Card, pool: Card[], random: RandomSource): Card[] {
-  const correctBack = normalizeCardText(card.back.text ?? "");
-  const seenBacks = new Set([correctBack]);
-  const { thema, sammlung } = distractorTiers(card, pool);
+function findDistractors(
+  card: Card,
+  pool: Card[],
+  random: RandomSource,
+  modality: Modality,
+): Card[] {
+  const seenBacks = new Set([backIdentity(card, modality)]);
+  const { thema, sammlung } = distractorTiers(card, pool, modality);
   // Each tier is shuffled on its own, so a candidate from the Sammlung can never be drawn ahead of
   // one from the Thema — only within-tier order is random.
   const candidates = [...shuffle(thema, random), ...shuffle(sammlung, random)];
@@ -88,7 +113,7 @@ function findDistractors(card: Card, pool: Card[], random: RandomSource): Card[]
   for (const candidate of candidates) {
     if (distractors.length === requiredDistractorCount) break;
 
-    const back = normalizeCardText(candidate.back.text ?? "");
+    const back = backIdentity(candidate, modality);
 
     if (seenBacks.has(back)) continue;
 
@@ -103,24 +128,25 @@ function toFlipExercise(card: Card): FlipExercise {
   return { kind: "flip", id: card.id, cards: [card] };
 }
 
+function toOption(card: Card, correct: boolean, modality: Modality): MultipleChoiceOption {
+  // SAFETY: `hasBack` was checked non-null by the caller for both the correct Card (in
+  // planExercises) and every distractor (in distractorTiers) before this is called.
+  return {
+    cardId: card.id,
+    correct,
+    text: modality === "text" ? card.back.text! : null,
+    audio: modality === "audio" ? card.back.audio! : null,
+  };
+}
+
 function toMultipleChoiceExercise(
   card: Card,
   distractors: Card[],
   random: RandomSource,
+  modality: Modality,
 ): MultipleChoiceExercise {
-  // SAFETY: card.back.text and each distractor's back.text were checked non-null by the caller
-  // (findDistractors filters candidates without back text, and the card itself is checked in
-  // planExercises before this is called).
-  const correctOption: MultipleChoiceOption = {
-    cardId: card.id,
-    text: card.back.text!,
-    correct: true,
-  };
-  const distractorOptions: MultipleChoiceOption[] = distractors.map((distractor) => ({
-    cardId: distractor.id,
-    text: distractor.back.text!,
-    correct: false,
-  }));
+  const correctOption = toOption(card, true, modality);
+  const distractorOptions = distractors.map((distractor) => toOption(distractor, false, modality));
 
   return {
     kind: "multipleChoice",
@@ -164,8 +190,10 @@ function limitRepeatedKind(exercises: PlannedExercise[]): PlannedExercise[] {
  * One Exercise per Card, in the order given. `pool` is every Card distractors may be drawn from —
  * wider than `dueCards`, typically every non-deleted Card in the app, since VOK-15 draws from a
  * Card's own Thema and then the rest of its Sammlung rather than only the due queue. A Card whose
- * back has no text, or that cannot find three distinct sibling backs in `pool`, plans as a flip
- * Card instead, and a would-be third consecutive multiple-choice Exercise is demoted to one too.
+ * back has text is offered text options; a Card whose back has only a recording is offered audio
+ * options drawn from sibling Cards with recorded backs. A Card with neither, or one that cannot
+ * find three distinct sibling backs of its own modality in `pool`, plans as a flip Card instead,
+ * and a would-be third consecutive multiple-choice Exercise is demoted to one too.
  */
 export function planExercises(
   dueCards: Card[],
@@ -173,13 +201,19 @@ export function planExercises(
   random: RandomSource,
 ): PlannedExercise[] {
   const planned = dueCards.map((card) => {
-    if (!card.back.text) return toFlipExercise(card);
+    const modality: Modality | undefined = card.back.text
+      ? "text"
+      : card.back.audio
+        ? "audio"
+        : undefined;
 
-    const distractors = findDistractors(card, pool, random);
+    if (!modality) return toFlipExercise(card);
+
+    const distractors = findDistractors(card, pool, random, modality);
 
     if (distractors.length < requiredDistractorCount) return toFlipExercise(card);
 
-    return toMultipleChoiceExercise(card, distractors, random);
+    return toMultipleChoiceExercise(card, distractors, random, modality);
   });
 
   return limitRepeatedKind(planned);
