@@ -1187,4 +1187,81 @@ for (const viewport of [
     await continueButton.focus();
     await expect(continueButton).toBeFocused();
   });
+
+  test(`swipes a Card onto an answer accessibly, by tap and by keyboard, at ${viewport.name} width`, async ({
+    page,
+    browserName,
+  }) => {
+    test.skip(browserName !== "chromium", "One browser owns the cross-platform visual baselines.");
+    await page.setViewportSize(viewport);
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    const state = await installMockApi(page);
+
+    // Three Cards, isolated in their own Collection: "die Birne" and "der Pfirsich" share a back,
+    // so each of the three ends up with exactly one distinct-text distractor — enough for Swipe,
+    // one short of multiple choice's three (VOK-19's own eligibility, ahead of the flip fallback).
+    state.cards = [
+      createCard("der Apfel", "the apple"),
+      createCard("die Birne", "das Haus"),
+      createCard("der Pfirsich", "das Haus"),
+    ];
+    await page.goto("/review");
+    await page.getByRole("button", { name: "Review starten" }).click();
+
+    const wrongOption = page.getByRole("button", { name: "das Haus" });
+    const correctOption = page.getByRole("button", { name: "the apple" });
+    const continueButton = page.getByRole("button", { name: "Weiter" });
+
+    await expect(page.getByText("der Apfel")).toBeVisible();
+    await expect(wrongOption).toBeVisible();
+    await expect(correctOption).toBeVisible();
+    await expectNoSeriousAxeViolations(page);
+    await expect(page).toHaveScreenshot(`review-swipe-unanswered-${viewport.name}.png`, {
+      animations: "disabled",
+    });
+
+    // Tapping an answer commits it identically to a drag, and is the keyboard route.
+    await wrongOption.focus();
+    await expect(wrongOption).toBeFocused();
+    await page.keyboard.press("Enter");
+
+    await expect(page.getByText("Leider falsch.")).toBeVisible();
+    await expect(page.getByRole("status")).toHaveText("Leider falsch.");
+    await expect(correctOption).toHaveAccessibleName(/richtig/);
+    await expect(wrongOption).toHaveAccessibleName(/falsch/);
+    await expectNoSeriousAxeViolations(page);
+    await expect(page).toHaveScreenshot(`review-swipe-resolved-wrong-${viewport.name}.png`, {
+      animations: "disabled",
+    });
+
+    // Tutopher and "Weiter" are both reachable by keyboard from the resolution, like every other
+    // Exercise's resolved state.
+    const tutorButton = page.getByRole("button", { name: "Mit Tutopher reden" });
+
+    await tutorButton.focus();
+    await expect(tutorButton).toBeFocused();
+    await page.keyboard.press("Enter");
+    await expect(page.getByRole("dialog", { name: "Tutopher" })).toBeVisible();
+    await page
+      .getByRole("button", { name: viewport.name === "mobile" ? "Zurück" : "Schließen" })
+      .click();
+
+    await continueButton.click();
+    await expect(page.getByText("die Birne")).toBeVisible();
+
+    // A correct answer resolves the same way — green only, no red — and still waits for "Weiter"
+    // rather than auto-advancing, the same pause every other Exercise gives.
+    await page.getByRole("button", { name: "das Haus" }).click();
+    await expect(page.getByText("Richtig!")).toBeVisible();
+    await expect(page.getByRole("button", { name: "das Haus" })).toHaveAccessibleName(/richtig/);
+    await expectNoSeriousAxeViolations(page);
+    await expect(page).toHaveScreenshot(`review-swipe-resolved-correct-${viewport.name}.png`, {
+      animations: "disabled",
+    });
+
+    await continueButton.focus();
+    await expect(continueButton).toBeFocused();
+    await continueButton.click();
+    await expect(page.getByText("der Pfirsich")).toBeVisible();
+  });
 }

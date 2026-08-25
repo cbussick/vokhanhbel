@@ -29,5 +29,8 @@ beforeAll(() => mockServer.listen({ onUnhandledRequest: "error" }));
 afterEach(() => {
   cleanup();
   mockServer.resetHandlers();
+  // Each test starts like a fresh browser — otherwise one test's Swipe/matching alternation
+  // preference (see browserState.ts) would leak into the next.
+  window.localStorage.clear();
 });
 afterAll(() => mockServer.close());
