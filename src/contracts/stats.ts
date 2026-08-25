@@ -5,6 +5,7 @@ export const statsSchema = z.object({
   totalPoints: z.number().int().nonnegative(),
   activeCardCount: z.number().int().nonnegative(),
   reviewsThisWeek: z.number().int().nonnegative(),
+  currentStreak: z.number().int().nonnegative(),
   bestDay: z
     .object({ date: berlinDateSchema, reviewCount: z.number().int().positive() })
     .nullable(),

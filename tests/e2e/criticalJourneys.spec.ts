@@ -119,6 +119,7 @@ async function installMockApi(page: Page, authenticated = true) {
         totalPoints: 35,
         activeCardCount: state.cards.length,
         reviewsThisWeek: 4,
+        currentStreak: 3,
         bestDay: { date: "2026-07-14", reviewCount: 4 },
         dailyRecap: { period: "today", date: "2026-07-14", reviewCount: 4, knewItCount: 3 },
       });
@@ -726,6 +727,7 @@ test("uses desktop space for route content without overstretching focused work",
   const activeCardsBox = await page.getByText("Aktive Karten").locator("..").boundingBox();
   const weeklyReviewsBox = await page.getByText("Reviews diese Woche").locator("..").boundingBox();
   const bestDayBox = await page.getByText("Bester Tag").locator("..").boundingBox();
+  const streakTile = page.getByText("Streak", { exact: true }).locator("..");
 
   expect(pointsBox).not.toBeNull();
   expect(activeCardsBox).not.toBeNull();
@@ -735,6 +737,10 @@ test("uses desktop space for route content without overstretching focused work",
   expect(activeCardsBox!.y).toBeGreaterThan(pointsBox!.y);
   expect(Math.abs(activeCardsBox!.y - weeklyReviewsBox!.y)).toBeLessThanOrEqual(1);
   expect(Math.abs(weeklyReviewsBox!.y - bestDayBox!.y)).toBeLessThanOrEqual(1);
+  // The Streak sits beside the other figures on "Ich", never in the permanent app header.
+  await expect(streakTile).toBeVisible();
+  await expect(streakTile.locator("dd")).toHaveText("3");
+  await expect(page.getByRole("banner").getByText("Streak", { exact: true })).toBeHidden();
 
   await page.getByRole("link", { name: /Wiederholen/ }).click();
   await page.getByRole("button", { name: "Review starten" }).click();

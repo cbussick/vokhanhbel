@@ -197,6 +197,7 @@ export const de = {
       totalPoints: "Punkte insgesamt",
       activeCards: "Aktive Karten",
       week: "Reviews diese Woche",
+      streak: "Streak",
       bestDay: "Bester Tag",
       noBestDay: "Noch kein bester Tag",
       recapToday: "Heute",
