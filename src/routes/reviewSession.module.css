@@ -291,6 +291,50 @@
   color: #fff;
 }
 
+.matchingBoard {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--space-3);
+}
+
+.matchingColumn {
+  display: grid;
+  gap: var(--space-2);
+  align-content: start;
+  padding: 0;
+  border: 0;
+}
+
+.matchingColumn legend {
+  padding: 0;
+  color: var(--color-text-secondary);
+  font-size: var(--font-sm);
+  font-weight: 600;
+}
+
+.matchingEntry {
+  min-block-size: 56px;
+  display: grid;
+  place-items: center;
+  padding: var(--space-2);
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-medium);
+  background: var(--color-surface);
+  font-weight: 700;
+  text-align: center;
+}
+
+.matchingEntrySelected {
+  border-color: var(--color-primary);
+  background: color-mix(in srgb, var(--color-primary) 12%, var(--color-surface));
+}
+
+.matchingEntryMatched {
+  border-color: var(--color-success);
+  background: var(--color-success);
+  color: #fff;
+}
+
 .outcome {
   font-weight: 800;
   text-align: center;
@@ -467,6 +511,10 @@
   }
 
   .option:hover:not(:disabled) {
+    background: var(--color-surface-hover);
+  }
+
+  .matchingEntry:hover:not(:disabled) {
     background: var(--color-surface-hover);
   }
 }

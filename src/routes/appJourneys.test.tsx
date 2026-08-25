@@ -572,7 +572,10 @@ describe("rendered app journeys", () => {
 
   const multipleChoiceCards = [
     multipleChoiceCard("33333333-3333-4333-8333-333333333331", "eins", "one"),
-    multipleChoiceCard("33333333-3333-4333-8333-333333333332", "zwei", "two"),
+    // Shares its front with the Card above rather than "zwei" (never asserted on screen), so these
+    // four Cards can never assemble into a matching group of their own — these tests are for
+    // multiple choice specifically, and matching's own coverage lives in its own describe block.
+    multipleChoiceCard("33333333-3333-4333-8333-333333333332", "eins", "two"),
     multipleChoiceCard("33333333-3333-4333-8333-333333333333", "drei", "three"),
     multipleChoiceCard("33333333-3333-4333-8333-333333333334", "vier", "four"),
   ];
@@ -736,6 +739,178 @@ describe("rendered app journeys", () => {
     await user.click(tutor);
     expect(await screen.findByText(/Tutopher kann Aufnahmen nicht anhören/)).toBeVisible();
     expect(tutorRequests).toBe(0);
+  });
+
+  function matchingCard(id: string, front: string, back: string) {
+    return { ...testCards[0]!, id, front, back };
+  }
+
+  const matchingCards = [
+    matchingCard("66666666-6666-4666-8666-666666666661", "eins", "one"),
+    matchingCard("66666666-6666-4666-8666-666666666662", "zwei", "two"),
+    matchingCard("66666666-6666-4666-8666-666666666663", "drei", "three"),
+    matchingCard("66666666-6666-4666-8666-666666666664", "vier", "four"),
+  ];
+
+  it("clears four due Cards as one matching board, grading a clean run knew_it", async () => {
+    const user = userEvent.setup();
+    const recordedGrades: Record<string, string> = {};
+    mockServer.use(
+      http.get("/api/cards", () => HttpResponse.json(matchingCards)),
+      http.post("/api/reviews", async ({ request }) => {
+        const input = (await request.json()) as { cardId: string; grade: string };
+        recordedGrades[input.cardId] = input.grade;
+
+        return HttpResponse.json({
+          review: { id: crypto.randomUUID(), pointsAwarded: 10, boxBefore: 0, boxAfter: 1 },
+          card: { ...matchingCards[0], box: 1 },
+        });
+      }),
+    );
+    await renderApp("/review");
+    await user.click(await screen.findByRole("button", { name: "Review starten" }));
+
+    expect(await screen.findByText("1 / 1")).toBeVisible();
+    for (const [front, back] of [
+      ["eins", "one"],
+      ["zwei", "two"],
+      ["drei", "three"],
+      ["vier", "four"],
+    ]) {
+      await user.click(screen.getByRole("button", { name: front! }));
+      await user.click(screen.getByRole("button", { name: back! }));
+    }
+
+    expect(await screen.findByText("Alle Paare gefunden!")).toBeVisible();
+    await waitFor(() =>
+      expect(Object.values(recordedGrades)).toEqual(["knew_it", "knew_it", "knew_it", "knew_it"]),
+    );
+
+    await user.click(screen.getByRole("button", { name: "Weiter" }));
+    expect(await screen.findByRole("heading", { name: "Gut gemacht!" })).toBeVisible();
+    expect(summaryStat("Reviews")).toHaveTextContent("4");
+  });
+
+  it("grades almost for a Card caught in a mis-pairing, and never grades forgot", async () => {
+    const user = userEvent.setup();
+    const recordedGrades: Record<string, string> = {};
+    mockServer.use(
+      http.get("/api/cards", () => HttpResponse.json(matchingCards)),
+      http.post("/api/reviews", async ({ request }) => {
+        const input = (await request.json()) as { cardId: string; grade: string };
+        recordedGrades[input.cardId] = input.grade;
+
+        return HttpResponse.json({
+          review: { id: crypto.randomUUID(), pointsAwarded: 5, boxBefore: 0, boxAfter: 0 },
+          card: { ...matchingCards[0], box: 0 },
+        });
+      }),
+    );
+    await renderApp("/review");
+    await user.click(await screen.findByRole("button", { name: "Review starten" }));
+    expect(await screen.findByText("eins")).toBeVisible();
+
+    // "eins" paired against the wrong back taints both "eins" and "two"'s Cards.
+    await user.click(screen.getByRole("button", { name: "eins" }));
+    await user.click(screen.getByRole("button", { name: "two" }));
+    expect(await screen.findByText("Das ist kein Paar. Versuch es noch einmal.")).toBeVisible();
+
+    await user.click(screen.getByRole("button", { name: "eins" }));
+    await user.click(screen.getByRole("button", { name: "one" }));
+    await user.click(screen.getByRole("button", { name: "zwei" }));
+    await user.click(screen.getByRole("button", { name: "two" }));
+    await user.click(screen.getByRole("button", { name: "drei" }));
+    await user.click(screen.getByRole("button", { name: "three" }));
+    await user.click(screen.getByRole("button", { name: "vier" }));
+    await user.click(screen.getByRole("button", { name: "four" }));
+
+    await waitFor(() =>
+      expect(recordedGrades).toMatchObject({
+        [matchingCards[0]!.id]: "almost",
+        [matchingCards[1]!.id]: "almost",
+        [matchingCards[2]!.id]: "knew_it",
+        [matchingCards[3]!.id]: "knew_it",
+      }),
+    );
+    expect(Object.values(recordedGrades)).not.toContain("forgot");
+  });
+
+  it("keeps the Reviews for pairs already matched and drops nothing else when leaving mid-board", async () => {
+    const user = userEvent.setup();
+    let reviews = 0;
+    mockServer.use(
+      http.get("/api/cards", () => HttpResponse.json(matchingCards)),
+      http.post("/api/reviews", () => {
+        reviews += 1;
+
+        return HttpResponse.json({
+          review: { id: crypto.randomUUID(), pointsAwarded: 10, boxBefore: 0, boxAfter: 1 },
+          card: { ...matchingCards[0], box: 1 },
+        });
+      }),
+    );
+    await renderApp("/review");
+    await user.click(await screen.findByRole("button", { name: "Review starten" }));
+    expect(await screen.findByText("eins")).toBeVisible();
+
+    await user.click(screen.getByRole("button", { name: "eins" }));
+    await user.click(screen.getByRole("button", { name: "one" }));
+    await user.click(screen.getByRole("button", { name: "zwei" }));
+    await user.click(screen.getByRole("button", { name: "two" }));
+    await waitFor(() => expect(reviews).toBe(2));
+
+    await user.click(screen.getByRole("button", { name: "Review beenden" }));
+    expect(await screen.findByRole("button", { name: "Review starten" })).toBeVisible();
+    expect(reviews).toBe(2);
+  });
+
+  it("opens Tutopher for the tapped Card once the board has resolved, with the whole board's outcomes", async () => {
+    const user = userEvent.setup();
+    let tutorRequestBody: unknown;
+    mockServer.use(
+      http.get("/api/cards", () => HttpResponse.json(matchingCards)),
+      http.post("/api/reviews", () =>
+        HttpResponse.json({
+          review: { id: crypto.randomUUID(), pointsAwarded: 10, boxBefore: 0, boxAfter: 1 },
+          card: { ...matchingCards[0], box: 1 },
+        }),
+      ),
+      http.post("/api/tutor-replies", async ({ request }) => {
+        tutorRequestBody = await request.json();
+
+        return completedTutorReply("„eins“ heißt „one“.");
+      }),
+    );
+    await renderApp("/review");
+    await user.click(await screen.findByRole("button", { name: "Review starten" }));
+    expect(await screen.findByText("eins")).toBeVisible();
+
+    for (const [front, back] of [
+      ["eins", "one"],
+      ["zwei", "two"],
+      ["drei", "three"],
+      ["vier", "four"],
+    ]) {
+      await user.click(screen.getByRole("button", { name: front! }));
+      await user.click(screen.getByRole("button", { name: back! }));
+    }
+
+    await screen.findByText("Alle Paare gefunden!");
+    await user.click(screen.getByRole("button", { name: /eins/ }));
+    await user.click(await screen.findByRole("button", { name: "Beispielsatz geben" }));
+
+    await waitFor(() =>
+      expect(tutorRequestBody).toMatchObject({
+        subjectCardId: matchingCards[0]!.id,
+        exerciseCards: [
+          { cardId: matchingCards[0]!.id, outcome: "knew_it" },
+          { cardId: matchingCards[1]!.id, outcome: "knew_it" },
+          { cardId: matchingCards[2]!.id, outcome: "knew_it" },
+          { cardId: matchingCards[3]!.id, outcome: "knew_it" },
+        ],
+        chosenOptionText: null,
+      }),
+    );
   });
 
   it("plans a mix of flip Cards and multiple-choice Exercises across Collections in one Session, demoting the third consecutive multiple choice to a flip Card", async () => {

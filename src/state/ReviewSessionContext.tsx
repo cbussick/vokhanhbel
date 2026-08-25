@@ -32,6 +32,33 @@ interface FlipExerciseView {
   tutorExercise: TutorExerciseContext;
 }
 
+export interface MatchingEntryView {
+  cardId: string;
+  text: string;
+  /** True once this entry's Card has been correctly matched — shown resolved and, once the whole
+   * board is `resolved`, tappable to open Tutopher for it instead of attempting another pair. */
+  matched: boolean;
+}
+
+export interface MatchingExerciseView {
+  kind: "matching";
+  position: number;
+  total: number;
+  /** The board's Cards, for looking up the one a resolved tap opens Tutopher for. */
+  cards: Card[];
+  /** Front-column entries, in the planned shuffled order. */
+  front: MatchingEntryView[];
+  /** Back-column entries, shuffled independently of `front`. */
+  back: MatchingEntryView[];
+  /** True once every Card on the board has graded — the board stays up, and tapping any pair now
+   * opens Tutopher for it instead of attempting another match. */
+  resolved: boolean;
+  issue: ReviewSubmissionIssue | undefined;
+  issueRequestId: string | undefined;
+  tutorConversation: TutorConversationMessage[];
+  tutorExercise: TutorExerciseContext;
+}
+
 export interface MultipleChoiceOptionView {
   id: string;
   text: string;
@@ -68,6 +95,7 @@ export type ReviewSessionView =
   | IdleView
   | FlipExerciseView
   | MultipleChoiceExerciseView
+  | MatchingExerciseView
   | SummaryView;
 
 export interface TutorConversationMessage {
@@ -91,6 +119,10 @@ interface ReviewSessionContextValue {
   revealAnswer: () => void;
   gradeCard: (grade: Grade) => void;
   chooseOption: (optionId: string) => void;
+  /** Attempts pairing the tapped front Card against the tapped back Card; a mismatch taints both
+   * without grading either, a match grades the Card `knew_it` or `almost` and enqueues its Review
+   * Submission immediately — see the reducer's `matchingPairResolved` for why immediately. */
+  attemptMatchingPair: (frontCardId: string, backCardId: string) => void;
   advanceExercise: () => void;
   skipCard: () => void;
   repeatForgotten: () => void;
@@ -160,6 +192,48 @@ function toReviewSessionView(
       issueRequestId: state.issueRequestId,
       tutorConversation: conversation,
       tutorExercise: { cards: [{ cardId: currentCard.id, outcome: null }], chosenOptionText: null },
+    };
+  }
+
+  if (exercise.kind === "matching") {
+    const resolvedCardIds = new Set(state.matching?.resolvedCardIds ?? []);
+    const cardsById = new Map(
+      exercise.cards.map((matchingCard) => [matchingCard.id, matchingCard]),
+    );
+    const toEntry = (cardId: string, face: "front" | "back"): MatchingEntryView | undefined => {
+      const matchingCard = cardsById.get(cardId);
+      const faceText = matchingCard?.[face].text;
+
+      return faceText
+        ? { cardId, text: faceText, matched: resolvedCardIds.has(cardId) }
+        : undefined;
+    };
+    const toEntries = (order: string[], face: "front" | "back") =>
+      order
+        .map((cardId) => toEntry(cardId, face))
+        .filter((entry): entry is MatchingEntryView => entry !== undefined);
+
+    return {
+      kind: "matching",
+      position,
+      total,
+      cards: exercise.cards,
+      front: toEntries(exercise.frontOrder, "front"),
+      back: toEntries(exercise.backOrder, "back"),
+      resolved: exercise.cards.length > 0 && resolvedCardIds.size === exercise.cards.length,
+      issue: state.issue,
+      issueRequestId: state.issueRequestId,
+      tutorConversation: conversation,
+      tutorExercise: {
+        cards: exercise.cards.map((matchingCard) => ({
+          cardId: matchingCard.id,
+          outcome:
+            state.reviewSession.roundSubmissions.find(
+              (submission) => submission.card.id === matchingCard.id,
+            )?.input.grade ?? null,
+        })),
+        chosenOptionText: null,
+      },
     };
   }
 
@@ -323,6 +397,52 @@ export function ReviewSessionProvider({ children }: { children: ReactNode }) {
     enqueueSubmission(submission, handleRejectedReviewSubmission);
   };
 
+  const attemptMatchingPair = (frontCardId: string, backCardId: string) => {
+    if (state.status !== "reviewing" || state.issue === "clock" || state.issue === "conflict")
+      return;
+
+    const exercise = state.reviewSession.exercises[state.currentIndex];
+
+    if (!exercise || exercise.kind !== "matching") return;
+
+    const resolvedCardIds = state.matching?.resolvedCardIds ?? [];
+
+    if (resolvedCardIds.includes(frontCardId) || resolvedCardIds.includes(backCardId)) return;
+
+    // Front and back entries both carry the id of the Card they belong to, so a pair is correct
+    // exactly when the two tapped ids are the same Card's — no text comparison needed.
+    if (frontCardId !== backCardId) {
+      dispatch({ type: "matchingPairMismatched", cardIds: [frontCardId, backCardId] });
+
+      return;
+    }
+
+    const card = exercise.cards.find((candidate) => candidate.id === frontCardId);
+
+    if (!card) return;
+
+    const taintedCardIds = state.matching?.taintedCardIds ?? [];
+    const grade: Grade = taintedCardIds.includes(frontCardId) ? "almost" : "knew_it";
+    const points = getPointsForGrade(grade);
+    const input = {
+      id: crypto.randomUUID(),
+      cardId: card.id,
+      grade,
+      reviewedAt: new Date().toISOString(),
+    } satisfies ReviewSubmissionInput;
+
+    const submission: ReviewSubmission = {
+      input,
+      reviewSessionId: state.reviewSession.id,
+      card,
+      optimisticPoints: points,
+      exerciseIndex: state.currentIndex,
+    };
+
+    dispatch({ type: "matchingPairResolved", submission });
+    enqueueSubmission(submission, handleRejectedReviewSubmission);
+  };
+
   const advanceExercise = () => dispatch({ type: "exerciseAdvanced" });
   const repeatForgotten = () => dispatch({ type: "forgottenRepeated" });
   const skipCard = () => dispatch({ type: "cardSkipped" });
@@ -346,6 +466,7 @@ export function ReviewSessionProvider({ children }: { children: ReactNode }) {
     revealAnswer,
     gradeCard,
     chooseOption,
+    attemptMatchingPair,
     advanceExercise,
     skipCard,
     repeatForgotten,

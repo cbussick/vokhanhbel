@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 import type { Card } from "../../contracts/card";
-import type { FlipExercise, MultipleChoiceExercise } from "../../domain/exercisePlanner";
+import type {
+  FlipExercise,
+  MatchingExercise,
+  MultipleChoiceExercise,
+} from "../../domain/exercisePlanner";
 import { idleReviewSessionState, reviewSessionReducer } from "./reviewSessionReducer";
 import type { ReviewSubmission } from "./reviewSubmission";
 
@@ -54,6 +58,30 @@ function submission(
     },
     reviewSessionId: "session",
     card: exercise.cards[0]!,
+    optimisticPoints: grade === "knew_it" ? 10 : grade === "almost" ? 5 : 1,
+    exerciseIndex,
+  };
+}
+
+function matching(ids: string[]): MatchingExercise {
+  return {
+    kind: "matching",
+    id: ids.join(":"),
+    cards: ids.map((id) => card(id)),
+    frontOrder: [...ids],
+    backOrder: [...ids],
+  };
+}
+
+function matchingSubmission(
+  cardId: string,
+  grade: ReviewSubmission["input"]["grade"],
+  exerciseIndex: number,
+): ReviewSubmission {
+  return {
+    input: { id: `${cardId}-submission`, cardId, grade, reviewedAt: new Date().toISOString() },
+    reviewSessionId: "session",
+    card: card(cardId),
     optimisticPoints: grade === "knew_it" ? 10 : grade === "almost" ? 5 : 1,
     exerciseIndex,
   };
@@ -261,5 +289,211 @@ describe("Rejection during an open Exercise", () => {
     if (rejected.status === "reviewing") {
       expect(rejected.reviewSession.exercises.map((planned) => planned.id)).toEqual(["2"]);
     }
+  });
+});
+
+describe("Matching Exercise", () => {
+  it("grades several Cards from one Exercise, one Review Submission per resolved pair", () => {
+    const exercise = matching(["1", "2", "3", "4"]);
+    const started = reviewSessionReducer(idleReviewSessionState, {
+      type: "reviewSessionStarted",
+      reviewSessionId: "session",
+      exercises: [exercise, flip("5")],
+    });
+    const firstResolved = reviewSessionReducer(started, {
+      type: "matchingPairResolved",
+      submission: matchingSubmission("1", "knew_it", 0),
+    });
+
+    expect(firstResolved).toMatchObject({
+      status: "reviewing",
+      currentIndex: 0,
+      matching: { resolvedCardIds: ["1"] },
+      reviewSession: { totalReviewSubmissions: 1, optimisticPoints: 10 },
+    });
+
+    const secondResolved = reviewSessionReducer(firstResolved, {
+      type: "matchingPairResolved",
+      submission: matchingSubmission("2", "almost", 0),
+    });
+
+    expect(secondResolved).toMatchObject({
+      status: "reviewing",
+      matching: { resolvedCardIds: ["1", "2"] },
+      reviewSession: { totalReviewSubmissions: 2, optimisticPoints: 15 },
+    });
+  });
+
+  it("marks both Cards of a mismatch tainted without grading either", () => {
+    const exercise = matching(["1", "2", "3", "4"]);
+    const started = reviewSessionReducer(idleReviewSessionState, {
+      type: "reviewSessionStarted",
+      reviewSessionId: "session",
+      exercises: [exercise],
+    });
+    const mismatched = reviewSessionReducer(started, {
+      type: "matchingPairMismatched",
+      cardIds: ["1", "3"],
+    });
+
+    expect(mismatched).toMatchObject({
+      status: "reviewing",
+      matching: { resolvedCardIds: [], taintedCardIds: ["1", "3"] },
+      reviewSession: { totalReviewSubmissions: 0 },
+    });
+  });
+
+  it("ignores Weiter until every Card in the board has resolved, then advances past it", () => {
+    const exercise = matching(["1", "2"]);
+    const started = reviewSessionReducer(idleReviewSessionState, {
+      type: "reviewSessionStarted",
+      reviewSessionId: "session",
+      exercises: [exercise, flip("5")],
+    });
+    const oneResolved = reviewSessionReducer(started, {
+      type: "matchingPairResolved",
+      submission: matchingSubmission("1", "knew_it", 0),
+    });
+
+    expect(reviewSessionReducer(oneResolved, { type: "exerciseAdvanced" })).toBe(oneResolved);
+
+    const bothResolved = reviewSessionReducer(oneResolved, {
+      type: "matchingPairResolved",
+      submission: matchingSubmission("2", "knew_it", 0),
+    });
+    const advanced = reviewSessionReducer(bothResolved, { type: "exerciseAdvanced" });
+
+    expect(advanced).toMatchObject({ status: "reviewing", currentIndex: 1, matching: undefined });
+  });
+
+  it("shrinks the board on a per-Card too-old rejection, keeping the pairs already matched", () => {
+    const exercise = matching(["1", "2", "3", "4"]);
+    const started = reviewSessionReducer(idleReviewSessionState, {
+      type: "reviewSessionStarted",
+      reviewSessionId: "session",
+      exercises: [exercise, flip("5")],
+    });
+    const resolvedSubmission = matchingSubmission("1", "knew_it", 0);
+    const resolved = reviewSessionReducer(started, {
+      type: "matchingPairResolved",
+      submission: resolvedSubmission,
+    });
+    const rejected = reviewSessionReducer(resolved, {
+      type: "reviewSubmissionRejected",
+      submission: resolvedSubmission,
+      issue: "too-old",
+      requestId: undefined,
+    });
+
+    expect(rejected).toMatchObject({
+      status: "reviewing",
+      currentIndex: 0,
+      matching: { resolvedCardIds: [] },
+      reviewSession: { totalReviewSubmissions: 0, optimisticPoints: 0 },
+    });
+    if (rejected.status === "reviewing") {
+      const board = rejected.reviewSession.exercises[0] as MatchingExercise;
+
+      // The Exercise total is untouched — the board shrinks, it doesn't disappear or requeue.
+      expect(rejected.reviewSession.exercises).toHaveLength(2);
+      expect(board.kind).toBe("matching");
+      expect(board.cards.map((c) => c.id)).toEqual(["2", "3", "4"]);
+    }
+  });
+
+  it("sends the board to a flip Card once a deleted rejection drops it below two pairs", () => {
+    const exercise = matching(["1", "2"]);
+    const started = reviewSessionReducer(idleReviewSessionState, {
+      type: "reviewSessionStarted",
+      reviewSessionId: "session",
+      exercises: [exercise],
+    });
+    const rejectedSubmission = matchingSubmission("1", "almost", 0);
+    const rejected = reviewSessionReducer(started, {
+      type: "reviewSubmissionRejected",
+      submission: rejectedSubmission,
+      issue: "deleted",
+      requestId: undefined,
+    });
+
+    expect(rejected).toMatchObject({ status: "reviewing", currentIndex: 0, matching: undefined });
+    if (rejected.status === "reviewing") {
+      expect(rejected.reviewSession.exercises).toMatchObject([
+        { kind: "flip", id: "2", cards: [{ id: "2" }] },
+      ]);
+    }
+  });
+
+  it("removes the board once a rejection lands on its last still-credited Card", () => {
+    // Both pairs already resolved (the board is fully graded, awaiting Weiter) when a late
+    // rejection reaches the last one — nothing is left to grade, so the Exercise disappears
+    // exactly like a deleted Card's single-Card Exercise does.
+    const exercise = matching(["1", "2"]);
+    const started = reviewSessionReducer(idleReviewSessionState, {
+      type: "reviewSessionStarted",
+      reviewSessionId: "session",
+      exercises: [exercise, flip("5")],
+    });
+    const firstResolved = reviewSessionReducer(started, {
+      type: "matchingPairResolved",
+      submission: matchingSubmission("1", "knew_it", 0),
+    });
+    const bothResolved = reviewSessionReducer(firstResolved, {
+      type: "matchingPairResolved",
+      submission: matchingSubmission("2", "knew_it", 0),
+    });
+    const rejected = reviewSessionReducer(bothResolved, {
+      type: "reviewSubmissionRejected",
+      submission: matchingSubmission("1", "knew_it", 0),
+      issue: "deleted",
+      requestId: undefined,
+    });
+
+    expect(rejected).toMatchObject({ status: "reviewing", currentIndex: 0 });
+    if (rejected.status !== "reviewing") throw new Error("expected reviewing");
+    expect(rejected.reviewSession.exercises.map((planned) => planned.id)).toEqual(["5"]);
+  });
+
+  it("keeps the Exercise-counted progress total unaffected by a matching board's own Card count", () => {
+    const exercise = matching(["1", "2", "3", "4"]);
+    const started = reviewSessionReducer(idleReviewSessionState, {
+      type: "reviewSessionStarted",
+      reviewSessionId: "session",
+      exercises: [flip("0"), exercise, flip("5")],
+    });
+
+    expect(started).toMatchObject({ reviewSession: { exercises: [{}, {}, {}] } });
+    if (started.status !== "reviewing") throw new Error("expected reviewing");
+    expect(started.reviewSession.exercises).toHaveLength(3);
+  });
+
+  it("never repeats a matching board's Cards — only a genuinely forgotten flip Card returns", () => {
+    // Matching never records forgot (ADR-0014), so its Cards can never reach the repeat round;
+    // this confirms that holds even in a round that also has a forgotten flip Card to repeat.
+    const board = matching(["1", "2"]);
+    const started = reviewSessionReducer(idleReviewSessionState, {
+      type: "reviewSessionStarted",
+      reviewSessionId: "session",
+      exercises: [board, flip("3")],
+    });
+    const boardResolved = reviewSessionReducer(
+      reviewSessionReducer(started, {
+        type: "matchingPairResolved",
+        submission: matchingSubmission("1", "knew_it", 0),
+      }),
+      { type: "matchingPairResolved", submission: matchingSubmission("2", "almost", 0) },
+    );
+    const advanced = reviewSessionReducer(boardResolved, { type: "exerciseAdvanced" });
+    const summary = reviewSessionReducer(advanced, {
+      type: "cardGraded",
+      submission: submission(flip("3"), "forgot", 1),
+    });
+    const repeated = reviewSessionReducer(summary, { type: "forgottenRepeated" });
+
+    expect(repeated).toMatchObject({ status: "reviewing", currentIndex: 0 });
+    if (repeated.status !== "reviewing") throw new Error("expected reviewing");
+    expect(repeated.reviewSession.exercises).toMatchObject([
+      { kind: "flip", id: "3", cards: [{ id: "3" }] },
+    ]);
   });
 });
