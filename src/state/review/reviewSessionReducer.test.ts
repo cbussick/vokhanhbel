@@ -32,10 +32,10 @@ function multipleChoice(id: string): MultipleChoiceExercise {
     id,
     cards: [card(id)],
     options: [
-      { cardId: id, text: "richtig", correct: true },
-      { cardId: "d1", text: "falsch eins", correct: false },
-      { cardId: "d2", text: "falsch zwei", correct: false },
-      { cardId: "d3", text: "falsch drei", correct: false },
+      { cardId: id, text: "richtig", audio: null, correct: true },
+      { cardId: "d1", text: "falsch eins", audio: null, correct: false },
+      { cardId: "d2", text: "falsch zwei", audio: null, correct: false },
+      { cardId: "d3", text: "falsch drei", audio: null, correct: false },
     ],
   };
 }

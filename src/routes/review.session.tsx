@@ -4,6 +4,7 @@ import { createFileRoute, Navigate, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { useTranslation } from "react-i18next";
 import { AppShell } from "../components/AppShell";
+import { AudioPlayer } from "../components/audio/AudioPlayer";
 import { CardFace } from "../components/audio/CardFace";
 import { RequireSession } from "../components/RequireSession";
 import { TutorDialog } from "../components/TutorDialog";
@@ -72,47 +73,93 @@ function Confetti() {
 
 export const Route = createFileRoute("/review/session")({ component: ReviewSessionRoute });
 
-function optionClassName(option: MultipleChoiceOptionView): string {
-  if (option.revealedCorrect) return `${styles.option} ${styles.optionCorrect}`;
-  if (option.dead) return `${styles.option} ${styles.optionDead}`;
+function optionModifierClassName(option: MultipleChoiceOptionView): string {
+  if (option.revealedCorrect) return styles.optionCorrect ?? "";
+  if (option.dead) return styles.optionDead ?? "";
 
-  return `${styles.option}`;
+  return "";
 }
 
+function OptionOutcome({ option }: { option: MultipleChoiceOptionView }) {
+  const { t } = useTranslation();
+
+  return (
+    <>
+      {option.dead && <span className={styles.visuallyHidden}> · {t("review.optionWrong")}</span>}
+      {option.revealedCorrect && (
+        <span className={styles.visuallyHidden}> · {t("review.optionCorrect")}</span>
+      )}
+    </>
+  );
+}
+
+/**
+ * An audio option is a play control plus a separate "choose" button rather than one clickable
+ * button, because AudioPlayer's own play/pause/retry control must keep working — including the
+ * retry a Learner needs precisely while `audioUnavailable` blocks every choose button — regardless
+ * of whether grading is currently blocked.
+ */
 function MultipleChoiceOptions({
   options,
   resolved,
   disabled,
+  audioUnavailable,
+  onOptionAvailabilityChange,
   onChoose,
 }: {
   options: MultipleChoiceOptionView[];
   resolved: boolean;
   disabled: boolean;
+  audioUnavailable: boolean;
+  onOptionAvailabilityChange: (optionId: string, available: boolean) => void;
   onChoose: (optionId: string) => void;
 }) {
   const { t } = useTranslation();
+  const audioMode = options.some((option) => option.audio);
 
   return (
     <fieldset className={styles.options} disabled={disabled}>
-      <legend className={styles.optionsLegend}>{t("review.multipleChoiceLegend")}</legend>
+      <legend className={styles.optionsLegend}>
+        {t(audioMode ? "review.multipleChoiceAudioLegend" : "review.multipleChoiceLegend")}
+      </legend>
       <div className={styles.optionsGrid}>
-        {options.map((option) => (
-          <button
-            key={option.id}
-            type="button"
-            className={optionClassName(option)}
-            disabled={resolved || option.dead}
-            onClick={() => onChoose(option.id)}
-          >
-            {option.text}
-            {option.dead && (
-              <span className={styles.visuallyHidden}> · {t("review.optionWrong")}</span>
-            )}
-            {option.revealedCorrect && (
-              <span className={styles.visuallyHidden}> · {t("review.optionCorrect")}</span>
-            )}
-          </button>
-        ))}
+        {options.map((option, index) =>
+          option.audio ? (
+            <div
+              key={option.id}
+              className={`${styles.audioOption} ${optionModifierClassName(option)}`}
+            >
+              <AudioPlayer
+                audio={option.audio}
+                label={t("review.audioOptionLabel", { index: index + 1 })}
+                compact
+                onAvailabilityChange={(available) =>
+                  onOptionAvailabilityChange(option.id, available)
+                }
+              />
+              <button
+                type="button"
+                className={styles.chooseOption}
+                disabled={resolved || option.dead || audioUnavailable}
+                onClick={() => onChoose(option.id)}
+              >
+                {t("review.chooseOption", { index: index + 1 })}
+                <OptionOutcome option={option} />
+              </button>
+            </div>
+          ) : (
+            <button
+              key={option.id}
+              type="button"
+              className={`${styles.option} ${optionModifierClassName(option)}`}
+              disabled={resolved || option.dead}
+              onClick={() => onChoose(option.id)}
+            >
+              {option.text}
+              <OptionOutcome option={option} />
+            </button>
+          ),
+        )}
       </div>
     </fieldset>
   );
@@ -129,6 +176,7 @@ function ReviewSessionRoute() {
   const [revealComplete, setRevealComplete] = useState(false);
   const [frontAudioAvailable, setFrontAudioAvailable] = useState(true);
   const [backAudioAvailable, setBackAudioAvailable] = useState(true);
+  const [unavailableOptionIds, setUnavailableOptionIds] = useState<ReadonlySet<string>>(new Set());
   const summaryHeadingRef = useRef<HTMLHeadingElement>(null);
 
   // The summary replaces the Exercise screen in place, so nothing else moves focus there for a
@@ -150,6 +198,18 @@ function ReviewSessionRoute() {
     setTutorOpen(false);
     setFrontAudioAvailable(true);
     setBackAudioAvailable(true);
+    setUnavailableOptionIds(new Set());
+  };
+
+  const setOptionAvailability = (optionId: string, available: boolean) => {
+    setUnavailableOptionIds((current) => {
+      const next = new Set(current);
+
+      if (available) next.delete(optionId);
+      else next.add(optionId);
+
+      return next;
+    });
   };
 
   const reveal = () => {
@@ -225,7 +285,12 @@ function ReviewSessionRoute() {
     !card.back.text &&
     Boolean(card.back.audio) &&
     !backAudioAvailable;
-  const requiredAudioUnavailable = frontRequiredUnavailable || backRequiredUnavailable;
+  // While any audio option has failed to load, guessing between the ones the Learner can still hear
+  // would record a Grade she never gave — so grading stays blocked until every option recovers.
+  const optionsAudioUnavailable =
+    view.kind === "multipleChoice" && !view.resolved && unavailableOptionIds.size > 0;
+  const requiredAudioUnavailable =
+    frontRequiredUnavailable || backRequiredUnavailable || optionsAudioUnavailable;
 
   const grade = (value: Grade) => {
     reviewSession.gradeCard(value);
@@ -365,6 +430,8 @@ function ReviewSessionRoute() {
                   disabled={
                     frontRequiredUnavailable || view.issue === "clock" || view.issue === "conflict"
                   }
+                  audioUnavailable={optionsAudioUnavailable}
+                  onOptionAvailabilityChange={setOptionAvailability}
                   onChoose={reviewSession.chooseOption}
                 />
                 {view.resolved && (

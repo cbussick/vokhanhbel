@@ -766,6 +766,77 @@ describe("rendered app journeys", () => {
     expect(await screen.findByRole("heading", { name: "Gut gemacht!" })).toBeVisible();
   });
 
+  it("offers audio options for a Card with a recorded back, blocks grading while one fails to load, and offers Skip Card", async () => {
+    const user = userEvent.setup();
+    const metadata = { durationMs: 1_000, contentType: "audio/wav" as const, byteSize: 8_044 };
+    const audioCard = (id: string, audioId: string, due: boolean) => ({
+      ...testCards[0]!,
+      id,
+      front: "Frage",
+      back: { text: null, audio: { ...metadata, id: audioId } },
+      dueAt: due ? testCards[0]!.dueAt : "2099-01-01T00:00:00.000Z",
+    });
+    const target = audioCard(
+      "99999999-9999-4999-8999-999999999991",
+      "aaaaaaaa-9999-4aaa-8aaa-aaaaaaaaaaa1",
+      true,
+    );
+    const siblings = [
+      audioCard(
+        "99999999-9999-4999-8999-999999999992",
+        "aaaaaaaa-9999-4aaa-8aaa-aaaaaaaaaaa2",
+        false,
+      ),
+      audioCard(
+        "99999999-9999-4999-8999-999999999993",
+        "aaaaaaaa-9999-4aaa-8aaa-aaaaaaaaaaa3",
+        false,
+      ),
+      audioCard(
+        "99999999-9999-4999-8999-999999999994",
+        "aaaaaaaa-9999-4aaa-8aaa-aaaaaaaaaaa4",
+        false,
+      ),
+    ];
+    let reviews = 0;
+    mockServer.use(
+      http.get("/api/cards", () => HttpResponse.json([target, ...siblings])),
+      http.get("/api/audio/:audioId", () => new HttpResponse(new Uint8Array([1]))),
+      http.post("/api/reviews", () => {
+        reviews += 1;
+
+        return HttpResponse.json({});
+      }),
+    );
+    await renderApp("/review");
+    await user.click(await screen.findByRole("button", { name: "Review starten" }));
+    expect(await screen.findByText("Frage")).toBeVisible();
+    expect(screen.getByText("Wähle die richtige Aufnahme")).toBeVisible();
+
+    const chooseButtons = screen.getAllByRole("button", { name: /Option \d wählen/ });
+
+    expect(chooseButtons).toHaveLength(4);
+    // The front here has no recording of its own, so every rendered <audio> element is an option.
+    const optionAudio = document.querySelectorAll("audio");
+
+    expect(optionAudio).toHaveLength(4);
+
+    fireEvent.error(optionAudio[0]!);
+    expect(await screen.findByRole("alert")).toHaveTextContent("benötigte Audio");
+    expect(chooseButtons[0]).toBeDisabled();
+    expect(chooseButtons[1]).toBeDisabled();
+
+    await user.click(screen.getByRole("button", { name: "Option 1: Erneut versuchen" }));
+    fireEvent.playing(optionAudio[0]!);
+    await waitFor(() => expect(screen.queryByRole("alert")).not.toBeInTheDocument());
+    expect(chooseButtons[1]).toBeEnabled();
+
+    fireEvent.error(optionAudio[1]!);
+    await user.click(await screen.findByRole("button", { name: "Karte überspringen" }));
+    expect(await screen.findByRole("heading", { name: "Gut gemacht!" })).toBeVisible();
+    expect(reviews).toBe(0);
+  });
+
   it("prefetches Review audio at low priority and skips an unavailable audio-only Card without grading", async () => {
     const user = userEvent.setup();
     const audioId = "88888888-8888-4888-8888-888888888888";
