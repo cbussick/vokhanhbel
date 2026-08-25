@@ -1,658 +1,31 @@
-/* eslint-disable jsx-a11y/no-noninteractive-tabindex -- visible Card faces are intentionally keyboard-scrollable regions */
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Navigate, useNavigate } from "@tanstack/react-router";
-import { useEffect, useRef, useState, type CSSProperties, type PointerEvent } from "react";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { AppShell } from "../components/AppShell";
-import { AudioPlayer } from "../components/audio/AudioPlayer";
-import { CardFace } from "../components/audio/CardFace";
-import { RequireSession } from "../components/RequireSession";
-import { TutorDialog } from "../components/TutorDialog";
-import type { Card } from "../contracts/card";
+import { FlipCardExercise } from "../components/review/FlipCardExercise";
+import { MatchingExercise } from "../components/review/MatchingExercise";
+import { MultipleChoiceExercise } from "../components/review/MultipleChoiceExercise";
+import { SessionSummary } from "../components/review/SessionSummary";
+import { SwipeExercise } from "../components/review/SwipeExercise";
 import type { Grade } from "../domain/review";
 import { useOnlineStatus } from "../lib/browserState";
 import { statsQuery } from "../lib/queries";
-import type {
-  MatchingEntryView,
-  MatchingExerciseView,
-  MultipleChoiceOptionView,
-  SwipeExerciseView,
-} from "../state/ReviewSessionContext";
 import { useReviewSession } from "../state/ReviewSessionContext";
-import styles from "./reviewSession.module.css";
-
-/** Whether motion should resolve instantly rather than animate — read fresh each time, since the
- * Learner can change this OS setting without reloading the app. */
-function prefersReducedMotion(): boolean {
-  return matchMedia("(prefers-reduced-motion: reduce)").matches;
-}
-
-/** How long the fly-off/spring-back CSS transition takes, so the local "still flying" state clears
- * in step with it. Zero under reduced motion, so the outgoing Card is simply gone next paint. */
-function swipeFlightDuration(): number {
-  return prefersReducedMotion() ? 0 : 260;
-}
-
-const confettiColors = [
-  "var(--color-primary)",
-  "var(--color-success)",
-  "var(--color-warning)",
-  "var(--color-danger)",
-];
-const confettiPieceCount = 24;
-
-interface ConfettiPiece {
-  id: number;
-  left: string;
-  color: string;
-  delay: string;
-  drift: string;
-}
-
-function createConfettiPieces(): ConfettiPiece[] {
-  return Array.from({ length: confettiPieceCount }, (_, index) => ({
-    id: index,
-    left: `${Math.round(Math.random() * 100)}%`,
-    color: confettiColors[index % confettiColors.length]!,
-    delay: `${Math.round(Math.random() * 200)}ms`,
-    drift: (Math.random() * 2 - 1).toFixed(2),
-  }));
-}
-
-/**
- * Hand-rolled rather than pulled from a library: this project has no UI dependencies, and a
- * celebration is not the place to acquire the first one. Hidden from assistive tech, and
- * suppressed entirely under reduced motion by the `.confetti` rule in reviewSession.module.css.
- */
-function Confetti() {
-  const [pieces] = useState(createConfettiPieces);
-
-  return (
-    <div className={styles.confetti} aria-hidden="true">
-      {pieces.map((piece) => (
-        <span
-          key={piece.id}
-          className={styles.confettiPiece}
-          // SAFETY: React's CSSProperties type has no slot for a custom property, but
-          // `--confetti-drift` is a plain style declaration a browser accepts like any other.
-          style={
-            {
-              left: piece.left,
-              background: piece.color,
-              animationDelay: piece.delay,
-              "--confetti-drift": piece.drift,
-            } as CSSProperties
-          }
-        />
-      ))}
-    </div>
-  );
-}
 
 export const Route = createFileRoute("/review/session")({ component: ReviewSessionRoute });
 
-function optionModifierClassName(option: MultipleChoiceOptionView): string {
-  if (option.revealedCorrect) return styles.optionCorrect ?? "";
-  if (option.dead) return styles.optionDead ?? "";
-
-  return "";
-}
-
-function TutorButton({ onClick, disabled }: { onClick: () => void; disabled: boolean }) {
-  const { t } = useTranslation();
-
-  return (
-    <button type="button" className={styles.tutorButton} onClick={onClick} disabled={disabled}>
-      <svg aria-hidden="true" viewBox="0 0 24 24">
-        <path d="M12 2.5c.7 4.5 2.9 6.7 7.4 7.4-4.5.7-6.7 2.9-7.4 7.4-.7-4.5-2.9-6.7-7.4-7.4 4.5-.7 6.7-2.9 7.4-7.4Z" />
-        <path
-          d="M19 15.5c.35 2.2 1.45 3.3 3.65 3.65-2.2.35-3.3 1.45-3.65 3.65-.35-2.2-1.45-3.3-3.65-3.65 2.2-.35 3.3-1.45 3.65-3.65Z"
-          opacity=".65"
-        />
-      </svg>
-      {t("tutor.open")}
-    </button>
-  );
-}
-
-function OptionOutcome({ option }: { option: MultipleChoiceOptionView }) {
-  const { t } = useTranslation();
-
-  return (
-    <>
-      {option.dead && <span className={styles.visuallyHidden}> · {t("review.optionWrong")}</span>}
-      {option.revealedCorrect && (
-        <span className={styles.visuallyHidden}> · {t("review.optionCorrect")}</span>
-      )}
-    </>
-  );
-}
+const issueKeysByIssue = {
+  "too-old": "review.tooOld",
+  clock: "review.clock",
+  deleted: "review.removed",
+  conflict: "review.conflict",
+} as const;
 
 /**
- * An audio option is a play control plus a separate "choose" button rather than one clickable
- * button, because AudioPlayer's own play/pause/retry control must keep working — including the
- * retry a Learner needs precisely while `audioUnavailable` blocks every choose button — regardless
- * of whether grading is currently blocked.
+ * Dispatches the Review Session's current view to the Exercise that renders it. The screen chrome
+ * lives in `ExerciseScreen`, and each Exercise owns its own body — this route holds only the state
+ * the Exercises share and the handlers that reset it as the Session advances.
  */
-function MultipleChoiceOptions({
-  options,
-  resolved,
-  disabled,
-  audioUnavailable,
-  onOptionAvailabilityChange,
-  onChoose,
-}: {
-  options: MultipleChoiceOptionView[];
-  resolved: boolean;
-  disabled: boolean;
-  audioUnavailable: boolean;
-  onOptionAvailabilityChange: (optionId: string, available: boolean) => void;
-  onChoose: (optionId: string) => void;
-}) {
-  const { t } = useTranslation();
-  const audioMode = options.some((option) => option.audio);
-
-  return (
-    <fieldset className={styles.options} disabled={disabled}>
-      <legend className={styles.optionsLegend}>
-        {t(audioMode ? "review.multipleChoiceAudioLegend" : "review.multipleChoiceLegend")}
-      </legend>
-      <div className={styles.optionsGrid}>
-        {options.map((option, index) =>
-          option.audio ? (
-            <div
-              key={option.id}
-              className={`${styles.audioOption} ${optionModifierClassName(option)}`}
-            >
-              <AudioPlayer
-                audio={option.audio}
-                label={t("review.audioOptionLabel", { index: index + 1 })}
-                compact
-                onAvailabilityChange={(available) =>
-                  onOptionAvailabilityChange(option.id, available)
-                }
-              />
-              <button
-                type="button"
-                className={styles.chooseOption}
-                disabled={resolved || option.dead || audioUnavailable}
-                onClick={() => onChoose(option.id)}
-              >
-                {t("review.chooseOption", { index: index + 1 })}
-                <OptionOutcome option={option} />
-              </button>
-            </div>
-          ) : (
-            <button
-              key={option.id}
-              type="button"
-              className={`${styles.option} ${optionModifierClassName(option)}`}
-              disabled={resolved || option.dead}
-              onClick={() => onChoose(option.id)}
-            >
-              {option.text}
-              <OptionOutcome option={option} />
-            </button>
-          ),
-        )}
-      </div>
-    </fieldset>
-  );
-}
-
-function MatchingEntryButton({
-  entry,
-  selected,
-  disabled,
-  onClick,
-}: {
-  entry: MatchingEntryView;
-  selected: boolean;
-  disabled: boolean;
-  onClick: () => void;
-}) {
-  const { t } = useTranslation();
-  const className = entry.matched
-    ? `${styles.matchingEntry} ${styles.matchingEntryMatched}`
-    : selected
-      ? `${styles.matchingEntry} ${styles.matchingEntrySelected}`
-      : styles.matchingEntry;
-
-  return (
-    <button
-      type="button"
-      className={className}
-      aria-pressed={selected}
-      disabled={disabled}
-      onClick={onClick}
-    >
-      {entry.text}
-      {entry.matched && (
-        <span className={styles.visuallyHidden}> · {t("review.matchingMatched")}</span>
-      )}
-      {selected && !entry.matched && (
-        <span className={styles.visuallyHidden}> · {t("review.matchingSelected")}</span>
-      )}
-    </button>
-  );
-}
-
-/**
- * The matching board: rendered as its own top-level branch, separate from the shared flip and
- * multiple-choice render below, so that branch's edits (audio options, VOK-17) never collide with
- * this one. A pair resolves the moment a front and a back are tapped — see
- * `ReviewSessionContext.attemptMatchingPair` — so unlike multiple choice there is no per-Exercise
- * "resolved" state to wait for until every pair on the board has graded.
- */
-function MatchingBoardSection({
-  view,
-  issueKey,
-  online,
-  selectedFrontCardId,
-  mismatchAnnouncement,
-  tutorOpen,
-  tutorCard,
-  onClose,
-  onAdvance,
-  onSelectFront,
-  onAttemptPair,
-  onOpenTutor,
-  onCloseTutor,
-}: {
-  view: MatchingExerciseView;
-  issueKey: string | undefined;
-  online: boolean;
-  selectedFrontCardId: string | undefined;
-  mismatchAnnouncement: string;
-  tutorOpen: boolean;
-  tutorCard: Card | undefined;
-  onClose: () => void;
-  onAdvance: () => void;
-  onSelectFront: (cardId: string | undefined) => void;
-  onAttemptPair: (frontCardId: string, backCardId: string) => void;
-  onOpenTutor: (cardId: string) => void;
-  onCloseTutor: () => void;
-}) {
-  const { t } = useTranslation();
-  const reviewSession = useReviewSession();
-  const issueBlocksInput = view.issue === "clock" || view.issue === "conflict";
-
-  // A matched entry only responds once the whole board has resolved, and then it opens Tutopher
-  // instead of attempting another pair — the Learner has nothing left to match it against.
-  const openTutorForMatched = (entry: MatchingEntryView) => {
-    if (view.resolved && online) onOpenTutor(entry.cardId);
-  };
-
-  const tapFront = (entry: MatchingEntryView) => {
-    if (entry.matched) return openTutorForMatched(entry);
-    if (!issueBlocksInput) onSelectFront(entry.cardId);
-  };
-
-  const tapBack = (entry: MatchingEntryView) => {
-    if (entry.matched) return openTutorForMatched(entry);
-    if (!issueBlocksInput && selectedFrontCardId) onAttemptPair(selectedFrontCardId, entry.cardId);
-  };
-
-  return (
-    <RequireSession>
-      <AppShell title={t("review.title")} variant="focused">
-        <section className={styles.session}>
-          <header className={styles.sessionHeader}>
-            <button type="button" aria-label={t("review.close")} onClick={onClose}>
-              <svg aria-hidden="true" viewBox="0 0 24 24">
-                <path d="m5 5 14 14M19 5 5 19" />
-              </svg>
-            </button>
-            <div className={styles.progressWrap}>
-              <span aria-hidden="true">
-                {view.position} / {view.total}
-              </span>
-              <progress
-                id="review-progress"
-                aria-label={t("review.progress", { current: view.position, total: view.total })}
-                value={view.position - 1}
-                max={view.total}
-              />
-            </div>
-          </header>
-          <div className={styles.sessionBody}>
-            {issueKey && (
-              <p className={styles.issue} role="alert">
-                {t(issueKey)}
-                {view.issueRequestId && (
-                  <span> {t("review.requestId", { requestId: view.issueRequestId })}</span>
-                )}
-              </p>
-            )}
-            <p className={styles.optionsLegend}>{t("review.matchingLegend")}</p>
-            <div className={styles.matchingBoard}>
-              <fieldset className={styles.matchingColumn} disabled={issueBlocksInput}>
-                <legend>{t("review.matchingFrontColumn")}</legend>
-                {view.front.map((entry) => (
-                  <MatchingEntryButton
-                    key={entry.cardId}
-                    entry={entry}
-                    selected={selectedFrontCardId === entry.cardId}
-                    disabled={entry.matched && (!view.resolved || !online)}
-                    onClick={() => tapFront(entry)}
-                  />
-                ))}
-              </fieldset>
-              <fieldset className={styles.matchingColumn} disabled={issueBlocksInput}>
-                <legend>{t("review.matchingBackColumn")}</legend>
-                {view.back.map((entry) => (
-                  <MatchingEntryButton
-                    key={entry.cardId}
-                    entry={entry}
-                    selected={false}
-                    disabled={entry.matched && (!view.resolved || !online)}
-                    onClick={() => tapBack(entry)}
-                  />
-                ))}
-              </fieldset>
-            </div>
-            <p className={styles.visuallyHidden} role="status" aria-atomic="true">
-              {mismatchAnnouncement}
-            </p>
-            {view.resolved && (
-              <>
-                <p className={styles.outcome} role="status">
-                  {t("review.matchingResolved")}
-                </p>
-                <button type="button" className={styles.revealButton} onClick={onAdvance}>
-                  {t("review.continue")}
-                </button>
-              </>
-            )}
-          </div>
-          {tutorOpen && tutorCard && view.resolved && (
-            <TutorDialog
-              card={tutorCard}
-              exercise={view.tutorExercise}
-              messages={view.tutorConversation}
-              updateMessages={reviewSession.updateTutorConversation}
-              onClose={onCloseTutor}
-            />
-          )}
-        </section>
-      </AppShell>
-    </RequireSession>
-  );
-}
-
-/**
- * The Swipe deck: rendered as its own top-level branch, like `MatchingBoardSection`. Built on pointer
- * events with geometric hit-testing (`getBoundingClientRect` against the two target buttons'
- * rectangles, checked in `onPointerMove`) rather than mouse-enter detection — the earlier
- * implementation this idea came from detected its drop target that way, so its drag never worked on
- * a phone at all. Tapping a target calls the exact same `onChoose` path as a completed drag, and
- * needs no pointer handling of its own, which is what makes it the keyboard route for free.
- */
-function SwipeDeckSection({
-  view,
-  issueKey,
-  tutorOpen,
-  tutorDisabled,
-  onClose,
-  onChoose,
-  onContinue,
-  onOpenTutor,
-  onCloseTutor,
-}: {
-  view: SwipeExerciseView;
-  issueKey: string | undefined;
-  tutorOpen: boolean;
-  tutorDisabled: boolean;
-  onClose: () => void;
-  onChoose: (optionCardId: string) => void;
-  onContinue: () => void;
-  onOpenTutor: () => void;
-  onCloseTutor: () => void;
-}) {
-  const { t } = useTranslation();
-  const reviewSession = useReviewSession();
-  const [dragCardId, setDragCardId] = useState<string | undefined>(undefined);
-  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
-  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
-  const [dragHoverSide, setDragHoverSide] = useState<"left" | "right" | undefined>(undefined);
-  const [flying, setFlying] = useState<{ cardId: string; direction: "left" | "right" } | undefined>(
-    undefined,
-  );
-  const leftTargetRef = useRef<HTMLButtonElement>(null);
-  const rightTargetRef = useRef<HTMLButtonElement>(null);
-
-  const issueBlocksInput = view.issue === "clock" || view.issue === "conflict";
-  const interactive = !view.resolved && !issueBlocksInput;
-
-  const flyOff = (cardId: string, direction: "left" | "right") => {
-    setFlying({ cardId, direction });
-
-    const duration = swipeFlightDuration();
-
-    window.setTimeout(
-      () => setFlying((current) => (current?.cardId === cardId ? undefined : current)),
-      duration,
-    );
-  };
-
-  const resetDrag = () => {
-    setDragCardId(undefined);
-    setDragOffset({ x: 0, y: 0 });
-    setDragHoverSide(undefined);
-  };
-
-  const commit = (optionCardId: string) => {
-    onChoose(optionCardId);
-    resetDrag();
-  };
-
-  const pointInRect = (x: number, y: number, rect: DOMRect | undefined): boolean =>
-    rect !== undefined && x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom;
-
-  const handlePointerDown = (event: PointerEvent<HTMLDivElement>, cardId: string) => {
-    if (!interactive) return;
-
-    event.currentTarget.setPointerCapture(event.pointerId);
-    setDragCardId(cardId);
-    setDragStart({ x: event.clientX, y: event.clientY });
-    setDragOffset({ x: 0, y: 0 });
-  };
-
-  const handlePointerMove = (event: PointerEvent<HTMLDivElement>) => {
-    if (!dragCardId) return;
-
-    setDragOffset({ x: event.clientX - dragStart.x, y: event.clientY - dragStart.y });
-
-    const overLeft = pointInRect(
-      event.clientX,
-      event.clientY,
-      leftTargetRef.current?.getBoundingClientRect(),
-    );
-    const overRight = pointInRect(
-      event.clientX,
-      event.clientY,
-      rightTargetRef.current?.getBoundingClientRect(),
-    );
-
-    setDragHoverSide(overLeft ? "left" : overRight ? "right" : undefined);
-  };
-
-  const handlePointerUp = () => {
-    if (!dragCardId) return;
-
-    const side = dragHoverSide;
-    const optionCardId =
-      side === "left"
-        ? view.options[0]?.cardId
-        : side === "right"
-          ? view.options[1]?.cardId
-          : undefined;
-
-    if (side && optionCardId) {
-      commit(optionCardId);
-
-      return;
-    }
-
-    // Released nowhere in particular: springs back to centre instead of answering.
-    resetDrag();
-  };
-
-  // The resolution — correct or wrong — is on screen until this fires, so the fly-off always
-  // happens here, toward whichever side the Learner actually chose: the option whose own
-  // correctness matches the verdict is the one she picked, since Swipe has only the two.
-  const handleContinue = () => {
-    if (view.resolved) {
-      const chosenIndex = view.options.findIndex((option) => option.correct === view.correct);
-
-      flyOff(view.currentCard.id, chosenIndex === 0 ? "left" : "right");
-    }
-
-    onContinue();
-  };
-
-  // The current Card plus whatever's genuinely still unresolved behind it, in deck order —
-  // everything still worth stacking on screen. Resolved Cards always precede it in `view.cards`,
-  // which `toReviewSessionView` and `shrinkSwipeDeck` both keep in lockstep with the deck's order.
-  const currentCardIndex = view.cards.findIndex((card) => card.id === view.currentCard.id);
-  const upcomingCards = view.cards.slice(currentCardIndex);
-  const peekClassNames = [styles.swipeCardPeek1, styles.swipeCardPeek2];
-
-  return (
-    <RequireSession>
-      <AppShell title={t("review.title")} variant="focused">
-        <section className={styles.session}>
-          <header className={styles.sessionHeader}>
-            <button type="button" aria-label={t("review.close")} onClick={onClose}>
-              <svg aria-hidden="true" viewBox="0 0 24 24">
-                <path d="m5 5 14 14M19 5 5 19" />
-              </svg>
-            </button>
-            <div className={styles.progressWrap}>
-              <span aria-hidden="true">
-                {view.position} / {view.total}
-              </span>
-              <progress
-                id="review-progress"
-                aria-label={t("review.progress", { current: view.position, total: view.total })}
-                value={view.position - 1}
-                max={view.total}
-              />
-            </div>
-          </header>
-          <div className={styles.sessionBody}>
-            {issueKey && (
-              <p className={styles.issue} role="alert">
-                {t(issueKey)}
-                {view.issueRequestId && (
-                  <span> {t("review.requestId", { requestId: view.issueRequestId })}</span>
-                )}
-              </p>
-            )}
-            <p className={styles.optionsLegend}>{t("review.swipeLegend")}</p>
-            <div className={styles.swipeDeck}>
-              {flying && (
-                <div
-                  key={`flying-${flying.cardId}`}
-                  aria-hidden="true"
-                  className={`${styles.swipeCard} ${styles.swipeCardFlying} ${
-                    flying.direction === "left"
-                      ? styles.swipeCardFlyingLeft
-                      : styles.swipeCardFlyingRight
-                  }`}
-                >
-                  <CardFace
-                    face={view.cards.find((card) => card.id === flying.cardId)!.front}
-                    label="front"
-                  />
-                </div>
-              )}
-              {upcomingCards.slice(0, 3).map((deckCard, index) =>
-                index === 0 ? (
-                  <div
-                    key={deckCard.id}
-                    className={`${styles.swipeCard} ${styles.swipeCardCurrent}`}
-                    style={
-                      dragCardId === deckCard.id
-                        ? {
-                            transform: `translate(${dragOffset.x}px, ${dragOffset.y * 0.15}px) rotate(${dragOffset.x / 18}deg)`,
-                            transition: "none",
-                          }
-                        : undefined
-                    }
-                    onPointerDown={(event) => handlePointerDown(event, deckCard.id)}
-                    onPointerMove={handlePointerMove}
-                    onPointerUp={handlePointerUp}
-                    onPointerCancel={handlePointerUp}
-                  >
-                    <CardFace face={deckCard.front} label="front" />
-                  </div>
-                ) : (
-                  <div
-                    key={deckCard.id}
-                    aria-hidden="true"
-                    className={`${styles.swipeCard} ${peekClassNames[index - 1] ?? ""}`}
-                  >
-                    <CardFace face={deckCard.front} label="front" />
-                  </div>
-                ),
-              )}
-            </div>
-            <fieldset className={styles.swipeTargets} disabled={view.resolved || issueBlocksInput}>
-              <legend className={styles.visuallyHidden}>{t("review.swipeLegend")}</legend>
-              {view.options.map((option, index) => {
-                const shimOption: MultipleChoiceOptionView = {
-                  id: option.cardId,
-                  text: option.text,
-                  audio: null,
-                  dead: !option.correct && view.resolved && !view.correct,
-                  revealedCorrect: view.resolved && option.correct,
-                };
-                const side = index === 0 ? "left" : "right";
-
-                return (
-                  <button
-                    key={option.cardId}
-                    ref={side === "left" ? leftTargetRef : rightTargetRef}
-                    type="button"
-                    className={`${styles.option} ${styles.swipeTarget} ${
-                      dragHoverSide === side ? styles.swipeTargetHover : ""
-                    } ${optionModifierClassName(shimOption)}`}
-                    onClick={() => commit(option.cardId)}
-                  >
-                    {option.text}
-                    <OptionOutcome option={shimOption} />
-                  </button>
-                );
-              })}
-            </fieldset>
-            {view.resolved && (
-              <>
-                <p className={styles.outcome} role="status">
-                  {t(view.correct ? "review.answerCorrect" : "review.answerWrong")}
-                </p>
-                <TutorButton onClick={onOpenTutor} disabled={tutorDisabled} />
-                <button type="button" className={styles.revealButton} onClick={handleContinue}>
-                  {t("review.continue")}
-                </button>
-              </>
-            )}
-          </div>
-          {tutorOpen && view.resolved && (
-            <TutorDialog
-              card={view.currentCard}
-              exercise={view.tutorExercise}
-              messages={view.tutorConversation}
-              updateMessages={reviewSession.updateTutorConversation}
-              onClose={onCloseTutor}
-            />
-          )}
-        </section>
-      </AppShell>
-    </RequireSession>
-  );
-}
-
 function ReviewSessionRoute() {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -668,14 +41,6 @@ function ReviewSessionRoute() {
   const [unavailableOptionIds, setUnavailableOptionIds] = useState<ReadonlySet<string>>(new Set());
   const [selectedFrontCardId, setSelectedFrontCardId] = useState<string | undefined>(undefined);
   const [matchingMismatch, setMatchingMismatch] = useState("");
-  const summaryHeadingRef = useRef<HTMLHeadingElement>(null);
-
-  // The summary replaces the Exercise screen in place, so nothing else moves focus there for a
-  // screen reader — move it to the heading ourselves, as Dialog and Login do for their own arrivals.
-  useEffect(() => {
-    if (reviewSession.view.kind === "summary")
-      requestAnimationFrame(() => summaryHeadingRef.current?.focus());
-  }, [reviewSession.view.kind]);
 
   if (reviewSession.view.kind === "idle") return <Navigate to="/review" />;
 
@@ -731,71 +96,30 @@ function ReviewSessionRoute() {
     resetFaceState();
   };
 
-  const issue = reviewSession.view.kind !== "summary" ? reviewSession.view.issue : undefined;
-  const issueKey =
-    issue === "too-old"
-      ? "review.tooOld"
-      : issue === "clock"
-        ? "review.clock"
-        : issue === "deleted"
-          ? "review.removed"
-          : issue === "conflict"
-            ? "review.conflict"
-            : undefined;
-
   if (reviewSession.view.kind === "summary") {
-    const currentStreak = stats.data?.currentStreak ?? 0;
-
     return (
-      <RequireSession>
-        <AppShell title={t("review.title")}>
-          <section className={styles.summary}>
-            {reviewSession.view.firstRound && <Confetti />}
-            <h2 ref={summaryHeadingRef} tabIndex={-1}>
-              {t("review.summary")}
-            </h2>
-            <dl className={styles.summaryStats}>
-              <div>
-                <dt>{t("review.summaryReviews")}</dt>
-                <dd>{reviewSession.view.cumulativeReviewSubmissions}</dd>
-              </div>
-              <div>
-                <dt>{t("review.summaryPoints")}</dt>
-                <dd>{reviewSession.view.cumulativeOptimisticPoints}</dd>
-              </div>
-              <div>
-                <dt>{t("me.streak")}</dt>
-                <dd>{currentStreak}</dd>
-              </div>
-            </dl>
-            <div>
-              {reviewSession.view.canRepeatForgotten && (
-                <button type="button" onClick={reviewSession.repeatForgotten}>
-                  {t("review.repeat")}
-                </button>
-              )}
-              <button type="button" onClick={close}>
-                {t("common.finish")}
-              </button>
-            </div>
-          </section>
-        </AppShell>
-      </RequireSession>
+      <SessionSummary
+        view={reviewSession.view}
+        currentStreak={stats.data?.currentStreak ?? 0}
+        onRepeatForgotten={reviewSession.repeatForgotten}
+        onFinish={close}
+      />
     );
   }
 
-  if (reviewSession.view.kind === "matching") {
+  const view = reviewSession.view;
+  const issueKey = view.issue ? issueKeysByIssue[view.issue] : undefined;
+
+  if (view.kind === "matching") {
     return (
-      <MatchingBoardSection
-        view={reviewSession.view}
+      <MatchingExercise
+        view={view}
         issueKey={issueKey}
         online={online}
         selectedFrontCardId={selectedFrontCardId}
         mismatchAnnouncement={matchingMismatch}
         tutorOpen={tutorOpen}
-        tutorCard={reviewSession.view.cards.find(
-          (candidate) => candidate.id === tutorSubjectCardId,
-        )}
+        tutorCard={view.cards.find((candidate) => candidate.id === tutorSubjectCardId)}
         onClose={close}
         onAdvance={advance}
         onSelectFront={setSelectedFrontCardId}
@@ -816,25 +140,23 @@ function ReviewSessionRoute() {
     );
   }
 
-  if (reviewSession.view.kind === "swipe") {
-    const swipeView = reviewSession.view;
+  const card = view.currentCard;
+  const tutorDisabled = !online && Boolean(card.front.text) && Boolean(card.back.text);
+
+  if (view.kind === "swipe") {
     // Every Card's own "Weiter" dismisses its resolution; on the deck's last Card, it also leaves
     // the whole Exercise in the same tap — sparing a second, redundant confirmation.
     const continueSwipeDeck = () => {
       reviewSession.continueSwipeCard();
-      if (swipeView.isLastCard) advance();
+      if (view.isLastCard) advance();
     };
-    const swipeTutorDisabled =
-      !online &&
-      Boolean(swipeView.currentCard.front.text) &&
-      Boolean(swipeView.currentCard.back.text);
 
     return (
-      <SwipeDeckSection
-        view={swipeView}
+      <SwipeExercise
+        view={view}
         issueKey={issueKey}
         tutorOpen={tutorOpen}
-        tutorDisabled={swipeTutorDisabled}
+        tutorDisabled={tutorDisabled}
         onClose={close}
         onChoose={reviewSession.chooseSwipeOption}
         onContinue={continueSwipeDeck}
@@ -844,177 +166,43 @@ function ReviewSessionRoute() {
     );
   }
 
-  const view = reviewSession.view;
-  const card = view.currentCard;
-  const frontRequiredUnavailable =
-    !card.front.text && Boolean(card.front.audio) && !frontAudioAvailable;
-  const backRequiredUnavailable =
-    view.kind === "flip" &&
-    view.revealed &&
-    !card.back.text &&
-    Boolean(card.back.audio) &&
-    !backAudioAvailable;
-  // While any audio option has failed to load, guessing between the ones the Learner can still hear
-  // would record a Grade she never gave — so grading stays blocked until every option recovers.
-  const optionsAudioUnavailable =
-    view.kind === "multipleChoice" && !view.resolved && unavailableOptionIds.size > 0;
-  const requiredAudioUnavailable =
-    frontRequiredUnavailable || backRequiredUnavailable || optionsAudioUnavailable;
-
-  const tutorButtonDisabled = !online && Boolean(card.front.text) && Boolean(card.back.text);
+  if (view.kind === "multipleChoice") {
+    return (
+      <MultipleChoiceExercise
+        view={view}
+        issueKey={issueKey}
+        frontAudioAvailable={frontAudioAvailable}
+        unavailableOptionIds={unavailableOptionIds}
+        tutorOpen={tutorOpen}
+        tutorDisabled={tutorDisabled}
+        onClose={close}
+        onAdvance={advance}
+        onSkip={skip}
+        onFrontAudioAvailabilityChange={setFrontAudioAvailable}
+        onOptionAvailabilityChange={setOptionAvailability}
+        onOpenTutor={() => setTutorOpen(true)}
+        onCloseTutor={() => setTutorOpen(false)}
+      />
+    );
+  }
 
   return (
-    <RequireSession>
-      <AppShell title={t("review.title")} variant="focused">
-        <section className={styles.session}>
-          <header className={styles.sessionHeader}>
-            <button type="button" aria-label={t("review.close")} onClick={close}>
-              <svg aria-hidden="true" viewBox="0 0 24 24">
-                <path d="m5 5 14 14M19 5 5 19" />
-              </svg>
-            </button>
-            <div className={styles.progressWrap}>
-              <span aria-hidden="true">
-                {view.position} / {view.total}
-              </span>
-              <progress
-                id="review-progress"
-                aria-label={t("review.progress", { current: view.position, total: view.total })}
-                value={view.position - 1}
-                max={view.total}
-              />
-            </div>
-          </header>
-          <div className={styles.sessionBody}>
-            {issueKey && (
-              <p className={styles.issue} role="alert">
-                {t(issueKey)}
-                {view.issueRequestId && (
-                  <span> {t("review.requestId", { requestId: view.issueRequestId })}</span>
-                )}
-              </p>
-            )}
-            {view.kind === "flip" ? (
-              <>
-                <div className={`${styles.reviewCard} ${view.revealed ? styles.revealed : ""}`}>
-                  <section
-                    className={styles.face}
-                    aria-label={t("review.cardFront")}
-                    aria-hidden={view.revealed}
-                    tabIndex={view.revealed ? -1 : 0}
-                  >
-                    <CardFace
-                      face={card.front}
-                      label="front"
-                      onAudioAvailabilityChange={setFrontAudioAvailable}
-                    />
-                  </section>
-                  <section
-                    className={`${styles.face} ${styles.back}`}
-                    aria-label={t("review.cardBack")}
-                    aria-hidden={!view.revealed}
-                    tabIndex={view.revealed ? 0 : -1}
-                  >
-                    <CardFace
-                      face={card.back}
-                      label="back"
-                      onAudioAvailabilityChange={setBackAudioAvailable}
-                    />
-                  </section>
-                </div>
-                {!view.revealed && (
-                  <button
-                    type="button"
-                    className={styles.revealButton}
-                    onClick={reveal}
-                    disabled={frontRequiredUnavailable}
-                  >
-                    {t("review.reveal")}
-                  </button>
-                )}
-                {view.revealed && revealComplete && (
-                  <>
-                    <TutorButton
-                      onClick={() => setTutorOpen(true)}
-                      disabled={tutorButtonDisabled}
-                    />
-                    <fieldset
-                      className={styles.grades}
-                      disabled={
-                        backRequiredUnavailable ||
-                        view.issue === "clock" ||
-                        view.issue === "conflict"
-                      }
-                    >
-                      <legend>{t("review.grading")}</legend>
-                      <button type="button" onClick={() => grade("forgot")}>
-                        {t("review.forgot")}
-                      </button>
-                      <button type="button" onClick={() => grade("almost")}>
-                        {t("review.almost")}
-                      </button>
-                      <button type="button" onClick={() => grade("knew_it")}>
-                        {t("review.knewIt")}
-                      </button>
-                    </fieldset>
-                  </>
-                )}
-              </>
-            ) : (
-              <>
-                <div className={styles.promptFace}>
-                  <CardFace
-                    face={card.front}
-                    label="front"
-                    onAudioAvailabilityChange={setFrontAudioAvailable}
-                  />
-                </div>
-                <MultipleChoiceOptions
-                  options={view.options}
-                  resolved={view.resolved}
-                  disabled={
-                    frontRequiredUnavailable || view.issue === "clock" || view.issue === "conflict"
-                  }
-                  audioUnavailable={optionsAudioUnavailable}
-                  onOptionAvailabilityChange={setOptionAvailability}
-                  onChoose={reviewSession.chooseOption}
-                />
-                {view.resolved && (
-                  <>
-                    <p className={styles.outcome} role="status">
-                      {t(view.correct ? "review.answerCorrect" : "review.answerWrong")}
-                    </p>
-                    <TutorButton
-                      onClick={() => setTutorOpen(true)}
-                      disabled={tutorButtonDisabled}
-                    />
-                    <button type="button" className={styles.revealButton} onClick={advance}>
-                      {t("review.continue")}
-                    </button>
-                  </>
-                )}
-              </>
-            )}
-            {requiredAudioUnavailable && (
-              <div className={styles.audioUnavailable} role="alert">
-                <p>{t("review.audioRequiredUnavailable")}</p>
-                <button type="button" onClick={skip}>
-                  {t("review.skipCard")}
-                </button>
-              </div>
-            )}
-          </div>
-          {tutorOpen && (view.kind === "flip" || view.resolved) && (
-            <TutorDialog
-              card={card}
-              exercise={view.tutorExercise}
-              messages={view.tutorConversation}
-              updateMessages={reviewSession.updateTutorConversation}
-              onClose={() => setTutorOpen(false)}
-            />
-          )}
-        </section>
-      </AppShell>
-    </RequireSession>
+    <FlipCardExercise
+      view={view}
+      issueKey={issueKey}
+      revealComplete={revealComplete}
+      frontAudioAvailable={frontAudioAvailable}
+      backAudioAvailable={backAudioAvailable}
+      tutorOpen={tutorOpen}
+      tutorDisabled={tutorDisabled}
+      onClose={close}
+      onReveal={reveal}
+      onGrade={grade}
+      onSkip={skip}
+      onFrontAudioAvailabilityChange={setFrontAudioAvailable}
+      onBackAudioAvailabilityChange={setBackAudioAvailable}
+      onOpenTutor={() => setTutorOpen(true)}
+      onCloseTutor={() => setTutorOpen(false)}
+    />
   );
 }

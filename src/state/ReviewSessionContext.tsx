@@ -22,7 +22,7 @@ interface IdleView {
   kind: "idle";
 }
 
-interface FlipExerciseView {
+export interface FlipExerciseView {
   kind: "flip";
   currentCard: Card;
   position: number;
@@ -72,7 +72,7 @@ export interface MultipleChoiceOptionView {
   revealedCorrect: boolean;
 }
 
-interface MultipleChoiceExerciseView {
+export interface MultipleChoiceExerciseView {
   kind: "multipleChoice";
   currentCard: Card;
   position: number;
@@ -123,7 +123,7 @@ export interface SwipeExerciseView {
   tutorExercise: TutorExerciseContext;
 }
 
-interface SummaryView {
+export interface SummaryView {
   kind: "summary";
   cumulativeReviewSubmissions: number;
   cumulativeOptimisticPoints: number;
