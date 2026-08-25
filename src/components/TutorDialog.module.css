@@ -1,61 +1,22 @@
-.dialog {
-  inline-size: 100%;
-  max-inline-size: 30rem;
-  block-size: min(90dvh, 48rem);
-  margin: auto auto 0;
-  padding: 0;
-  border: 0;
-  border-radius: var(--radius-large) var(--radius-large) 0 0;
-  background: transparent;
-  color: var(--color-text);
+/*
+ * The chrome — dialog element, header, close and back affordances, scrolling body, pinned footer —
+ * belongs to Dialog.module.css. Only the conversation itself is styled here.
+ *
+ * A conversation needs a stable height instead of one that grows with every reply. Below 48rem the
+ * shared stylesheet makes the dialog fullscreen, so the height only applies above that breakpoint.
+ */
+@media (width >= 48rem) {
+  .tutorDialog {
+    --dialog-block-size: min(90dvh, 48rem);
+  }
 }
 
-.dialog::backdrop {
-  background: rgb(36 54 66 / 45%);
-}
-
-.sheet {
+.conversation {
+  min-inline-size: 0;
   block-size: 100%;
   display: grid;
-  grid-template-rows: auto auto 1fr auto auto;
+  grid-template-rows: auto minmax(0, 1fr) auto;
   gap: var(--space-3);
-  padding: var(--space-4) var(--space-4) max(var(--space-4), env(safe-area-inset-bottom));
-  border-radius: inherit;
-  background: var(--color-surface);
-  box-shadow: var(--shadow-sheet);
-}
-
-.explanation {
-  block-size: auto;
-  grid-template-rows: auto auto auto;
-}
-
-.explanation > button {
-  min-block-size: 44px;
-  border: 0;
-  border-radius: var(--radius-medium);
-  background: var(--color-primary);
-  color: var(--color-primary-text);
-  font-weight: 700;
-}
-
-.sheet header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.sheet h2 {
-  font-family: var(--font-display);
-}
-
-.sheet header button {
-  min-inline-size: 44px;
-  min-block-size: 44px;
-  border: 0;
-  border-radius: var(--radius-full);
-  background: var(--color-divider);
-  font-size: var(--font-xl);
 }
 
 .disclosure {
@@ -63,7 +24,26 @@
   font-size: var(--font-xs);
 }
 
+.visuallyHidden {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+.transcript {
+  position: relative;
+  min-inline-size: 0;
+  min-block-size: 0;
+}
+
 .messages {
+  block-size: 100%;
   min-block-size: 0;
   overflow-y: auto;
   display: grid;
@@ -73,29 +53,56 @@
   scroll-behavior: auto;
 }
 
+.emptyState {
+  min-block-size: 100%;
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  text-align: center;
+}
+
+.promptHint {
+  max-inline-size: 24rem;
+  font-family: var(--font-display);
+  font-size: var(--font-xl);
+  font-weight: 700;
+  line-height: 1.3;
+}
+
 .messages article {
   max-inline-size: 88%;
-  padding: var(--space-3);
-  border-radius: var(--radius-medium);
   white-space: pre-line;
   overflow-wrap: anywhere;
 }
 
-.messages article strong {
-  font-size: var(--font-xs);
-}
-
-.messages article p {
-  margin-block-start: var(--space-1);
-}
-
 .user {
   justify-self: end;
+  padding: var(--space-3);
+  border-radius: var(--radius-medium);
   background: var(--color-primary);
 }
 
+.user strong {
+  font-size: var(--font-xs);
+}
+
+.user p {
+  margin-block-start: var(--space-1);
+}
+
 .assistant {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
   justify-self: start;
+}
+
+.reply {
+  min-block-size: 2.25rem;
+  padding: var(--space-3);
+  border-radius: var(--radius-medium);
   background: var(--color-divider);
 }
 
@@ -110,17 +117,45 @@
 }
 
 .latest {
-  justify-self: center;
+  position: absolute;
+  inset-block-end: var(--space-3);
+  inset-inline-start: 50%;
+  z-index: 1;
   min-block-size: 44px;
-  border: 1px solid var(--color-border);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding-inline: var(--space-4);
+  border: 0;
   border-radius: var(--radius-full);
-  background: white;
+  background: var(--color-primary);
+  box-shadow: var(--shadow-medium);
+  color: var(--color-primary-text);
+  font-weight: 800;
+  white-space: nowrap;
+  translate: -50% 0;
+}
+
+.latest svg {
+  flex-shrink: 0;
+  inline-size: 1.25rem;
+  block-size: 1.25rem;
+  fill: none;
+  stroke: currentcolor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2;
 }
 
 .prompts {
+  min-inline-size: 0;
   display: flex;
+  flex-wrap: wrap;
   gap: var(--space-2);
-  overflow-x: auto;
+}
+
+.emptyPrompts {
+  justify-content: center;
 }
 
 .prompts button {
@@ -132,28 +167,30 @@
   background: white;
 }
 
-.sheet form {
+.composer {
+  min-inline-size: 0;
   display: grid;
   grid-template-columns: 1fr auto;
   gap: var(--space-2);
 }
 
-.sheet form label,
-.sheet form p {
+.composer label,
+.composer p {
   grid-column: 1 / -1;
   font-size: var(--font-sm);
 }
 
-.sheet textarea {
+.composer textarea {
+  min-inline-size: 0;
   min-block-size: 52px;
   max-block-size: 8rem;
-  resize: vertical;
+  resize: none;
   padding: var(--space-2);
   border: 2px solid var(--color-border);
   border-radius: var(--radius-medium);
 }
 
-.sheet form button {
+.composer button {
   min-block-size: 52px;
   padding-inline: var(--space-4);
   border: 0;
@@ -162,30 +199,16 @@
   font-weight: 800;
 }
 
-@media (width >= 48rem) {
-  .dialog {
-    margin: auto;
-    border-radius: var(--radius-large);
-  }
-}
-
-@media (width >= 64rem) {
-  .dialog {
-    max-inline-size: 40rem;
-  }
-}
-
 @media (hover: hover) and (pointer: fine) {
-  .sheet header button:hover:not(:disabled) {
-    background: var(--color-divider-hover);
-  }
-
-  .explanation > button:hover:not(:disabled),
-  .sheet form button:hover:not(:disabled) {
+  .composer button:hover:not(:disabled) {
     background: var(--color-primary-hover);
   }
 
   .prompts button:hover:not(:disabled) {
     background: var(--color-surface-hover);
+  }
+
+  .latest:hover {
+    background: var(--color-primary-hover);
   }
 }

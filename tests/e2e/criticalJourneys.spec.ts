@@ -550,10 +550,14 @@ test("completes Review, Tutor, repeat-ready summary, and Me", async ({ page }) =
   await page.goto("/review");
   await page.getByRole("button", { name: "Review starten" }).click();
   await page.getByRole("button", { name: "Antwort zeigen" }).click();
-  await expect(page.getByRole("button", { name: "Tutopher fragen" })).toBeVisible();
-  await page.getByRole("button", { name: "Tutopher fragen" }).click();
+  await expect(page.getByRole("button", { name: "Mit Tutopher reden" })).toBeVisible();
+  await page.getByRole("button", { name: "Mit Tutopher reden" }).click();
   await page.getByRole("button", { name: "Einfach erklären" }).click();
-  await expect(page.getByText("Ein Apfel ist eine Frucht.")).toBeVisible();
+  await expect(
+    page
+      .getByRole("region", { name: "Unterhaltung mit Tutopher" })
+      .getByText("Ein Apfel ist eine Frucht."),
+  ).toBeVisible();
   await page.getByRole("button", { name: "Schließen" }).click();
   await page.getByRole("button", { name: /Gewusst/ }).click();
   await expect(page.getByRole("heading", { name: "Gut gemacht!" })).toBeVisible();
@@ -801,6 +805,69 @@ test("presents form dialogs as full-screen tasks on mobile", async ({ page }) =>
   await expectMobileFullscreenDialog(topicDialog, 320, 700);
 });
 
+test("gives the Tutor dialog full-screen chrome and a pinned composer on mobile", async ({
+  page,
+  browserName,
+}) => {
+  await page.setViewportSize({ width: 320, height: 700 });
+  await installMockApi(page);
+  await page.goto("/review");
+  await page.getByRole("button", { name: "Review starten" }).click();
+  await page.getByRole("button", { name: "Antwort zeigen" }).click();
+  await page.getByRole("button", { name: "Mit Tutopher reden" }).click();
+
+  const dialog = page.getByRole("dialog", { name: "Tutopher" });
+  await expectMobileFullscreenDialog(dialog, 320, 700);
+
+  const composer = dialog.getByLabel("Deine Nachricht");
+  const transcript = dialog.getByRole("region", { name: "Unterhaltung mit Tutopher" });
+  const composerBox = await composer.boundingBox();
+  expect(composerBox).not.toBeNull();
+  await expect(composer).toHaveCSS("resize", "none");
+  await expect(dialog.getByRole("button", { name: "Zur neuesten Nachricht" })).toBeHidden();
+
+  // A transcript long enough to scroll must not push the composer anywhere.
+  for (let exchange = 1; exchange <= 4; exchange += 1) {
+    await dialog.getByRole("button", { name: "Einfach erklären" }).click();
+    await expect(transcript.getByText("Ein Apfel ist eine Frucht.")).toHaveCount(exchange);
+  }
+
+  const dialogBox = await dialog.boundingBox();
+  expect(dialogBox).not.toBeNull();
+  for (const label of ["Einfach erklären", "Beispielsatz geben", "Merkhilfe finden"]) {
+    const promptBox = await dialog.getByRole("button", { name: label }).boundingBox();
+    expect(promptBox).not.toBeNull();
+    expect(promptBox!.x).toBeGreaterThanOrEqual(dialogBox!.x);
+    expect(promptBox!.x + promptBox!.width).toBeLessThanOrEqual(dialogBox!.x + dialogBox!.width);
+  }
+
+  expect(await composer.boundingBox()).toEqual(composerBox);
+  const transcriptBox = await transcript.boundingBox();
+  await transcript.evaluate((element) => {
+    (element as { scrollTop: number }).scrollTop = 0;
+  });
+  const latest = dialog.getByRole("button", { name: "Zur neuesten Nachricht" });
+  await expect(latest).toBeVisible();
+  expect(await transcript.boundingBox()).toEqual(transcriptBox);
+  await expect(latest).toHaveCSS("position", "absolute");
+  await expect(latest.locator("svg")).toBeVisible();
+  if (browserName === "chromium") {
+    await expect(page).toHaveScreenshot("tutor-latest-mobile.png", { animations: "disabled" });
+  }
+
+  await latest.click();
+  await expect(latest).toBeHidden();
+  await expect
+    .poll(() =>
+      transcript.evaluate(
+        (element) => element.scrollHeight - element.scrollTop - element.clientHeight,
+      ),
+    )
+    .toBeLessThan(48);
+  await dialog.getByRole("button", { name: "Zurück" }).click();
+  await expect(dialog).toBeHidden();
+});
+
 for (const viewport of [
   { name: "mobile", width: 390, height: 844 },
   { name: "tablet", width: 768, height: 900 },
@@ -837,12 +904,14 @@ for (const viewport of [
     await expect(page).toHaveScreenshot(`review-back-${viewport.name}.png`, {
       animations: "disabled",
     });
-    await page.getByRole("button", { name: "Tutopher fragen" }).click();
+    await page.getByRole("button", { name: "Mit Tutopher reden" }).click();
     await expect(page.getByRole("heading", { name: "Tutopher" })).toBeVisible();
     await expect(page).toHaveScreenshot(`tutor-${viewport.name}.png`, {
       animations: "disabled",
     });
-    await page.getByRole("button", { name: "Schließen" }).click();
+    await page
+      .getByRole("button", { name: viewport.name === "mobile" ? "Zurück" : "Schließen" })
+      .click();
     await page.getByRole("button", { name: /Gewusst/ }).click();
     await expect(page.getByRole("heading", { name: "Gut gemacht!" })).toBeVisible();
     await expect(page).toHaveScreenshot(`review-summary-${viewport.name}.png`, {

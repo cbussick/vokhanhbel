@@ -1,6 +1,8 @@
-export function TutopherAvatar() {
+import styles from "./TutopherAvatar.module.css";
+
+export function TutopherAvatar({ size = "medium" }: { size?: "small" | "medium" | "large" }) {
   return (
-    <svg className="mascot" viewBox="0 0 64 64" aria-hidden="true">
+    <svg className={`${styles.avatar} ${styles[size]}`} viewBox="0 0 64 64" aria-hidden="true">
       <path
         d="M30 12c.4-3.4 2.2-5.2 4.6-6"
         fill="none"

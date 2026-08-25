@@ -1,21 +1,42 @@
-# Triage Labels
+# Matt Pocock triage roles in Linear
 
-The skills speak in terms of five canonical triage roles. This file maps those roles to the actual label strings used in this repo's issue tracker.
+Matt Pocock's skills speak in canonical triage roles. In this repository, translate those roles into Linear's native fields using the table below. The role names are skill vocabulary, not additional tracker states.
 
-| Label in mattpocock/skills | Label in our tracker | Meaning                                  |
-| --------------------------- | --------------------- | ----------------------------------------- |
-| `needs-triage`               | `needs-triage`         | Maintainer needs to evaluate this issue   |
-| `needs-info`                 | `needs-info`           | Waiting on reporter for more information  |
-| `ready-for-agent`            | `ready-for-agent`      | Fully specified, ready for an AFK agent   |
-| `ready-for-human`            | `ready-for-human`      | Requires human implementation             |
-| `wontfix`                    | `wontfix`              | Will not be actioned                      |
+Linear status is the sole issue lifecycle. Assignment records ownership, native relations record blockers and duplicates, and labels classify the work.
 
-When a skill mentions a role (e.g. "apply the AFK-ready triage label"), use the corresponding label string from this table.
+## Triage role mapping
 
-Edit the right-hand column to match whatever vocabulary you actually use.
+| Canonical role | Linear representation |
+| --- | --- |
+| `needs-triage` | Keep the issue in Linear's native Triage inbox. If native Triage is unavailable, use Backlog. |
+| `needs-info` | Backlog, with one specific unanswered question in the newest comment. |
+| `ready-for-agent` | Todo, unassigned, and unblocked. Parent specs and Wayfinder maps are never implementation-frontier issues. |
+| `ready-for-human` | Todo and assigned to the responsible human. |
+| `wontfix` | Canceled, with the reason recorded in a comment. |
 
-## Completion status
+When a Matt Pocock skill says to apply, remove, or inspect a triage role, read or update the corresponding Linear fields above. Do not apply a `triage-state` label.
 
-Local issues use `done` after every acceptance criterion has evidence and the implementation has
-passed review. This is a lifecycle status rather than a triage role. Criteria that require a person,
-device, hosted CI, or production environment remain `ready-for-human` until that evidence is recorded.
+Linear's `In Progress`, `Done`, and `Duplicate` statuses retain their native meanings. Claiming agent work means assigning the current Linear user and moving the issue from Todo to In Progress. Native blocking and duplicate relations remain authoritative.
+
+## Work-kind labels
+
+Apply exactly one stable classification label when triaging a raw request:
+
+| Canonical category | Linear label | Meaning |
+| --- | --- | --- |
+| `bug` | `defect` | Existing behaviour is broken |
+| `enhancement` | `enhancement` | New behaviour or an improvement |
+
+The workspace-default `Bug`, `Feature`, and `Improvement` labels are outside this project workflow.
+
+## Wayfinder labels
+
+Wayfinder labels identify the purpose of an issue; they do not represent lifecycle state:
+
+- `wayfinder:map`
+- `wayfinder:research`
+- `wayfinder:prototype`
+- `wayfinder:grilling`
+- `wayfinder:task`
+
+The four decision-ticket labels are mutually exclusive. `wayfinder:map` applies only to the parent map issue.

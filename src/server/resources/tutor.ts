@@ -16,7 +16,7 @@ const allowanceCountSchema = z.object({
 const usageRetentionInterval = "2 days";
 const sessionAllowanceInterval = "15 minutes";
 const sessionAllowanceSeconds = 15 * 60;
-const sessionRequestLimit = 30;
+const sessionRequestLimit = 60;
 const dailyRequestLimit = 200;
 const requestTimeoutMilliseconds = 60_000;
 
