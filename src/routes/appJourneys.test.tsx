@@ -1525,4 +1525,51 @@ describe("rendered app journeys", () => {
     expect(await screen.findByRole("button", { name: "Review starten" })).toBeEnabled();
     nowSpy.mockRestore();
   });
+
+  it("shows the current Streak beside the other figures on Ich, never in the header", async () => {
+    mockServer.use(
+      http.get("/api/stats", () =>
+        HttpResponse.json({
+          totalPoints: 40,
+          activeCardCount: 2,
+          reviewsThisWeek: 3,
+          currentStreak: 4,
+          bestDay: null,
+          dailyRecap: null,
+        }),
+      ),
+    );
+    await renderApp("/me");
+
+    expect(await screen.findByRole("heading", { name: "Khanhs Fortschritt" })).toBeVisible();
+    const streakTile = screen.getByText("Streak", { exact: true }).closest("div");
+
+    if (!streakTile) throw new Error("Streak tile missing");
+    expect(within(streakTile).getByText("4")).toBeVisible();
+    expect(
+      within(screen.getByRole("banner")).queryByText("Streak", { exact: true }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("shows a Streak of zero for a Learner with no Review history", async () => {
+    mockServer.use(
+      http.get("/api/stats", () =>
+        HttpResponse.json({
+          totalPoints: 0,
+          activeCardCount: 2,
+          reviewsThisWeek: 0,
+          currentStreak: 0,
+          bestDay: null,
+          dailyRecap: null,
+        }),
+      ),
+    );
+    await renderApp("/me");
+
+    expect(await screen.findByRole("heading", { name: "Khanhs Fortschritt" })).toBeVisible();
+    const streakTile = screen.getByText("Streak", { exact: true }).closest("div");
+
+    if (!streakTile) throw new Error("Streak tile missing");
+    expect(within(streakTile).getByText("0")).toBeVisible();
+  });
 });

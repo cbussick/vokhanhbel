@@ -70,6 +70,7 @@ export const mockServer = setupServer(
       totalPoints: 0,
       activeCardCount: 2,
       reviewsThisWeek: 0,
+      currentStreak: 0,
       bestDay: null,
       dailyRecap: null,
     }),

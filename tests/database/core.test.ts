@@ -464,6 +464,41 @@ describe("PostgreSQL application behavior", () => {
     ).rejects.toThrow("Reviews are append-only");
   });
 
+  it("counts today's Review toward the current Streak", async () => {
+    const card = await createCard({ ...inDefaultCollection, front: "streak", back: "Serie" });
+    await recordReview({
+      id: crypto.randomUUID(),
+      cardId: card.id,
+      grade: "knew_it",
+      reviewedAt: new Date().toISOString(),
+    });
+
+    await expect(getStats()).resolves.toMatchObject({ currentStreak: 1 });
+  });
+
+  it("credits an offline Review by reviewedAt rather than by when the server recorded it", async () => {
+    const card = await createCard({ ...inDefaultCollection, front: "underground", back: "U-Bahn" });
+    const answeredYesterday = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+
+    await recordReview({
+      id: crypto.randomUUID(),
+      cardId: card.id,
+      grade: "knew_it",
+      reviewedAt: answeredYesterday,
+    });
+    const stored = await getPool().query<{ recorded_at: Date; reviewed_at: Date }>(
+      "SELECT recorded_at, reviewed_at FROM reviews WHERE card_id=$1",
+      [card.id],
+    );
+
+    // recorded_at defaults to the moment the server heard about it, well after the Learner
+    // actually answered — the Streak has to read reviewed_at, not this column.
+    expect(stored.rows[0]!.recorded_at.getTime()).toBeGreaterThan(
+      stored.rows[0]!.reviewed_at.getTime(),
+    );
+    await expect(getStats()).resolves.toMatchObject({ currentStreak: 1 });
+  });
+
   it("calculates Berlin target midnight across both daylight-saving transitions", async () => {
     const spring = await getPool().query<{ due_at: Date }>(
       `SELECT ((date_trunc('day', $1::timestamptz AT TIME ZONE 'Europe/Berlin') + interval '1 day') AT TIME ZONE 'Europe/Berlin') AS due_at`,

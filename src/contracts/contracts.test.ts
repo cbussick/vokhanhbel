@@ -195,6 +195,7 @@ describe("public contracts", () => {
         totalPoints: 0,
         activeCardCount: 0,
         reviewsThisWeek: 0,
+        currentStreak: 0,
         bestDay: null,
         dailyRecap: null,
       }).success,
