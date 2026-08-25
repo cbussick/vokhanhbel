@@ -6,7 +6,7 @@ export type ReviewSubmissionIssue = "too-old" | "clock" | "deleted" | "conflict"
 interface ReviewSession {
   id: string;
   exercises: PlannedExercise[];
-  cardAttemptNumber: number;
+  exerciseAttemptNumber: number;
   roundSubmissions: ReviewSubmission[];
   totalReviewSubmissions: number;
   optimisticPoints: number;
@@ -18,6 +18,8 @@ interface MultipleChoiceProgress {
   deadOptionIds: string[];
   /** Set once the Exercise's verdict is final; the Session advances past it only on "Weiter". */
   resolvedSubmission: ReviewSubmission | undefined;
+  /** The option whose pick produced `resolvedSubmission` — the "chosen option" the Tutor learns. */
+  resolvedOptionId: string | undefined;
 }
 
 export type ReviewSessionState =
@@ -89,7 +91,7 @@ export function reviewSessionReducer(
         reviewSession: {
           id: action.reviewSessionId,
           exercises: action.exercises,
-          cardAttemptNumber: 1,
+          exerciseAttemptNumber: 1,
           roundSubmissions: [],
           totalReviewSubmissions: 0,
           optimisticPoints: 0,
@@ -107,7 +109,7 @@ export function reviewSessionReducer(
       if (state.status !== "reviewing") return state;
       const reviewSession = {
         ...state.reviewSession,
-        cardAttemptNumber: state.reviewSession.cardAttemptNumber + 1,
+        exerciseAttemptNumber: state.reviewSession.exerciseAttemptNumber + 1,
         roundSubmissions: [...state.reviewSession.roundSubmissions, action.submission],
         totalReviewSubmissions: state.reviewSession.totalReviewSubmissions + 1,
         optimisticPoints: state.reviewSession.optimisticPoints + action.submission.optimisticPoints,
@@ -134,6 +136,7 @@ export function reviewSessionReducer(
         multipleChoice: {
           deadOptionIds: [...(state.multipleChoice?.deadOptionIds ?? []), action.optionId],
           resolvedSubmission: undefined,
+          resolvedOptionId: undefined,
         },
       };
     }
@@ -153,6 +156,7 @@ export function reviewSessionReducer(
         multipleChoice: {
           deadOptionIds: action.correct ? deadOptionIds : [...deadOptionIds, action.optionId],
           resolvedSubmission: action.submission,
+          resolvedOptionId: action.optionId,
         },
       };
     }
@@ -165,7 +169,7 @@ export function reviewSessionReducer(
         status: "reviewing",
         reviewSession: {
           ...state.reviewSession,
-          cardAttemptNumber: state.reviewSession.cardAttemptNumber + 1,
+          exerciseAttemptNumber: state.reviewSession.exerciseAttemptNumber + 1,
         },
         currentIndex: state.currentIndex + 1,
         revealed: false,
@@ -182,7 +186,7 @@ export function reviewSessionReducer(
       const reviewSession = {
         ...state.reviewSession,
         exercises,
-        cardAttemptNumber: state.reviewSession.cardAttemptNumber + 1,
+        exerciseAttemptNumber: state.reviewSession.exerciseAttemptNumber + 1,
       };
 
       if (exercises.length === 0 || state.currentIndex >= exercises.length)
@@ -216,7 +220,7 @@ export function reviewSessionReducer(
         reviewSession: {
           ...state.reviewSession,
           exercises: forgotten,
-          cardAttemptNumber: state.reviewSession.cardAttemptNumber + 1,
+          exerciseAttemptNumber: state.reviewSession.exerciseAttemptNumber + 1,
           roundSubmissions: [],
           roundNumber: state.reviewSession.roundNumber + 1,
         },
@@ -237,7 +241,7 @@ export function reviewSessionReducer(
       );
       const reviewSession = {
         ...state.reviewSession,
-        cardAttemptNumber: state.reviewSession.cardAttemptNumber + 1,
+        exerciseAttemptNumber: state.reviewSession.exerciseAttemptNumber + 1,
         roundSubmissions,
         totalReviewSubmissions: Math.max(0, state.reviewSession.totalReviewSubmissions - 1),
         optimisticPoints: Math.max(

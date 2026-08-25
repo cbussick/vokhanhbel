@@ -1,8 +1,8 @@
 import { z } from "zod";
 import { problemTypes } from "../../contracts/problem.js";
-import type { TutorInput } from "../../contracts/tutor.js";
+import type { TutorExerciseCard, TutorInput } from "../../contracts/tutor.js";
 import { berlinTimeZone } from "../../domain/time.js";
-import type { AiProvider } from "../ai/aiProvider.js";
+import type { AiProvider, TutorProviderRequest } from "../ai/aiProvider.js";
 import { getPool } from "../database/client.js";
 import { AppProblem } from "../http/problem.js";
 import { getCard } from "./cards.js";
@@ -71,25 +71,52 @@ export async function consumeTutorAllowance(sessionHash: string): Promise<void> 
   }
 }
 
+/**
+ * Everything the client asserts about the resolved Exercise: which Card the dialog is anchored to,
+ * every Card the Exercise covered with its Grade (null for a flip Card's self-graded outcome), and
+ * the option text the Learner chose (null for a flip Card, which has none).
+ */
+export interface TutorExerciseInput {
+  subjectCardId: string;
+  exerciseCards: TutorExerciseCard[];
+  chosenOptionText: string | null;
+}
+
 export async function createTutorStream(
-  cardId: string,
+  exercise: TutorExerciseInput,
   input: TutorInput,
   sessionHash: string,
   provider: AiProvider,
   requestSignal: AbortSignal,
 ): Promise<Response> {
-  const card = await getCard(cardId);
+  const subjectCard = await getCard(exercise.subjectCardId);
 
-  if (!card.front.text || !card.back.text)
+  if (!subjectCard.front.text || !subjectCard.back.text)
     throw new AppProblem(
       422,
       problemTypes.tutorAudioUnsupported,
       "Tutopher kann Audio nicht anhören",
     );
+
+  const exerciseCards = await Promise.all(
+    exercise.exerciseCards.map(async (exerciseCard) => {
+      const card =
+        exerciseCard.cardId === exercise.subjectCardId
+          ? subjectCard
+          : await getCard(exerciseCard.cardId);
+
+      return { front: card.front.text, back: card.back.text, outcome: exerciseCard.outcome };
+    }),
+  );
+
   await consumeTutorAllowance(sessionHash);
 
   return createTutorResponse(
-    { front: card.front.text, back: card.back.text },
+    {
+      subjectCard: { front: subjectCard.front.text, back: subjectCard.back.text },
+      exerciseCards,
+      chosenOptionText: exercise.chosenOptionText,
+    },
     input,
     provider,
     requestSignal,
@@ -97,7 +124,7 @@ export async function createTutorStream(
 }
 
 export function createTutorResponse(
-  card: { front: string; back: string },
+  exercise: Omit<TutorProviderRequest, "input" | "signal">,
   input: TutorInput,
   provider: AiProvider,
   requestSignal: AbortSignal,
@@ -110,7 +137,7 @@ export function createTutorResponse(
         controller.enqueue(encoder.encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`));
 
       try {
-        for await (const event of provider.streamTutorReply({ card, input, signal })) {
+        for await (const event of provider.streamTutorReply({ ...exercise, input, signal })) {
           if (event.type === "delta") send("delta", { text: event.text });
           else send("done", { truncated: event.truncated });
         }
