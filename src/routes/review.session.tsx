@@ -1,6 +1,7 @@
 /* eslint-disable jsx-a11y/no-noninteractive-tabindex -- visible Card faces are intentionally keyboard-scrollable regions */
+import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Navigate, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { useTranslation } from "react-i18next";
 import { AppShell } from "../components/AppShell";
 import { CardFace } from "../components/audio/CardFace";
@@ -8,9 +9,66 @@ import { RequireSession } from "../components/RequireSession";
 import { TutorDialog } from "../components/TutorDialog";
 import type { Grade } from "../domain/review";
 import { useOnlineStatus } from "../lib/browserState";
+import { statsQuery } from "../lib/queries";
 import type { MultipleChoiceOptionView } from "../state/ReviewSessionContext";
 import { useReviewSession } from "../state/ReviewSessionContext";
 import styles from "./reviewSession.module.css";
+
+const confettiColors = [
+  "var(--color-primary)",
+  "var(--color-success)",
+  "var(--color-warning)",
+  "var(--color-danger)",
+];
+const confettiPieceCount = 24;
+
+interface ConfettiPiece {
+  id: number;
+  left: string;
+  color: string;
+  delay: string;
+  drift: string;
+}
+
+function createConfettiPieces(): ConfettiPiece[] {
+  return Array.from({ length: confettiPieceCount }, (_, index) => ({
+    id: index,
+    left: `${Math.round(Math.random() * 100)}%`,
+    color: confettiColors[index % confettiColors.length]!,
+    delay: `${Math.round(Math.random() * 200)}ms`,
+    drift: (Math.random() * 2 - 1).toFixed(2),
+  }));
+}
+
+/**
+ * Hand-rolled rather than pulled from a library: this project has no UI dependencies, and a
+ * celebration is not the place to acquire the first one. Hidden from assistive tech, and
+ * suppressed entirely under reduced motion by the `.confetti` rule in reviewSession.module.css.
+ */
+function Confetti() {
+  const [pieces] = useState(createConfettiPieces);
+
+  return (
+    <div className={styles.confetti} aria-hidden="true">
+      {pieces.map((piece) => (
+        <span
+          key={piece.id}
+          className={styles.confettiPiece}
+          // SAFETY: React's CSSProperties type has no slot for a custom property, but
+          // `--confetti-drift` is a plain style declaration a browser accepts like any other.
+          style={
+            {
+              left: piece.left,
+              background: piece.color,
+              animationDelay: piece.delay,
+              "--confetti-drift": piece.drift,
+            } as CSSProperties
+          }
+        />
+      ))}
+    </div>
+  );
+}
 
 export const Route = createFileRoute("/review/session")({ component: ReviewSessionRoute });
 
@@ -65,10 +123,20 @@ function ReviewSessionRoute() {
   const navigate = useNavigate();
   const reviewSession = useReviewSession();
   const online = useOnlineStatus();
+  // Read the Streak from the same query "Ich" reads, so the two never diverge (see ADR-0008).
+  const stats = useQuery(statsQuery);
   const [tutorOpen, setTutorOpen] = useState(false);
   const [revealComplete, setRevealComplete] = useState(false);
   const [frontAudioAvailable, setFrontAudioAvailable] = useState(true);
   const [backAudioAvailable, setBackAudioAvailable] = useState(true);
+  const summaryHeadingRef = useRef<HTMLHeadingElement>(null);
+
+  // The summary replaces the Exercise screen in place, so nothing else moves focus there for a
+  // screen reader — move it to the heading ourselves, as Dialog and Login do for their own arrivals.
+  useEffect(() => {
+    if (reviewSession.view.kind === "summary")
+      requestAnimationFrame(() => summaryHeadingRef.current?.focus());
+  }, [reviewSession.view.kind]);
 
   if (reviewSession.view.kind === "idle") return <Navigate to="/review" />;
 
@@ -107,22 +175,30 @@ function ReviewSessionRoute() {
             : undefined;
 
   if (reviewSession.view.kind === "summary") {
+    const currentStreak = stats.data?.currentStreak ?? 0;
+
     return (
       <RequireSession>
         <AppShell title={t("review.title")}>
           <section className={styles.summary}>
-            {reviewSession.view.firstRound && (
-              <div className={styles.confetti} aria-hidden="true">
-                ✦ · ✦ · ✦
+            {reviewSession.view.firstRound && <Confetti />}
+            <h2 ref={summaryHeadingRef} tabIndex={-1}>
+              {t("review.summary")}
+            </h2>
+            <dl className={styles.summaryStats}>
+              <div>
+                <dt>{t("review.summaryReviews")}</dt>
+                <dd>{reviewSession.view.cumulativeReviewSubmissions}</dd>
               </div>
-            )}
-            <h2>{t("review.summary")}</h2>
-            <p>
-              {t("review.summaryText", {
-                reviews: reviewSession.view.cumulativeReviewSubmissions,
-                points: reviewSession.view.cumulativeOptimisticPoints,
-              })}
-            </p>
+              <div>
+                <dt>{t("review.summaryPoints")}</dt>
+                <dd>{reviewSession.view.cumulativeOptimisticPoints}</dd>
+              </div>
+              <div>
+                <dt>{t("me.streak")}</dt>
+                <dd>{currentStreak}</dd>
+              </div>
+            </dl>
             <div>
               {reviewSession.view.canRepeatForgotten && (
                 <button type="button" onClick={reviewSession.repeatForgotten}>

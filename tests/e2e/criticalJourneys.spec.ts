@@ -920,6 +920,7 @@ for (const viewport of [
       .click();
     await page.getByRole("button", { name: /Gewusst/ }).click();
     await expect(page.getByRole("heading", { name: "Gut gemacht!" })).toBeVisible();
+    await expectNoSeriousAxeViolations(page);
     await expect(page).toHaveScreenshot(`review-summary-${viewport.name}.png`, {
       animations: "disabled",
     });

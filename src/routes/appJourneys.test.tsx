@@ -23,6 +23,10 @@ async function cardDialogReady() {
   return dialog;
 }
 
+function summaryStat(label: string) {
+  return screen.getByText(label, { selector: "dt" }).nextElementSibling as HTMLElement;
+}
+
 function completedTutorReply(text: string) {
   return new HttpResponse(
     `event: delta\ndata: ${JSON.stringify({ text })}\n\nevent: done\ndata: {"truncated":false}\n\n`,
@@ -453,6 +457,110 @@ describe("rendered app journeys", () => {
     await waitFor(() => expect(recordedGrade).toBe("knew_it"));
   });
 
+  it("shows Cards reviewed, Points earned, and the Streak Ich would report on the summary", async () => {
+    const user = userEvent.setup();
+    mockServer.use(
+      http.get("/api/stats", () =>
+        HttpResponse.json({
+          totalPoints: 40,
+          activeCardCount: 2,
+          reviewsThisWeek: 3,
+          currentStreak: 5,
+          bestDay: null,
+          dailyRecap: null,
+        }),
+      ),
+    );
+    await renderApp("/review");
+    await user.click(await screen.findByRole("button", { name: "Review starten" }));
+    await user.click(screen.getByRole("button", { name: "Antwort zeigen" }));
+    await user.click(await screen.findByRole("button", { name: /Gewusst/ }));
+
+    expect(await screen.findByRole("heading", { name: "Gut gemacht!" })).toBeVisible();
+    expect(summaryStat("Reviews")).toHaveTextContent("1");
+    expect(summaryStat("Punkte")).toHaveTextContent("10");
+    expect(summaryStat("Streak")).toHaveTextContent("5");
+  });
+
+  it("refreshes a stale Streak once the Session's Review lands, so the summary matches Ich", async () => {
+    const user = userEvent.setup();
+    let streak = 2;
+    mockServer.use(
+      http.get("/api/stats", () =>
+        HttpResponse.json({
+          totalPoints: 0,
+          activeCardCount: 2,
+          reviewsThisWeek: 0,
+          currentStreak: streak,
+          bestDay: null,
+          dailyRecap: null,
+        }),
+      ),
+      http.post("/api/reviews", async ({ request }) => {
+        streak = 3;
+        const input = (await request.json()) as { cardId: string; grade: string };
+
+        return HttpResponse.json({
+          review: { ...input, id: crypto.randomUUID(), pointsAwarded: 10 },
+          card: { ...testCards[0], box: 1 },
+        });
+      }),
+    );
+    await renderApp("/review");
+    await user.click(await screen.findByRole("button", { name: "Review starten" }));
+    await user.click(screen.getByRole("button", { name: "Antwort zeigen" }));
+    await user.click(await screen.findByRole("button", { name: /Gewusst/ }));
+    expect(await screen.findByRole("heading", { name: "Gut gemacht!" })).toBeVisible();
+
+    await waitFor(() => expect(summaryStat("Streak")).toHaveTextContent("3"));
+
+    await user.click(screen.getByRole("link", { name: /Ich/ }));
+    await screen.findByRole("heading", { name: "Khanhs Fortschritt" });
+    expect(summaryStat("Streak")).toHaveTextContent("3");
+  });
+
+  it("keeps cumulative figures correct on the summary after a repeat round", async () => {
+    const user = userEvent.setup();
+    const secondCard = { ...testCards[1]!, dueAt: testCards[0]!.dueAt, front: "Second due Card" };
+    mockServer.use(
+      http.get("/api/cards", () => HttpResponse.json([testCards[0], secondCard])),
+      http.post("/api/reviews", async ({ request }) => {
+        const input = (await request.json()) as { cardId: string; grade: string };
+
+        return HttpResponse.json({
+          review: { ...input, id: crypto.randomUUID(), pointsAwarded: 10 },
+          card: { ...testCards[0], box: input.grade === "forgot" ? 0 : 1 },
+        });
+      }),
+    );
+    await renderApp("/review");
+    await user.click(await screen.findByRole("button", { name: "Review starten" }));
+    await user.click(screen.getByRole("button", { name: "Antwort zeigen" }));
+    await user.click(await screen.findByRole("button", { name: "Vergessen" }));
+    expect(await screen.findByText("Second due Card")).toBeVisible();
+    await user.click(screen.getByRole("button", { name: "Antwort zeigen" }));
+    await user.click(await screen.findByRole("button", { name: /Gewusst/ }));
+
+    expect(await screen.findByRole("heading", { name: "Gut gemacht!" })).toBeVisible();
+    expect(summaryStat("Reviews")).toHaveTextContent("2");
+    expect(summaryStat("Punkte")).toHaveTextContent("11");
+
+    await user.click(await screen.findByRole("button", { name: "Vergessene wiederholen" }));
+    expect(await screen.findByText("Take care")).toBeVisible();
+    await user.click(screen.getByRole("button", { name: "Antwort zeigen" }));
+    await user.click(await screen.findByRole("button", { name: /Gewusst/ }));
+
+    expect(await screen.findByRole("heading", { name: "Gut gemacht!" })).toBeVisible();
+    expect(summaryStat("Reviews")).toHaveTextContent("3");
+    expect(summaryStat("Punkte")).toHaveTextContent("21");
+    expect(
+      screen.queryByRole("button", { name: "Vergessene wiederholen" }),
+    ).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Fertig" }));
+    expect(await screen.findByRole("button", { name: "Review starten" })).toBeVisible();
+  });
+
   function multipleChoiceCard(id: string, front: string, back: string) {
     return {
       ...testCards[0]!,
@@ -657,7 +765,9 @@ describe("rendered app journeys", () => {
     fireEvent.error(audio);
     await user.click(screen.getByRole("button", { name: "Karte überspringen" }));
     expect(await screen.findByRole("heading", { name: "Gut gemacht!" })).toBeVisible();
-    expect(screen.getByText(/0 Reviews · 0 Punkte/)).toBeVisible();
+    expect(summaryStat("Reviews")).toHaveTextContent("0");
+    expect(summaryStat("Punkte")).toHaveTextContent("0");
+    expect(summaryStat("Streak")).toHaveTextContent("0");
     expect(reviews).toBe(0);
   });
 
