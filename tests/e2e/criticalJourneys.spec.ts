@@ -1116,4 +1116,75 @@ for (const viewport of [
       { animations: "disabled" },
     );
   });
+
+  test(`matches a board accessibly, by keyboard, at ${viewport.name} width`, async ({
+    page,
+    browserName,
+  }) => {
+    test.skip(browserName !== "chromium", "One browser owns the cross-platform visual baselines.");
+    await page.setViewportSize(viewport);
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    const state = await installMockApi(page);
+
+    // Four Cards in one Collection, text on both faces, no duplicate front or back: an eligible
+    // matching group.
+    state.cards = [
+      createCard("der Apfel", "the apple"),
+      createCard("die Birne", "the pear"),
+      createCard("der Pfirsich", "the peach"),
+      createCard("die Pflaume", "the plum"),
+    ];
+    await page.goto("/review");
+    await page.getByRole("button", { name: "Review starten" }).click();
+
+    // Regex names, not exact strings: a matched entry's accessible name later grows a
+    // "· zugeordnet" suffix, and these locators need to keep resolving after that happens.
+    const frontApfel = page.getByRole("button", { name: /^der Apfel/ });
+    const backPear = page.getByRole("button", { name: /^the pear/ });
+    const backApple = page.getByRole("button", { name: /^the apple/ });
+
+    await expect(frontApfel).toBeVisible();
+    await expect(backPear).toBeVisible();
+    await expectNoSeriousAxeViolations(page);
+    await expect(page).toHaveScreenshot(`review-matching-unresolved-${viewport.name}.png`, {
+      animations: "disabled",
+    });
+
+    // A mis-pairing is announced, not just coloured, and costs nothing but a retry.
+    await frontApfel.focus();
+    await expect(frontApfel).toBeFocused();
+    await page.keyboard.press("Enter");
+    await expect(frontApfel).toHaveAttribute("aria-pressed", "true");
+    await backPear.click();
+    await expect(page.getByRole("status")).toHaveText(/kein Paar/);
+
+    await frontApfel.click();
+    await backApple.click();
+    await expect(frontApfel).toHaveAccessibleName(/zugeordnet/);
+    await page.getByRole("button", { name: /^die Birne/ }).click();
+    await backPear.click();
+    await page.getByRole("button", { name: /^der Pfirsich/ }).click();
+    await page.getByRole("button", { name: /^the peach/ }).click();
+    await page.getByRole("button", { name: /^die Pflaume/ }).click();
+    await page.getByRole("button", { name: /^the plum/ }).click();
+
+    const continueButton = page.getByRole("button", { name: "Weiter" });
+
+    await expect(page.getByText("Alle Paare gefunden!")).toBeVisible();
+    await expectNoSeriousAxeViolations(page);
+    await expect(page).toHaveScreenshot(`review-matching-resolved-${viewport.name}.png`, {
+      animations: "disabled",
+    });
+
+    // A resolved pair opens Tutopher for its own Card, reachable by keyboard like any other.
+    await frontApfel.focus();
+    await expect(frontApfel).toBeFocused();
+    await page.keyboard.press("Enter");
+    await expect(page.getByRole("dialog", { name: "Tutopher" })).toBeVisible();
+    await page
+      .getByRole("button", { name: viewport.name === "mobile" ? "Zurück" : "Schließen" })
+      .click();
+    await continueButton.focus();
+    await expect(continueButton).toBeFocused();
+  });
 }

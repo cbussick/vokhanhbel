@@ -8,10 +8,15 @@ import { AudioPlayer } from "../components/audio/AudioPlayer";
 import { CardFace } from "../components/audio/CardFace";
 import { RequireSession } from "../components/RequireSession";
 import { TutorDialog } from "../components/TutorDialog";
+import type { Card } from "../contracts/card";
 import type { Grade } from "../domain/review";
 import { useOnlineStatus } from "../lib/browserState";
 import { statsQuery } from "../lib/queries";
-import type { MultipleChoiceOptionView } from "../state/ReviewSessionContext";
+import type {
+  MatchingEntryView,
+  MatchingExerciseView,
+  MultipleChoiceOptionView,
+} from "../state/ReviewSessionContext";
 import { useReviewSession } from "../state/ReviewSessionContext";
 import styles from "./reviewSession.module.css";
 
@@ -182,6 +187,186 @@ function MultipleChoiceOptions({
   );
 }
 
+function MatchingEntryButton({
+  entry,
+  selected,
+  disabled,
+  onClick,
+}: {
+  entry: MatchingEntryView;
+  selected: boolean;
+  disabled: boolean;
+  onClick: () => void;
+}) {
+  const { t } = useTranslation();
+  const className = entry.matched
+    ? `${styles.matchingEntry} ${styles.matchingEntryMatched}`
+    : selected
+      ? `${styles.matchingEntry} ${styles.matchingEntrySelected}`
+      : styles.matchingEntry;
+
+  return (
+    <button
+      type="button"
+      className={className}
+      aria-pressed={selected}
+      disabled={disabled}
+      onClick={onClick}
+    >
+      {entry.text}
+      {entry.matched && (
+        <span className={styles.visuallyHidden}> · {t("review.matchingMatched")}</span>
+      )}
+      {selected && !entry.matched && (
+        <span className={styles.visuallyHidden}> · {t("review.matchingSelected")}</span>
+      )}
+    </button>
+  );
+}
+
+/**
+ * The matching board: rendered as its own top-level branch, separate from the shared flip and
+ * multiple-choice render below, so that branch's edits (audio options, VOK-17) never collide with
+ * this one. A pair resolves the moment a front and a back are tapped — see
+ * `ReviewSessionContext.attemptMatchingPair` — so unlike multiple choice there is no per-Exercise
+ * "resolved" state to wait for until every pair on the board has graded.
+ */
+function MatchingBoardSection({
+  view,
+  issueKey,
+  online,
+  selectedFrontCardId,
+  mismatchAnnouncement,
+  tutorOpen,
+  tutorCard,
+  onClose,
+  onAdvance,
+  onSelectFront,
+  onAttemptPair,
+  onOpenTutor,
+  onCloseTutor,
+}: {
+  view: MatchingExerciseView;
+  issueKey: string | undefined;
+  online: boolean;
+  selectedFrontCardId: string | undefined;
+  mismatchAnnouncement: string;
+  tutorOpen: boolean;
+  tutorCard: Card | undefined;
+  onClose: () => void;
+  onAdvance: () => void;
+  onSelectFront: (cardId: string | undefined) => void;
+  onAttemptPair: (frontCardId: string, backCardId: string) => void;
+  onOpenTutor: (cardId: string) => void;
+  onCloseTutor: () => void;
+}) {
+  const { t } = useTranslation();
+  const reviewSession = useReviewSession();
+  const issueBlocksInput = view.issue === "clock" || view.issue === "conflict";
+
+  // A matched entry only responds once the whole board has resolved, and then it opens Tutopher
+  // instead of attempting another pair — the Learner has nothing left to match it against.
+  const openTutorForMatched = (entry: MatchingEntryView) => {
+    if (view.resolved && online) onOpenTutor(entry.cardId);
+  };
+
+  const tapFront = (entry: MatchingEntryView) => {
+    if (entry.matched) return openTutorForMatched(entry);
+    if (!issueBlocksInput) onSelectFront(entry.cardId);
+  };
+
+  const tapBack = (entry: MatchingEntryView) => {
+    if (entry.matched) return openTutorForMatched(entry);
+    if (!issueBlocksInput && selectedFrontCardId) onAttemptPair(selectedFrontCardId, entry.cardId);
+  };
+
+  return (
+    <RequireSession>
+      <AppShell title={t("review.title")} variant="focused">
+        <section className={styles.session}>
+          <header className={styles.sessionHeader}>
+            <button type="button" aria-label={t("review.close")} onClick={onClose}>
+              <svg aria-hidden="true" viewBox="0 0 24 24">
+                <path d="m5 5 14 14M19 5 5 19" />
+              </svg>
+            </button>
+            <div className={styles.progressWrap}>
+              <span aria-hidden="true">
+                {view.position} / {view.total}
+              </span>
+              <progress
+                id="review-progress"
+                aria-label={t("review.progress", { current: view.position, total: view.total })}
+                value={view.position - 1}
+                max={view.total}
+              />
+            </div>
+          </header>
+          <div className={styles.sessionBody}>
+            {issueKey && (
+              <p className={styles.issue} role="alert">
+                {t(issueKey)}
+                {view.issueRequestId && (
+                  <span> {t("review.requestId", { requestId: view.issueRequestId })}</span>
+                )}
+              </p>
+            )}
+            <p className={styles.optionsLegend}>{t("review.matchingLegend")}</p>
+            <div className={styles.matchingBoard}>
+              <fieldset className={styles.matchingColumn} disabled={issueBlocksInput}>
+                <legend>{t("review.matchingFrontColumn")}</legend>
+                {view.front.map((entry) => (
+                  <MatchingEntryButton
+                    key={entry.cardId}
+                    entry={entry}
+                    selected={selectedFrontCardId === entry.cardId}
+                    disabled={entry.matched && (!view.resolved || !online)}
+                    onClick={() => tapFront(entry)}
+                  />
+                ))}
+              </fieldset>
+              <fieldset className={styles.matchingColumn} disabled={issueBlocksInput}>
+                <legend>{t("review.matchingBackColumn")}</legend>
+                {view.back.map((entry) => (
+                  <MatchingEntryButton
+                    key={entry.cardId}
+                    entry={entry}
+                    selected={false}
+                    disabled={entry.matched && (!view.resolved || !online)}
+                    onClick={() => tapBack(entry)}
+                  />
+                ))}
+              </fieldset>
+            </div>
+            <p className={styles.visuallyHidden} role="status" aria-atomic="true">
+              {mismatchAnnouncement}
+            </p>
+            {view.resolved && (
+              <>
+                <p className={styles.outcome} role="status">
+                  {t("review.matchingResolved")}
+                </p>
+                <button type="button" className={styles.revealButton} onClick={onAdvance}>
+                  {t("review.continue")}
+                </button>
+              </>
+            )}
+          </div>
+          {tutorOpen && tutorCard && view.resolved && (
+            <TutorDialog
+              card={tutorCard}
+              exercise={view.tutorExercise}
+              messages={view.tutorConversation}
+              updateMessages={reviewSession.updateTutorConversation}
+              onClose={onCloseTutor}
+            />
+          )}
+        </section>
+      </AppShell>
+    </RequireSession>
+  );
+}
+
 function ReviewSessionRoute() {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -190,10 +375,13 @@ function ReviewSessionRoute() {
   // Read the Streak from the same query "Ich" reads, so the two never diverge (see ADR-0008).
   const stats = useQuery(statsQuery);
   const [tutorOpen, setTutorOpen] = useState(false);
+  const [tutorSubjectCardId, setTutorSubjectCardId] = useState<string | undefined>(undefined);
   const [revealComplete, setRevealComplete] = useState(false);
   const [frontAudioAvailable, setFrontAudioAvailable] = useState(true);
   const [backAudioAvailable, setBackAudioAvailable] = useState(true);
   const [unavailableOptionIds, setUnavailableOptionIds] = useState<ReadonlySet<string>>(new Set());
+  const [selectedFrontCardId, setSelectedFrontCardId] = useState<string | undefined>(undefined);
+  const [matchingMismatch, setMatchingMismatch] = useState("");
   const summaryHeadingRef = useRef<HTMLHeadingElement>(null);
 
   // The summary replaces the Exercise screen in place, so nothing else moves focus there for a
@@ -213,9 +401,12 @@ function ReviewSessionRoute() {
   const resetFaceState = () => {
     setRevealComplete(false);
     setTutorOpen(false);
+    setTutorSubjectCardId(undefined);
     setFrontAudioAvailable(true);
     setBackAudioAvailable(true);
     setUnavailableOptionIds(new Set());
+    setSelectedFrontCardId(undefined);
+    setMatchingMismatch("");
   };
 
   const setOptionAvailability = (optionId: string, available: boolean) => {
@@ -237,6 +428,21 @@ function ReviewSessionRoute() {
     const duration = matchMedia("(prefers-reduced-motion: reduce)").matches ? 120 : 250;
 
     window.setTimeout(() => setRevealComplete(true), duration);
+  };
+
+  const grade = (value: Grade) => {
+    reviewSession.gradeCard(value);
+    resetFaceState();
+  };
+
+  const advance = () => {
+    reviewSession.advanceExercise();
+    resetFaceState();
+  };
+
+  const skip = () => {
+    reviewSession.skipCard();
+    resetFaceState();
   };
 
   const issue = reviewSession.view.kind !== "summary" ? reviewSession.view.issue : undefined;
@@ -292,6 +498,38 @@ function ReviewSessionRoute() {
     );
   }
 
+  if (reviewSession.view.kind === "matching") {
+    return (
+      <MatchingBoardSection
+        view={reviewSession.view}
+        issueKey={issueKey}
+        online={online}
+        selectedFrontCardId={selectedFrontCardId}
+        mismatchAnnouncement={matchingMismatch}
+        tutorOpen={tutorOpen}
+        tutorCard={reviewSession.view.cards.find(
+          (candidate) => candidate.id === tutorSubjectCardId,
+        )}
+        onClose={close}
+        onAdvance={advance}
+        onSelectFront={setSelectedFrontCardId}
+        onAttemptPair={(frontCardId, backCardId) => {
+          reviewSession.attemptMatchingPair(frontCardId, backCardId);
+          setSelectedFrontCardId(undefined);
+          setMatchingMismatch(frontCardId === backCardId ? "" : t("review.matchingMismatch"));
+        }}
+        onOpenTutor={(cardId) => {
+          setTutorSubjectCardId(cardId);
+          setTutorOpen(true);
+        }}
+        onCloseTutor={() => {
+          setTutorOpen(false);
+          setTutorSubjectCardId(undefined);
+        }}
+      />
+    );
+  }
+
   const view = reviewSession.view;
   const card = view.currentCard;
   const frontRequiredUnavailable =
@@ -310,21 +548,6 @@ function ReviewSessionRoute() {
     frontRequiredUnavailable || backRequiredUnavailable || optionsAudioUnavailable;
 
   const tutorButtonDisabled = !online && Boolean(card.front.text) && Boolean(card.back.text);
-
-  const grade = (value: Grade) => {
-    reviewSession.gradeCard(value);
-    resetFaceState();
-  };
-
-  const advance = () => {
-    reviewSession.advanceExercise();
-    resetFaceState();
-  };
-
-  const skip = () => {
-    reviewSession.skipCard();
-    resetFaceState();
-  };
 
   return (
     <RequireSession>

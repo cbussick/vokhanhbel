@@ -1,7 +1,10 @@
-import type { PlannedExercise } from "../../domain/exercisePlanner";
+import type { MatchingExercise, PlannedExercise } from "../../domain/exercisePlanner";
 import type { ReviewSubmission } from "./reviewSubmission";
 
 export type ReviewSubmissionIssue = "too-old" | "clock" | "deleted" | "conflict";
+
+/** A matching Exercise falling below this many un-graded pairs sends what's left to flip Cards. */
+const matchingMinimumPairs = 2;
 
 interface ReviewSession {
   id: string;
@@ -22,6 +25,20 @@ interface MultipleChoiceProgress {
   resolvedOptionId: string | undefined;
 }
 
+/**
+ * Progress through the current matching Exercise. Unlike multiple choice, each pair grades and
+ * enqueues its Review Submission the moment it resolves rather than waiting for the whole board —
+ * that is what lets leaving mid-board keep the pairs already matched. Reset whenever `currentIndex`
+ * moves.
+ */
+interface MatchingProgress {
+  /** Cards already graded — matched correctly, in resolution order. */
+  resolvedCardIds: string[];
+  /** Cards that have been part of at least one wrong pairing so far, so they grade `almost`
+   * rather than `knew_it` once resolved. Never cleared once set, even across a rejection. */
+  taintedCardIds: string[];
+}
+
 export type ReviewSessionState =
   | { status: "idle" }
   | {
@@ -30,6 +47,7 @@ export type ReviewSessionState =
       currentIndex: number;
       revealed: boolean;
       multipleChoice: MultipleChoiceProgress | undefined;
+      matching: MatchingProgress | undefined;
       issue: ReviewSubmissionIssue | undefined;
       issueRequestId: string | undefined;
     }
@@ -49,6 +67,8 @@ type ReviewSessionAction =
       correct: boolean;
       submission: ReviewSubmission;
     }
+  | { type: "matchingPairMismatched"; cardIds: [string, string] }
+  | { type: "matchingPairResolved"; submission: ReviewSubmission }
   | { type: "exerciseAdvanced" }
   | { type: "cardSkipped" }
   | { type: "forgottenRepeated" }
@@ -80,6 +100,46 @@ function exerciseWithCard(
   return exercises.find((exercise) => exercise.cards.some((card) => card.id === cardId));
 }
 
+interface MatchingShrinkResult {
+  replacement: PlannedExercise | undefined;
+  matching: MatchingProgress | undefined;
+}
+
+/**
+ * Removes `removedCardId` from a matching Exercise after its Review Submission is rejected as
+ * `deleted` or `too-old` — the board shrinks rather than the Card getting re-asked, since re-doing
+ * one pair on an otherwise-progressed board doesn't make sense the way redoing a single-Card
+ * Exercise does. Losing the pair's Review is accepted as offline grading's best effort (ADR-0009).
+ *
+ * A board with nothing left to grade disappears entirely, like a deleted Card's Exercise does.
+ * One left below the two-pair minimum finishes as a plain flip Card instead — matching two entries
+ * that are already known to be the only pair left teaches nothing. Otherwise the board carries on
+ * with one fewer pair, and the Exercise total is untouched either way.
+ */
+function shrinkMatchingExercise(
+  exercise: MatchingExercise,
+  matching: MatchingProgress | undefined,
+  removedCardId: string,
+): MatchingShrinkResult {
+  const cards = exercise.cards.filter((card) => card.id !== removedCardId);
+  const resolvedCardIds = (matching?.resolvedCardIds ?? []).filter((id) => id !== removedCardId);
+  const taintedCardIds = (matching?.taintedCardIds ?? []).filter((id) => id !== removedCardId);
+  const unresolved = cards.filter((card) => !resolvedCardIds.includes(card.id));
+
+  if (unresolved.length === 0) return { replacement: undefined, matching: undefined };
+
+  if (unresolved.length < matchingMinimumPairs)
+    return {
+      replacement: { kind: "flip", id: unresolved[0]!.id, cards: [unresolved[0]!] },
+      matching: undefined,
+    };
+
+  return {
+    replacement: { ...exercise, cards },
+    matching: { resolvedCardIds, taintedCardIds },
+  };
+}
+
 export function reviewSessionReducer(
   state: ReviewSessionState,
   action: ReviewSessionAction,
@@ -100,6 +160,7 @@ export function reviewSessionReducer(
         currentIndex: 0,
         revealed: false,
         multipleChoice: undefined,
+        matching: undefined,
         issue: undefined,
         issueRequestId: undefined,
       };
@@ -124,6 +185,7 @@ export function reviewSessionReducer(
         currentIndex: state.currentIndex + 1,
         revealed: false,
         multipleChoice: undefined,
+        matching: undefined,
         issue: undefined,
         issueRequestId: undefined,
       };
@@ -160,8 +222,50 @@ export function reviewSessionReducer(
         },
       };
     }
+    case "matchingPairMismatched": {
+      if (state.status !== "reviewing") return state;
+      const taintedCardIds = new Set([
+        ...(state.matching?.taintedCardIds ?? []),
+        ...action.cardIds,
+      ]);
+
+      return {
+        ...state,
+        matching: {
+          resolvedCardIds: state.matching?.resolvedCardIds ?? [],
+          taintedCardIds: [...taintedCardIds],
+        },
+      };
+    }
+    case "matchingPairResolved": {
+      if (state.status !== "reviewing") return state;
+      const reviewSession = {
+        ...state.reviewSession,
+        roundSubmissions: [...state.reviewSession.roundSubmissions, action.submission],
+        totalReviewSubmissions: state.reviewSession.totalReviewSubmissions + 1,
+        optimisticPoints: state.reviewSession.optimisticPoints + action.submission.optimisticPoints,
+      };
+
+      return {
+        ...state,
+        reviewSession,
+        matching: {
+          resolvedCardIds: [...(state.matching?.resolvedCardIds ?? []), action.submission.card.id],
+          taintedCardIds: state.matching?.taintedCardIds ?? [],
+        },
+      };
+    }
     case "exerciseAdvanced": {
-      if (state.status !== "reviewing" || !state.multipleChoice?.resolvedSubmission) return state;
+      if (state.status !== "reviewing") return state;
+      const exercise = state.reviewSession.exercises[state.currentIndex];
+      const resolved =
+        exercise?.kind === "multipleChoice"
+          ? Boolean(state.multipleChoice?.resolvedSubmission)
+          : exercise?.kind === "matching"
+            ? (state.matching?.resolvedCardIds.length ?? 0) === exercise.cards.length
+            : false;
+
+      if (!resolved) return state;
       if (state.currentIndex + 1 >= state.reviewSession.exercises.length)
         return { status: "summary", reviewSession: state.reviewSession };
 
@@ -174,6 +278,7 @@ export function reviewSessionReducer(
         currentIndex: state.currentIndex + 1,
         revealed: false,
         multipleChoice: undefined,
+        matching: undefined,
         issue: undefined,
         issueRequestId: undefined,
       };
@@ -198,6 +303,7 @@ export function reviewSessionReducer(
         currentIndex: state.currentIndex,
         revealed: false,
         multipleChoice: undefined,
+        matching: undefined,
         issue: undefined,
         issueRequestId: undefined,
       };
@@ -227,6 +333,7 @@ export function reviewSessionReducer(
         currentIndex: 0,
         revealed: false,
         multipleChoice: undefined,
+        matching: undefined,
         issue: undefined,
         issueRequestId: undefined,
       };
@@ -250,11 +357,45 @@ export function reviewSessionReducer(
         ),
       };
 
-      if (action.issue === "too-old") {
-        const rejectedExercise = exerciseWithCard(
-          reviewSession.exercises,
+      const rejectedExercise = exerciseWithCard(reviewSession.exercises, action.submission.card.id);
+
+      // A matching board shrinks rather than following the single-Card too-old/deleted paths
+      // below: re-appending or dropping the whole Exercise would throw away the other pairs
+      // already matched. See shrinkMatchingExercise.
+      if (
+        (action.issue === "too-old" || action.issue === "deleted") &&
+        rejectedExercise?.kind === "matching"
+      ) {
+        const shrunk = shrinkMatchingExercise(
+          rejectedExercise,
+          state.status === "reviewing" ? state.matching : undefined,
           action.submission.card.id,
         );
+        const exercises = reviewSession.exercises.flatMap((exercise) =>
+          exercise === rejectedExercise
+            ? shrunk.replacement
+              ? [shrunk.replacement]
+              : []
+            : [exercise],
+        );
+        const currentIndex = findNextUngradedExercise(exercises, roundSubmissions);
+
+        if (currentIndex < 0)
+          return { status: "summary", reviewSession: { ...reviewSession, exercises } };
+
+        return {
+          status: "reviewing",
+          reviewSession: { ...reviewSession, exercises },
+          currentIndex,
+          revealed: false,
+          multipleChoice: undefined,
+          matching: exercises[currentIndex] === shrunk.replacement ? shrunk.matching : undefined,
+          issue: action.issue,
+          issueRequestId: action.requestId,
+        };
+      }
+
+      if (action.issue === "too-old") {
         const exercises = rejectedExercise
           ? [
               ...reviewSession.exercises.filter((exercise) => exercise !== rejectedExercise),
@@ -268,6 +409,7 @@ export function reviewSessionReducer(
           currentIndex: Math.max(0, findNextUngradedExercise(exercises, roundSubmissions)),
           revealed: false,
           multipleChoice: undefined,
+          matching: undefined,
           issue: action.issue,
           issueRequestId: action.requestId,
         };
@@ -288,6 +430,7 @@ export function reviewSessionReducer(
           currentIndex,
           revealed: false,
           multipleChoice: undefined,
+          matching: undefined,
           issue: action.issue,
           issueRequestId: action.requestId,
         };
@@ -309,6 +452,10 @@ export function reviewSessionReducer(
         multipleChoice:
           state.status === "reviewing" && currentIndex === state.currentIndex
             ? state.multipleChoice
+            : undefined,
+        matching:
+          state.status === "reviewing" && currentIndex === state.currentIndex
+            ? state.matching
             : undefined,
         issue: action.issue,
         issueRequestId: action.requestId,

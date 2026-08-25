@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 import type { Card } from "../contracts/card.js";
-import { planExercises, type MultipleChoiceExercise } from "./exercisePlanner.js";
+import {
+  planExercises,
+  type MatchingExercise,
+  type MultipleChoiceExercise,
+} from "./exercisePlanner.js";
 
 const collectionA = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
 const collectionB = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
@@ -500,6 +504,137 @@ describe("planExercises", () => {
       const plan = planExercises(cards, cards, zero);
 
       expect(plan.map((exercise) => exercise.kind)).toEqual(["flip", "flip", "flip", "flip"]);
+    });
+  });
+
+  describe("matching", () => {
+    function matchingReadyCard(id: string, front: string, back: string) {
+      return card({ id, front: text(front), back: text(back) });
+    }
+
+    it("groups four eligible due Cards into one matching Exercise", () => {
+      const cards = [
+        matchingReadyCard("1", "eins", "one"),
+        matchingReadyCard("2", "zwei", "two"),
+        matchingReadyCard("3", "drei", "three"),
+        matchingReadyCard("4", "vier", "four"),
+      ];
+
+      const plan = planExercises(cards, cards, zero);
+
+      expect(plan).toHaveLength(1);
+      const exercise = plan[0] as MatchingExercise;
+
+      expect(exercise.kind).toBe("matching");
+      expect(exercise.cards.map((matched) => matched.id)).toEqual(["1", "2", "3", "4"]);
+      expect(new Set(exercise.frontOrder)).toEqual(new Set(["1", "2", "3", "4"]));
+      expect(new Set(exercise.backOrder)).toEqual(new Set(["1", "2", "3", "4"]));
+    });
+
+    it("excludes a Card missing text on either face from matching eligibility", () => {
+      const cards = [
+        matchingReadyCard("1", "eins", "one"),
+        matchingReadyCard("2", "zwei", "two"),
+        matchingReadyCard("3", "drei", "three"),
+        card({ id: "4", front: text("vier"), back: audio("audio-4") }),
+        matchingReadyCard("5", "fuenf", "five"),
+      ];
+
+      const plan = planExercises(cards, cards, zero);
+      const matching = plan.find((exercise) => exercise.kind === "matching");
+
+      expect(matching?.cards.map((matched) => matched.id)).toEqual(["1", "2", "3", "5"]);
+      // The audio-only-back Card is ineligible for matching and for multiple choice alike (both
+      // need back text), so it falls back to its normal per-Card planning as a flip Card.
+      expect(plan.find((exercise) => exercise.id === "4")?.kind).toBe("flip");
+    });
+
+    it("skips a Card that would duplicate another chosen Card's front or back within a column", () => {
+      const cards = [
+        matchingReadyCard("1", "eins", "one"),
+        matchingReadyCard("2", "zwei", "two"),
+        matchingReadyCard("3", "eins", "three"), // duplicate front, after normalization
+        matchingReadyCard("4", "vier", "one"), // duplicate back, after normalization
+        matchingReadyCard("5", "fuenf", "five"),
+        matchingReadyCard("6", "sechs", "six"),
+      ];
+
+      const plan = planExercises(cards, cards, zero);
+      const matching = plan.find((exercise) => exercise.kind === "matching") as MatchingExercise;
+
+      expect(matching.cards.map((matched) => matched.id)).toEqual(["1", "2", "5", "6"]);
+    });
+
+    it("never draws a matching group across Sammlungen, even when four eligible Cards exist between them", () => {
+      const cards = [
+        card({
+          id: "1",
+          collectionId: collectionA,
+          front: text("eins"),
+          back: text("one"),
+        }),
+        card({
+          id: "2",
+          collectionId: collectionA,
+          front: text("zwei"),
+          back: text("two"),
+        }),
+        card({
+          id: "3",
+          collectionId: collectionB,
+          front: text("drei"),
+          back: text("three"),
+        }),
+        card({
+          id: "4",
+          collectionId: collectionB,
+          front: text("vier"),
+          back: text("four"),
+        }),
+      ];
+
+      const plan = planExercises(cards, cards, zero);
+
+      expect(plan.every((exercise) => exercise.kind !== "matching")).toBe(true);
+    });
+
+    it("falls back to per-Card planning entirely when fewer than four Cards are matching-eligible", () => {
+      const cards = [
+        matchingReadyCard("1", "eins", "one"),
+        matchingReadyCard("2", "zwei", "two"),
+        matchingReadyCard("3", "drei", "three"),
+      ];
+
+      const plan = planExercises(cards, cards, zero);
+
+      expect(plan.every((exercise) => exercise.kind !== "matching")).toBe(true);
+    });
+
+    it("plans at most one matching Exercise per Session even with many eligible due Cards", () => {
+      const cards = Array.from({ length: 8 }, (_, index) =>
+        matchingReadyCard(`${index}`, `wort${index}`, `word${index}`),
+      );
+
+      const plan = planExercises(cards, cards, zero);
+
+      expect(plan.filter((exercise) => exercise.kind === "matching")).toHaveLength(1);
+    });
+
+    it("places the matching Exercise at the position of the first Card it draws, preserving order", () => {
+      // A back-audio-only Card is ineligible for both matching (needs text on both faces) and
+      // multiple choice (needs back text), so it plans as a flip Card ahead of the matching group.
+      const solo = card({ id: "solo", front: text("hallo"), back: audio("audio-solo") });
+      const cards = [
+        solo,
+        matchingReadyCard("1", "eins", "one"),
+        matchingReadyCard("2", "zwei", "two"),
+        matchingReadyCard("3", "drei", "three"),
+        matchingReadyCard("4", "vier", "four"),
+      ];
+
+      const plan = planExercises(cards, cards, zero);
+
+      expect(plan.map((exercise) => exercise.kind)).toEqual(["flip", "matching"]);
     });
   });
 });
