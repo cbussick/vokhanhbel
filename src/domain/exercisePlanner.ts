@@ -55,27 +55,13 @@ export interface SwipeOption {
   text: string;
 }
 
-export interface SwipeCard {
-  /** The Card this position in the deck grades. */
-  cardId: string;
-  /** The two text options shown left and right, already shuffled — exactly one has `correct: true`. */
-  options: SwipeOption[];
-}
-
-/** The Cards and per-Card options a Swipe deck presents, before being wrapped as an Exercise —
- * `selectSwipeDeck`'s result and `toSwipeExercise`'s input. */
-interface SwipeDeckSelection {
-  cards: Card[];
-  deck: SwipeCard[];
-}
-
 export interface SwipeExercise {
   kind: "swipe";
   id: string;
-  /** The deck's three Cards, in stacked presentation order — index 0 is on top, shown first. */
+  /** The one Card this Exercise grades, as a single-element list like every other Exercise's. */
   cards: Card[];
-  /** One entry per Card in `cards`, same order. */
-  deck: SwipeCard[];
+  /** The two text options shown left and right, already shuffled — exactly one has `correct: true`. */
+  options: SwipeOption[];
 }
 
 export type PlannedExercise =
@@ -91,7 +77,6 @@ export type GroupedExerciseKind = "matching" | "swipe";
 const optionCount = 4;
 const requiredDistractorCount = optionCount - 1;
 const matchingGroupSize = 4;
-const swipeDeckSize = 3;
 
 function shuffle<T>(items: T[], random: RandomSource): T[] {
   const shuffled = [...items];
@@ -227,31 +212,38 @@ function selectMatchingGroup(dueCards: Card[]): Card[] | undefined {
 }
 
 /**
- * The three due Cards a Swipe deck presents, or undefined when fewer than three fit. Eligibility is
- * narrower than multiple choice's: Swipe needs only one distractor for the correct back's Card, so
- * it reaches Cards multiple choice cannot — but a Card that finds three distinct sibling backs is
- * left for multiple choice, which makes fuller use of them; Swipe only ever claims a Card whose
- * distractor count falls short of that. Both targets are text, so eligibility is fixed to the "text"
- * modality regardless of any other Card's Exercise — a Card whose back is a recording can never be a
- * Swipe target or a Swipe distractor. Scans `dueCards` in order, like `selectMatchingGroup`, and
- * keeps the first three Cards that qualify.
+ * The one due Card a Swipe Exercise throws, or undefined when none fits. Swipe needs only one
+ * distractor for the correct back's Card, so it reaches Cards multiple choice cannot — and, when
+ * `leading`, it also claims Cards that could have supplied a full set of four options.
+ *
+ * That flag is what makes Swipe appear at all. Without it, Swipe passed over every Card that found
+ * three distinct sibling backs, on the grounds that multiple choice used them better — but in a
+ * Sammlung of any size that is every Card, so Swipe could essentially never be planned. With it, the
+ * throttle moves to where the design already put it: one grouped Exercise per Session, alternating
+ * with matching (see `groupedExerciseOrder`). On matching's turn Swipe stays the narrow fallback it
+ * was, so a Session that simply cannot form a matching board still leads with multiple choice rather
+ * than always being taken over.
+ *
+ * Both targets are text, so eligibility is fixed to the "text" modality regardless of any other
+ * Card's Exercise — a Card whose back is a recording can never be a Swipe target or a Swipe
+ * distractor. Scans `dueCards` in order, like `selectMatchingGroup`, and keeps the first that
+ * qualifies.
  */
-function selectSwipeDeck(
+function selectSwipeExercise(
   dueCards: Card[],
   pool: Card[],
   random: RandomSource,
-): SwipeDeckSelection | undefined {
-  const cards: Card[] = [];
-  const deck: SwipeCard[] = [];
-
+  leading: boolean,
+): SwipeExercise | undefined {
   for (const card of dueCards) {
     if (!hasBack(card, "text")) continue;
 
     const distractors = findDistractors(card, pool, random, "text");
+    const distractor = distractors[0];
 
-    if (distractors.length === 0 || distractors.length >= requiredDistractorCount) continue;
+    if (!distractor) continue;
+    if (!leading && distractors.length >= requiredDistractorCount) continue;
 
-    const distractor = distractors[0]!;
     const correctOption: SwipeOption = { cardId: card.id, correct: true, text: card.back.text! };
     const distractorOption: SwipeOption = {
       cardId: distractor.id,
@@ -259,24 +251,15 @@ function selectSwipeDeck(
       text: distractor.back.text!,
     };
 
-    cards.push(card);
-    deck.push({ cardId: card.id, options: shuffle([correctOption, distractorOption], random) });
-
-    if (cards.length === swipeDeckSize) return { cards, deck };
+    return {
+      kind: "swipe",
+      id: card.id,
+      cards: [card],
+      options: shuffle([correctOption, distractorOption], random),
+    };
   }
 
   return undefined;
-}
-
-function toSwipeExercise(swipeDeck: SwipeDeckSelection): SwipeExercise {
-  return {
-    kind: "swipe",
-    // Composite rather than a single Card id, like matching's — this Exercise has no one subject
-    // Card either.
-    id: swipeDeck.cards.map((card) => card.id).join(":"),
-    cards: swipeDeck.cards,
-    deck: swipeDeck.deck,
-  };
 }
 
 function toMatchingExercise(cards: Card[], random: RandomSource): MatchingExercise {
@@ -349,6 +332,19 @@ function groupedExerciseOrder(
 }
 
 /**
+ * The kind that leads the grouped-Exercise attempt for a Session planned with `previousGroupedKind`
+ * — the first entry of `groupedExerciseOrder`. The call site remembers this when a Session plans no
+ * grouped Exercise at all, so that a due queue which can never assemble a matching board still
+ * alternates round to Swipe's turn instead of leading with matching every Session and never
+ * reaching it.
+ */
+export function leadingGroupedExerciseKind(
+  previousGroupedKind: GroupedExerciseKind | undefined,
+): GroupedExerciseKind {
+  return groupedExerciseOrder(previousGroupedKind)[0]!;
+}
+
+/**
  * Plans the fixed Exercise sequence for a Review Session, once, over the due Cards it drew — the
  * only new module the Exercise feature needs. Pure other than the injected random source and
  * `previousGroupedKind`: same inputs always produce the same plan.
@@ -365,10 +361,9 @@ function groupedExerciseOrder(
  * Sammlung rather than only the due queue. A Card whose back has text is offered text options; a
  * Card whose back has only a recording is offered audio options drawn from sibling Cards with
  * recorded backs. A Card with neither, or one that cannot find three distinct sibling backs of its
- * own modality in `pool`, plans as a flip Card instead — unless it and two other due Cards can each
- * supply at least one sibling back, in which case those three plan as a Swipe deck instead of falling
- * all the way to flip (see `selectSwipeDeck`). A would-be third consecutive multiple-choice Exercise
- * is demoted to a flip Card too.
+ * own modality in `pool`, plans as a flip Card instead — unless it was taken as the Session's Swipe
+ * Exercise, which needs only one sibling back (see `selectSwipeExercise`). A would-be third
+ * consecutive multiple-choice Exercise is demoted to a flip Card too.
  */
 export function planExercises(
   dueCards: Card[],
@@ -377,20 +372,22 @@ export function planExercises(
   previousGroupedKind?: GroupedExerciseKind,
 ): PlannedExercise[] {
   let matchingGroup: Card[] | undefined;
-  let swipeDeck: SwipeDeckSelection | undefined;
+  let swipeExercise: SwipeExercise | undefined;
 
-  for (const kind of groupedExerciseOrder(previousGroupedKind)) {
+  const order = groupedExerciseOrder(previousGroupedKind);
+
+  for (const [index, kind] of order.entries()) {
     if (kind === "matching") {
       matchingGroup = selectMatchingGroup(dueCards);
       if (matchingGroup) break;
     } else {
-      swipeDeck = selectSwipeDeck(dueCards, pool, random);
-      if (swipeDeck) break;
+      swipeExercise = selectSwipeExercise(dueCards, pool, random, index === 0);
+      if (swipeExercise) break;
     }
   }
 
   const matchingCardIds = new Set(matchingGroup?.map((card) => card.id));
-  const swipeCardIds = new Set(swipeDeck?.cards.map((card) => card.id));
+  const swipeCardIds = new Set(swipeExercise?.cards.map((card) => card.id));
   let matchingPlanned = false;
   let swipePlanned = false;
 
@@ -408,7 +405,7 @@ export function planExercises(
 
       swipePlanned = true;
 
-      return [toSwipeExercise(swipeDeck!)];
+      return [swipeExercise!];
     }
 
     const modality: Modality | undefined = card.back.text

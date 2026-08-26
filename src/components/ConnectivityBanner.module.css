@@ -24,6 +24,35 @@
   color: inherit;
 }
 
+/* Floats clear of the layout so a sync that starts mid-Exercise never moves what the Learner is
+   reading. Drops in from the top rather than rising from the bottom: the bottom of an Exercise is
+   where "Weiter" and the grade buttons live, and a toast there covered the very control the Learner
+   was reaching for. The top holds only the progress indicator, which nothing is waiting on. */
+.toast {
+  position: fixed;
+  inset-block-start: calc(var(--space-3) + env(safe-area-inset-top));
+  inset-inline: 0;
+  z-index: var(--layer-feedback);
+  inline-size: fit-content;
+  max-inline-size: calc(100% - var(--space-8));
+  padding: var(--space-2) var(--space-4);
+  margin-inline: auto;
+  border-radius: var(--radius-full);
+
+  /* Opaque rather than translucent: an alpha background leaves a contrast checker guessing what is
+     behind the text, and white on this mix is 9.8:1 either way. */
+  background: color-mix(in srgb, var(--color-text) 92%, var(--color-bg));
+  box-shadow: var(--shadow-medium);
+  color: #fff;
+  font-size: var(--font-sm);
+  font-weight: 600;
+  text-align: center;
+  animation: toast-in var(--duration-normal) var(--ease-enter);
+
+  /* Purely informational, and gone within a second — it must never swallow a tap meant for a Card. */
+  pointer-events: none;
+}
+
 @keyframes banner-in {
   from {
     translate: 0 -100%;
@@ -31,8 +60,16 @@
   }
 }
 
+@keyframes toast-in {
+  from {
+    translate: 0 -0.5rem;
+    opacity: 0;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .banner {
+  .banner,
+  .toast {
     animation: none;
   }
 }

@@ -89,11 +89,7 @@
   flex: 1 1 0;
   min-block-size: 12rem;
   inline-size: 100%;
-  padding: 0;
-  border: 0;
-  background: transparent;
   perspective: 70rem;
-  cursor: pointer;
 }
 
 .face {
@@ -190,14 +186,6 @@
   animation: grades-in var(--duration-fast);
 }
 
-.grades legend {
-  position: absolute;
-  inline-size: 1px;
-  block-size: 1px;
-  overflow: hidden;
-  clip-path: inset(50%);
-}
-
 .grades button {
   min-block-size: 56px;
   display: grid;
@@ -254,11 +242,29 @@
   border: 0;
 }
 
-.optionsLegend {
-  padding: 0;
-  color: var(--color-text-secondary);
+/* One treatment for the "what do I do here" line of every Exercise — a chip that reads as an
+   instruction rather than as another piece of Card content. */
+.exerciseInstruction {
+  display: block;
+  inline-size: fit-content;
+  max-inline-size: 100%;
+  padding: var(--space-2) var(--space-4);
+  margin-inline: auto;
+  border-radius: var(--radius-full);
+  background: color-mix(in srgb, var(--color-primary) 32%, var(--color-surface));
+  color: var(--color-primary-text);
   font-size: var(--font-sm);
-  font-weight: 600;
+  font-weight: 700;
+  text-align: center;
+}
+
+/* A fieldset's rendered legend sits outside the fieldset's own formatting context, so the grid gap
+   of the fieldset around it never reaches it. This margin stands in for that gap, which is what
+   makes the distance from instruction to controls the same whether an Exercise words its
+   instruction as a <legend> or as a <p> spaced by `.sessionBody`'s flex gap. */
+.options .exerciseInstruction,
+.grades .exerciseInstruction {
+  margin-block-end: var(--space-4);
 }
 
 .optionsGrid {
@@ -279,20 +285,6 @@
   text-align: center;
 }
 
-.optionDead {
-  border-color: var(--color-danger);
-  background: var(--color-danger);
-  color: #fff;
-}
-
-/* No `color: #fff` here, unlike .optionDead: white on --color-success is 2.4:1 and fails WCAG AA,
-   while the inherited --color-text is 5.2:1. This matches the green grade button, which has always
-   left its text colour alone for the same reason. */
-.optionCorrect {
-  border-color: var(--color-success);
-  background: var(--color-success);
-}
-
 .audioOption {
   display: grid;
   gap: var(--space-2);
@@ -309,6 +301,50 @@
   background: var(--color-primary);
   color: var(--color-primary-text);
   font-weight: 700;
+}
+
+/* The two verdict rules must come after `.option` AND after `.audioOption`, which they tie with on
+   specificity: an audio option wears its verdict on the wrapper around the play control rather than
+   on a button, and while these sat above `.audioOption` its `border`/`background` shorthands won on
+   source order — an audio Exercise resolved with no green and no red anywhere on it. */
+.optionDead {
+  border-color: var(--color-danger);
+  background: var(--color-danger);
+  color: #fff;
+}
+
+/* No `color: #fff` here, unlike .optionDead: white on --color-success is 2.4:1 and fails WCAG AA,
+   while the inherited --color-text is 5.2:1. This matches the green grade button, which has always
+   left its text colour alone for the same reason. */
+.optionCorrect {
+  border-color: var(--color-success);
+  background: var(--color-success);
+}
+
+/* An audio option wears its verdict around the player rather than behind it. Its box holds the play
+   control, the progress track and the duration, all styled for a light surface — a saturated fill
+   put the duration's --color-text-secondary on --color-danger at 1.16:1. The full-strength border
+   these keep from the rules above carries the verdict; the fill only tints beneath it. */
+.audioOption.optionDead {
+  background: color-mix(in srgb, var(--color-danger) 12%, var(--color-surface));
+  color: var(--color-text);
+}
+
+.audioOption.optionCorrect {
+  background: color-mix(in srgb, var(--color-success) 18%, var(--color-surface));
+}
+
+/* Every option is disabled once the Exercise resolves, but the two carrying a verdict are finished
+   answers rather than unavailable controls — the same call as `.matchingEntryMatched:disabled`, and
+   the reason is the same: dimming the right answer greys out the thing worth reading. The options
+   with no verdict keep the global dimming, so the answered pair stands out from them. The nested
+   selectors reach an audio option's own choose button, which is the disabled element there. */
+.optionCorrect:disabled,
+.optionDead:disabled,
+.optionCorrect .chooseOption:disabled,
+.optionDead .chooseOption:disabled {
+  opacity: 1;
+  cursor: default;
 }
 
 .matchingBoard {
@@ -344,9 +380,24 @@
   text-align: center;
 }
 
+/* Held, not merely tinted. A 12% wash of the primary read as barely different from the plain entries
+   beside it, which is the whole job this state has: say which one is waiting for its partner. The
+   fill carries that on its own — the border matches it rather than outlining it, so the entry reads
+   as one solid block instead of a block inside a frame. */
 .matchingEntrySelected {
   border-color: var(--color-primary);
-  background: color-mix(in srgb, var(--color-primary) 12%, var(--color-surface));
+  background: var(--color-primary);
+  color: var(--color-primary-text);
+  box-shadow: var(--shadow-medium);
+  scale: 1.03;
+}
+
+/* The wrong-pair flash. Colour and a shake together, so the rejection reads without either alone
+   having to carry it — the live region beneath the board says it in words as well. */
+.matchingEntryMismatched {
+  border-color: var(--color-danger);
+  background: color-mix(in srgb, var(--color-danger) 20%, var(--color-surface));
+  animation: matching-mismatch 320ms var(--ease-standard);
 }
 
 /* Text colour left inherited, as in .optionCorrect: white on --color-success fails WCAG AA. */
@@ -355,10 +406,102 @@
   background: var(--color-success);
 }
 
+/* A matched entry is disabled only because there is nothing left to match it against — it is a
+   finished answer, not an unavailable control. The global `button:disabled` dimming would grey out
+   the very word the Learner has just got right, so this opts out of it here and here alone; every
+   other disabled button in the app goes on looking disabled. */
+.matchingEntryMatched:disabled {
+  opacity: 1;
+  cursor: default;
+}
+
+.matchingMismatch {
+  /* Reserved whether or not there is anything to say, so the board never shifts under a tap. */
+  min-block-size: 1.5rem;
+  color: var(--color-danger);
+  font-weight: 700;
+  text-align: center;
+}
+
+/* Bucket, deck, bucket. The Card sits in the cut between the two targets, so a swipe is a throw into
+   one of them rather than a tap on a list below — which is what made this read as multiple choice
+   with a bigger prompt. Clipped, because the dragged Card is translated well past the arena and an
+   un-clipped overflow gave the whole page a scrollbar in both directions to chase it. */
+.swipeArena {
+  display: grid;
+  grid-template-columns: minmax(5rem, 1fr) minmax(0, 2fr) minmax(5rem, 1fr);
+  gap: var(--space-2);
+  align-items: stretch;
+  flex: 1 1 0;
+  min-block-size: 13rem;
+  max-block-size: 26rem;
+  overflow: clip;
+
+  /* Without this the clip cuts the Card's shadow off flat against the arena's own edge. The margin
+     lets it paint past the boundary while the drag stays bounded — see `clamp` in SwipeExercise. */
+  overflow-clip-margin: var(--space-4);
+  padding: 0;
+  border: 0;
+}
+
+.swipeBucket {
+  display: grid;
+  place-items: center;
+  align-content: center;
+  padding: var(--space-2);
+
+  /* Dashed and tinted like the audio upload's own drop zone, which is the other place in the app
+     where something is dropped onto a target — but at 2px and in a much darker dash than that one,
+     since here the zone is the target itself rather than a strip under a label, and it has to read
+     as a place to throw something from across the screen. Full arena height — taller than the Card
+     between them — so a throw that lands high or low still lands in the bucket. */
+  border: 2px dashed color-mix(in srgb, var(--color-primary-text) 45%, transparent);
+  border-radius: var(--radius-large);
+  background: color-mix(in srgb, var(--color-surface) 84%, var(--color-primary));
+  font-size: var(--font-md);
+  font-weight: 700;
+  text-align: center;
+  overflow-wrap: anywhere;
+  transition:
+    border-color var(--duration-fast) var(--ease-standard),
+    background-color var(--duration-fast) var(--ease-standard);
+}
+
+/* Dragged far enough that letting go now lands the Card here — the gesture's one piece of "yes,
+   this one" feedback, so it goes solid rather than only deepening the dash. */
+.swipeBucketArmed {
+  border-style: solid;
+  border-color: var(--color-primary-text);
+  background: color-mix(in srgb, var(--color-primary) 30%, var(--color-surface));
+}
+
+/* A bucket carries its verdict at two-class specificity for the same reason `.audioOption` does: it
+   is declared after `.optionDead`/`.optionCorrect` and would otherwise win on source order, leaving
+   the resolved deck uncoloured — and, worse, `.optionDead`'s white text on the bucket's own pale
+   background. These also drop the dashed border, which has done its job once the answer is in. */
+.swipeBucket.optionDead {
+  border-style: solid;
+  border-color: var(--color-danger);
+  background: var(--color-danger);
+  color: #fff;
+}
+
+.swipeBucket.optionCorrect {
+  border-style: solid;
+  border-color: var(--color-success);
+  background: var(--color-success);
+  color: var(--color-text);
+}
+
 .swipeDeck {
   position: relative;
-  flex: 1 1 0;
-  min-block-size: 12rem;
+
+  /* The Card inside is absolutely positioned and has no height of its own, so the deck carries it —
+     shorter than the buckets on either side, and centred between them. */
+  align-self: center;
+  block-size: 82%;
+  max-block-size: 19rem;
+  min-block-size: 0;
 }
 
 .swipeCard {
@@ -366,7 +509,7 @@
   inset: 0;
   display: grid;
   place-items: center;
-  padding: var(--space-6);
+  padding: var(--space-4);
   border: 2px solid var(--color-border);
   border-radius: var(--radius-large);
   background: var(--color-surface);
@@ -374,70 +517,72 @@
 
   /* Pointer-driven drag owns horizontal movement; without this a touch drag also pans the page. */
   touch-action: none;
+
+  /* A drag across the face would otherwise select the word written on it. */
+  user-select: none;
 }
 
-.swipeCardCurrent,
-.swipeCardFlying {
-  transition:
-    transform var(--duration-fast) var(--ease-standard),
-    opacity var(--duration-fast);
-}
-
-.swipeCardCurrent {
-  z-index: 3;
+/* Only while there is still an answer to give: once the Exercise resolves the Card is a record of
+   what happened, and offering to pick it up again would be a lie. */
+.swipeCardDraggable {
   cursor: grab;
+  transition: transform var(--duration-fast) var(--ease-standard);
 }
 
-.swipeCardCurrent:active {
+.swipeCardDraggable:active {
   cursor: grabbing;
-}
-
-.swipeCardPeek1 {
-  z-index: 2;
-  transform: translateY(0.5rem) scale(0.96);
-  opacity: 0.85;
-}
-
-.swipeCardPeek2 {
-  z-index: 1;
-  transform: translateY(1rem) scale(0.92);
-  opacity: 0.7;
-}
-
-.swipeCardFlying {
-  z-index: 4;
-}
-
-.swipeCardFlyingLeft {
-  transform: translateX(-140%) rotate(-20deg);
-  opacity: 0;
-}
-
-.swipeCardFlyingRight {
-  transform: translateX(140%) rotate(20deg);
-  opacity: 0;
-}
-
-.swipeTargets {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: var(--space-2);
-  padding: 0;
-  border: 0;
-}
-
-.swipeTarget {
-  transition: outline-color var(--duration-fast);
-}
-
-.swipeTargetHover {
-  outline: 3px solid var(--color-primary);
-  outline-offset: 2px;
 }
 
 .outcome {
   font-weight: 800;
   text-align: center;
+}
+
+/* Laid out from the first frame and filled only once the Exercise resolves — see `ExerciseScreen`'s
+   `footer` slot for why the space is reserved rather than overlaid. `margin-block-start: auto`
+   pins it to the bottom of the body so the reserved band sits under the Exercise, not inside it. */
+.resolutionFooter {
+  display: grid;
+  gap: var(--space-2);
+  margin-block-start: auto;
+}
+
+/* The verdict line keeps its height either way, so its arrival moves nothing. */
+.resolutionFooter .outcome {
+  min-block-size: 1.5rem;
+}
+
+/* The controls carry `hidden` until the Exercise resolves, which is what keeps them out of the tab
+   order and the accessibility tree — and is the one form of hiding a jsdom test can see. This puts
+   their boxes back, since holding the space open is the whole point of the reserved footer. `flex`
+   rather than the default `block` so a button's icon and label stay on one line and its height is
+   the same reserved 44/56px it will have once it is real. Direct children only, so the flip Card's
+   own stack below keeps its layout. */
+.resolutionFooter > [hidden] {
+  display: flex;
+  visibility: hidden;
+}
+
+/* The flip Card's footer holds two states rather than one set of controls that arrives late: the
+   reveal button before, the Tutor button and grades after. Stacking them in a single grid cell
+   makes the reserved height the taller of the two, so turning the Card over moves nothing. */
+.flipFooterStack {
+  display: grid;
+}
+
+.flipFooterStack > * {
+  grid-area: 1 / 1;
+  align-self: end;
+}
+
+.flipFooterStack > [hidden] {
+  display: grid;
+  visibility: hidden;
+}
+
+.flipGrades {
+  display: grid;
+  gap: var(--space-2);
 }
 
 .issue {
@@ -494,15 +639,33 @@
 
 .summary button {
   min-block-size: 56px;
-  border: 0;
+  padding-inline: var(--space-6);
   border-radius: var(--radius-medium);
+}
+
+/* Finishing is the primary action and the only one always offered — repeating the forgotten Cards
+   is the optional detour, so it takes the quieter treatment. That way round, "Fertig" never ends up
+   the lone secondary button on a Session that had nothing to repeat. */
+.summaryFinish {
+  border: 0;
   background: var(--color-primary);
+  color: var(--color-primary-text);
   font-weight: 800;
 }
 
+.summaryRepeat {
+  border: 2px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-weight: 700;
+}
+
+/* Fixed, not absolute: the fall belongs to the whole screen, and pinning it to the summary panel
+   gave it barely a couple of hundred pixels to happen in. */
 .confetti {
-  position: absolute;
+  position: fixed;
   inset: 0;
+  z-index: var(--layer-feedback);
   overflow: clip;
   pointer-events: none;
 }
@@ -510,13 +673,35 @@
 .confettiPiece {
   position: absolute;
   inset-block-start: -8%;
-  inline-size: 0.5rem;
-  block-size: 0.875rem;
   border-radius: var(--radius-small);
   animation-name: confetti-fall;
-  animation-duration: var(--duration-celebration);
-  animation-timing-function: var(--ease-enter);
+
+  /* Duration and delay come from each piece's own inline style — see `createConfettiPieces`. */
+  animation-timing-function: linear;
   animation-fill-mode: forwards;
+}
+
+@keyframes matching-mismatch {
+  0%,
+  100% {
+    translate: 0;
+  }
+
+  20% {
+    translate: -6px;
+  }
+
+  40% {
+    translate: 6px;
+  }
+
+  60% {
+    translate: -4px;
+  }
+
+  80% {
+    translate: 4px;
+  }
 }
 
 @keyframes grades-in {
@@ -532,16 +717,22 @@
   }
 }
 
+/* Linear rather than eased, so a piece falls at a steady rate the way a real one does, and fades
+   only over the last stretch instead of dimming from the moment it is thrown. */
 @keyframes confetti-fall {
-  from {
+  0% {
     translate: 0 0;
     rotate: 0deg;
     opacity: 1;
   }
 
-  to {
-    translate: calc(var(--confetti-drift) * 4rem) 480%;
-    rotate: calc(var(--confetti-drift) * 540deg);
+  75% {
+    opacity: 1;
+  }
+
+  100% {
+    translate: calc(var(--confetti-drift) * 6rem) 115vh;
+    rotate: calc(var(--confetti-spin) * 1080deg);
     opacity: 0;
   }
 }
@@ -573,9 +764,20 @@
     display: none;
   }
 
-  .swipeCardCurrent,
-  .swipeCardFlying {
+  /* The summary fades itself in from nothing. Every other animation here is already suppressed under
+     reduced motion and this one was simply missed — which also left an axe scan compositing the
+     stats labels through a half-finished opacity and reporting them as too faint. */
+  .summary {
+    animation: none;
+  }
+
+  .swipeCardDraggable {
     transition: none;
+  }
+
+  /* The red and the announcement still carry the rejection without the shake. */
+  .matchingEntryMismatched {
+    animation: none;
   }
 }
 
@@ -602,9 +804,13 @@
   }
 
   .revealButton:hover:not(:disabled),
-  .summary button:hover:not(:disabled),
+  .summaryFinish:hover:not(:disabled),
   .audioUnavailable button:hover:not(:disabled) {
     background: var(--color-primary-hover);
+  }
+
+  .summaryRepeat:hover:not(:disabled) {
+    background: var(--color-surface-hover);
   }
 
   .tutorButton:hover:not(:disabled) {
@@ -623,7 +829,16 @@
     background: var(--color-primary-hover);
   }
 
-  .matchingEntry:hover:not(:disabled) {
+  /* Only an entry with nothing to say takes the hover wash. Selected, matched and just-rejected
+     entries are each already coloured to mean something, and this rule outranks all three — hovering
+     a matched pair looked like the match had come undone, and it hid the red on a rejected one
+     outright. The pointer cursor is affordance enough for those. */
+  .matchingEntry:hover:not(
+      :disabled,
+      .matchingEntrySelected,
+      .matchingEntryMatched,
+      .matchingEntryMismatched
+    ) {
     background: var(--color-surface-hover);
   }
 }

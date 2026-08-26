@@ -30,7 +30,7 @@ export function MultipleChoiceOptions({
 
   return (
     <fieldset className={styles.options} disabled={disabled}>
-      <legend className={styles.optionsLegend}>
+      <legend className={styles.exerciseInstruction}>
         {t(audioMode ? "review.multipleChoiceAudioLegend" : "review.multipleChoiceLegend")}
       </legend>
       <div className={styles.optionsGrid}>

@@ -88,18 +88,15 @@ function matchingSubmission(
   };
 }
 
-function swipe(ids: string[]): SwipeExercise {
+function swipe(id: string): SwipeExercise {
   return {
     kind: "swipe",
-    id: ids.join(":"),
-    cards: ids.map((id) => card(id)),
-    deck: ids.map((id) => ({
-      cardId: id,
-      options: [
-        { cardId: id, correct: true, text: "richtig" },
-        { cardId: `${id}-d`, correct: false, text: "falsch" },
-      ],
-    })),
+    id,
+    cards: [card(id)],
+    options: [
+      { cardId: id, correct: true, text: "richtig" },
+      { cardId: `${id}-d`, correct: false, text: "falsch" },
+    ],
   };
 }
 
@@ -529,12 +526,11 @@ describe("Matching Exercise", () => {
 });
 
 describe("Swipe Exercise", () => {
-  it("grades a correct swipe knew_it and pauses the deck on its resolution until Weiter", () => {
-    const exercise = swipe(["1", "2", "3"]);
+  it("grades a correct swipe knew_it and holds on its resolution until Weiter", () => {
     const started = reviewSessionReducer(idleReviewSessionState, {
       type: "reviewSessionStarted",
       reviewSessionId: "session",
-      exercises: [exercise, flip("5")],
+      exercises: [swipe("1"), flip("5")],
     });
     const resolved = reviewSessionReducer(started, {
       type: "swipeCardResolved",
@@ -545,21 +541,16 @@ describe("Swipe Exercise", () => {
     expect(resolved).toMatchObject({
       status: "reviewing",
       currentIndex: 0,
-      swipe: { resolved: [{ cardId: "1", correct: true }], awaitingContinueCardId: "1" },
+      swipe: { correct: true },
       reviewSession: { totalReviewSubmissions: 1, optimisticPoints: 10 },
     });
-
-    const continued = reviewSessionReducer(resolved, { type: "swipeCardAdvanced" });
-
-    expect(continued).toMatchObject({ swipe: { awaitingContinueCardId: undefined } });
   });
 
-  it("grades a wrong swipe forgot and pauses the deck on that Card until Weiter", () => {
-    const exercise = swipe(["1", "2", "3"]);
+  it("grades a wrong swipe forgot, with no retry to offer", () => {
     const started = reviewSessionReducer(idleReviewSessionState, {
       type: "reviewSessionStarted",
       reviewSessionId: "session",
-      exercises: [exercise],
+      exercises: [swipe("1")],
     });
     const resolved = reviewSessionReducer(started, {
       type: "swipeCardResolved",
@@ -569,166 +560,74 @@ describe("Swipe Exercise", () => {
 
     expect(resolved).toMatchObject({
       status: "reviewing",
-      swipe: {
-        resolved: [{ cardId: "1", correct: false }],
-        awaitingContinueCardId: "1",
-      },
+      swipe: { correct: false },
       reviewSession: { totalReviewSubmissions: 1, optimisticPoints: 1 },
     });
-
-    const continued = reviewSessionReducer(resolved, { type: "swipeCardAdvanced" });
-
-    expect(continued).toMatchObject({ swipe: { awaitingContinueCardId: undefined } });
   });
 
-  it("ignores swipeCardAdvanced while no Card is paused on a miss", () => {
-    const exercise = swipe(["1", "2", "3"]);
+  it("ignores Weiter until the Card has resolved, then advances past it", () => {
     const started = reviewSessionReducer(idleReviewSessionState, {
       type: "reviewSessionStarted",
       reviewSessionId: "session",
-      exercises: [exercise],
+      exercises: [swipe("1"), flip("5")],
     });
 
-    expect(reviewSessionReducer(started, { type: "swipeCardAdvanced" })).toBe(started);
-  });
+    expect(reviewSessionReducer(started, { type: "exerciseAdvanced" })).toBe(started);
 
-  it("ignores Weiter until every Card in the deck has resolved, then advances past it", () => {
-    const exercise = swipe(["1", "2"]);
-    const started = reviewSessionReducer(idleReviewSessionState, {
-      type: "reviewSessionStarted",
-      reviewSessionId: "session",
-      exercises: [exercise, flip("5")],
-    });
-    const oneResolved = reviewSessionReducer(started, {
+    const resolved = reviewSessionReducer(started, {
       type: "swipeCardResolved",
       correct: true,
       submission: swipeSubmission("1", "knew_it", 0),
     });
-
-    expect(reviewSessionReducer(oneResolved, { type: "exerciseAdvanced" })).toBe(oneResolved);
-
-    const bothResolved = reviewSessionReducer(oneResolved, {
-      type: "swipeCardResolved",
-      correct: true,
-      submission: swipeSubmission("2", "knew_it", 0),
-    });
-    const advanced = reviewSessionReducer(bothResolved, { type: "exerciseAdvanced" });
+    const advanced = reviewSessionReducer(resolved, { type: "exerciseAdvanced" });
 
     expect(advanced).toMatchObject({ status: "reviewing", currentIndex: 1, swipe: undefined });
   });
 
-  it("produces one Review Submission per Card and counts the deck as a single Exercise", () => {
-    const exercise = swipe(["1", "2", "3"]);
+  it("requeues the Exercise on a too-old rejection, like any other single-Card Exercise", () => {
     const started = reviewSessionReducer(idleReviewSessionState, {
       type: "reviewSessionStarted",
       reviewSessionId: "session",
-      exercises: [exercise, flip("5")],
+      exercises: [swipe("1"), flip("5")],
     });
-
-    expect(started).toMatchObject({ reviewSession: { exercises: [{}, {}] } });
-    if (started.status !== "reviewing") throw new Error("expected reviewing");
-    expect(started.reviewSession.exercises).toHaveLength(2);
-
-    const allResolved = ["1", "2", "3"].reduce(
-      (current, id) =>
-        reviewSessionReducer(current, {
-          type: "swipeCardResolved",
-          correct: true,
-          submission: swipeSubmission(id, "knew_it", 0),
-        }),
-      started as ReturnType<typeof reviewSessionReducer>,
-    );
-
-    expect(allResolved).toMatchObject({ reviewSession: { totalReviewSubmissions: 3 } });
-  });
-
-  it("shrinks the deck on a per-Card too-old rejection, keeping the Cards already graded", () => {
-    const exercise = swipe(["1", "2", "3"]);
-    const started = reviewSessionReducer(idleReviewSessionState, {
-      type: "reviewSessionStarted",
-      reviewSessionId: "session",
-      exercises: [exercise, flip("5")],
-    });
-    const resolvedSubmission = swipeSubmission("1", "knew_it", 0);
+    const swiped = swipeSubmission("1", "knew_it", 0);
     const resolved = reviewSessionReducer(started, {
       type: "swipeCardResolved",
       correct: true,
-      submission: resolvedSubmission,
+      submission: swiped,
     });
     const rejected = reviewSessionReducer(resolved, {
       type: "reviewSubmissionRejected",
-      submission: resolvedSubmission,
+      submission: swiped,
       issue: "too-old",
       requestId: undefined,
     });
 
     expect(rejected).toMatchObject({
       status: "reviewing",
-      currentIndex: 0,
-      swipe: { resolved: [] },
+      swipe: undefined,
       reviewSession: { totalReviewSubmissions: 0, optimisticPoints: 0 },
     });
-    if (rejected.status === "reviewing") {
-      const deck = rejected.reviewSession.exercises[0] as SwipeExercise;
-
-      // The Exercise total is untouched — the deck shrinks, it doesn't disappear or requeue.
-      expect(rejected.reviewSession.exercises).toHaveLength(2);
-      expect(deck.kind).toBe("swipe");
-      expect(deck.cards.map((c) => c.id)).toEqual(["2", "3"]);
-    }
-  });
-
-  it("keeps the deck alive, shrunk, when the rejected Card still has ungraded Cards beside it", () => {
-    const exercise = swipe(["1", "2"]);
-    const started = reviewSessionReducer(idleReviewSessionState, {
-      type: "reviewSessionStarted",
-      reviewSessionId: "session",
-      exercises: [exercise, flip("5")],
-    });
-    const firstResolved = reviewSessionReducer(started, {
-      type: "swipeCardResolved",
-      correct: true,
-      submission: swipeSubmission("1", "knew_it", 0),
-    });
-    const rejected = reviewSessionReducer(firstResolved, {
-      type: "reviewSubmissionRejected",
-      submission: swipeSubmission("1", "knew_it", 0),
-      issue: "deleted",
-      requestId: undefined,
-    });
-
-    expect(rejected).toMatchObject({ status: "reviewing", currentIndex: 0 });
     if (rejected.status !== "reviewing") throw new Error("expected reviewing");
-    // Card "2" is still ungraded, so the deck survives with just that one Card left.
-    const deck = rejected.reviewSession.exercises[0] as SwipeExercise;
-
-    expect(rejected.reviewSession.exercises).toHaveLength(2);
-    expect(deck.cards.map((c) => c.id)).toEqual(["2"]);
+    // Moved to the back of the queue rather than dropped, so the Card is asked again later.
+    expect(rejected.reviewSession.exercises.map((planned) => planned.id)).toEqual(["5", "1"]);
   });
 
-  it("removes the deck once a rejection lands on its last still-credited Card", () => {
-    // Both Cards already resolved (the deck is fully graded, awaiting Weiter) when a late
-    // rejection reaches the last one — nothing is left to grade, so the Exercise disappears
-    // exactly like a deleted Card's single-Card Exercise does.
-    const exercise = swipe(["1", "2"]);
+  it("drops the Exercise when its Card turns out to be deleted", () => {
     const started = reviewSessionReducer(idleReviewSessionState, {
       type: "reviewSessionStarted",
       reviewSessionId: "session",
-      exercises: [exercise, flip("5")],
+      exercises: [swipe("1"), flip("5")],
     });
-    const firstResolved = reviewSessionReducer(started, {
+    const swiped = swipeSubmission("1", "knew_it", 0);
+    const resolved = reviewSessionReducer(started, {
       type: "swipeCardResolved",
       correct: true,
-      submission: swipeSubmission("1", "knew_it", 0),
+      submission: swiped,
     });
-    const bothResolved = reviewSessionReducer(firstResolved, {
-      type: "swipeCardResolved",
-      correct: true,
-      submission: swipeSubmission("2", "knew_it", 0),
-    });
-    const rejected = reviewSessionReducer(bothResolved, {
+    const rejected = reviewSessionReducer(resolved, {
       type: "reviewSubmissionRejected",
-      submission: swipeSubmission("1", "knew_it", 0),
+      submission: swiped,
       issue: "deleted",
       requestId: undefined,
     });
@@ -738,25 +637,18 @@ describe("Swipe Exercise", () => {
     expect(rejected.reviewSession.exercises.map((planned) => planned.id)).toEqual(["5"]);
   });
 
-  it("never repeats a Swipe Card — a wrong swipe already grades forgot, so it repeats as a flip Card", () => {
-    const exercise = swipe(["1", "2"]);
+  it("never repeats a Swipe Card as a swipe — a wrong swipe repeats as a flip Card", () => {
     const started = reviewSessionReducer(idleReviewSessionState, {
       type: "reviewSessionStarted",
       reviewSessionId: "session",
-      exercises: [exercise],
+      exercises: [swipe("1")],
     });
-    const firstResolved = reviewSessionReducer(started, {
+    const resolved = reviewSessionReducer(started, {
       type: "swipeCardResolved",
       correct: false,
       submission: swipeSubmission("1", "forgot", 0),
     });
-    const continued = reviewSessionReducer(firstResolved, { type: "swipeCardAdvanced" });
-    const bothResolved = reviewSessionReducer(continued, {
-      type: "swipeCardResolved",
-      correct: true,
-      submission: swipeSubmission("2", "knew_it", 0),
-    });
-    const advanced = reviewSessionReducer(bothResolved, { type: "exerciseAdvanced" });
+    const advanced = reviewSessionReducer(resolved, { type: "exerciseAdvanced" });
 
     expect(advanced).toMatchObject({ status: "summary" });
 

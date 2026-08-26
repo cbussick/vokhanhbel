@@ -34,6 +34,9 @@ export default defineConfig({
   test: {
     environment: "jsdom",
     setupFiles: ["./src/test/setup.ts"],
+    // Comfortably above the five-second async timeout in src/test/setup.ts, so a genuinely stuck
+    // query reports itself rather than being cut off by the surrounding test.
+    testTimeout: 15_000,
     exclude: [...configDefaults.exclude, "tests/database/**", "tests/e2e/**"],
     coverage: {
       provider: "v8",

@@ -60,6 +60,39 @@ export function FlipCardExercise({
       issueKey={issueKey}
       issueRequestId={view.issueRequestId}
       onClose={onClose}
+      footer={
+        // Both states stack in one grid cell, so the footer is as tall as the taller of them and
+        // revealing the answer no longer shoves the Card upward. See `.flipFooterStack`.
+        <div className={styles.flipFooterStack}>
+          <button
+            type="button"
+            className={styles.revealButton}
+            onClick={onReveal}
+            disabled={frontRequiredUnavailable}
+            hidden={view.revealed}
+          >
+            {t("review.reveal")}
+          </button>
+          <div className={styles.flipGrades} hidden={!(view.revealed && revealComplete)}>
+            <TutorButton onClick={onOpenTutor} disabled={tutorDisabled} />
+            <fieldset
+              className={styles.grades}
+              disabled={backRequiredUnavailable || issueBlocksInput(view.issue)}
+            >
+              <legend className={styles.exerciseInstruction}>{t("review.grading")}</legend>
+              <button type="button" onClick={() => onGrade("forgot")}>
+                {t("review.forgot")}
+              </button>
+              <button type="button" onClick={() => onGrade("almost")}>
+                {t("review.almost")}
+              </button>
+              <button type="button" onClick={() => onGrade("knew_it")}>
+                {t("review.knewIt")}
+              </button>
+            </fieldset>
+          </div>
+        </div>
+      }
       dialog={
         tutorOpen && (
           <TutorDialog
@@ -98,36 +131,7 @@ export function FlipCardExercise({
           />
         </section>
       </div>
-      {!view.revealed && (
-        <button
-          type="button"
-          className={styles.revealButton}
-          onClick={onReveal}
-          disabled={frontRequiredUnavailable}
-        >
-          {t("review.reveal")}
-        </button>
-      )}
-      {view.revealed && revealComplete && (
-        <>
-          <TutorButton onClick={onOpenTutor} disabled={tutorDisabled} />
-          <fieldset
-            className={styles.grades}
-            disabled={backRequiredUnavailable || issueBlocksInput(view.issue)}
-          >
-            <legend>{t("review.grading")}</legend>
-            <button type="button" onClick={() => onGrade("forgot")}>
-              {t("review.forgot")}
-            </button>
-            <button type="button" onClick={() => onGrade("almost")}>
-              {t("review.almost")}
-            </button>
-            <button type="button" onClick={() => onGrade("knew_it")}>
-              {t("review.knewIt")}
-            </button>
-          </fieldset>
-        </>
-      )}
+      {!view.revealed && <p className={styles.exerciseInstruction}>{t("review.flipLegend")}</p>}
       {(frontRequiredUnavailable || backRequiredUnavailable) && (
         <AudioUnavailableNotice onSkip={onSkip} />
       )}
