@@ -1,7 +1,15 @@
 import "@testing-library/jest-dom/vitest";
-import { cleanup } from "@testing-library/react";
+import { cleanup, configure } from "@testing-library/react";
 import { afterAll, afterEach, beforeAll } from "vitest";
 import { mockServer } from "./server";
+
+// Testing Library defaults `findBy`/`waitFor` to one second, which is not enough for this app: a
+// test that clicks through to another route waits on that route's lazy chunk, its loader and its
+// MSW-backed queries, and on a loaded machine that overruns a second. It failed as an empty document
+// — the assertion arriving before anything had rendered — which reads like a broken selector rather
+// than a slow one, and cost two wrong diagnoses before CI made it reproducible. `renderApp` already
+// hand-rolls a longer wait for the first render; this covers every navigation after it.
+configure({ asyncUtilTimeout: 5_000 });
 
 Object.defineProperty(window, "matchMedia", {
   writable: true,

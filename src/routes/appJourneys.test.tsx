@@ -70,10 +70,7 @@ describe("rendered app journeys", () => {
     const input = await screen.findByLabelText("Passwort");
     await user.type(input, "  genau sechzehn+  ");
     await user.click(screen.getByRole("button", { name: "App öffnen" }));
-    // Unlike the tests that start on /review, this one navigates there, so the assertion lands while
-    // the route's chunk is still loading — on a busy machine that outran the one-second default and
-    // failed against an empty document. The wait is about the navigation, not about the password.
-    await screen.findByRole("heading", { name: "Wiederholen" }, { timeout: 5_000 });
+    await screen.findByRole("heading", { name: "Wiederholen" });
     expect(submitted).toBe("  genau sechzehn+  ");
   });
 
