@@ -1,0 +1,121 @@
+import { useEffect, useRef, useState, type CSSProperties } from "react";
+import { useTranslation } from "react-i18next";
+import type { SummaryView } from "../../state/ReviewSessionContext";
+import { AppShell } from "../AppShell";
+import { RequireSession } from "../RequireSession";
+import styles from "./reviewSession.module.css";
+
+const confettiColors = [
+  "var(--color-primary)",
+  "var(--color-success)",
+  "var(--color-warning)",
+  "var(--color-danger)",
+];
+const confettiPieceCount = 24;
+
+interface ConfettiPiece {
+  id: number;
+  left: string;
+  color: string;
+  delay: string;
+  drift: string;
+}
+
+function createConfettiPieces(): ConfettiPiece[] {
+  return Array.from({ length: confettiPieceCount }, (_, index) => ({
+    id: index,
+    left: `${Math.round(Math.random() * 100)}%`,
+    color: confettiColors[index % confettiColors.length]!,
+    delay: `${Math.round(Math.random() * 200)}ms`,
+    drift: (Math.random() * 2 - 1).toFixed(2),
+  }));
+}
+
+/**
+ * Hand-rolled rather than pulled from a library: this project has no UI dependencies, and a
+ * celebration is not the place to acquire the first one. Hidden from assistive tech, and
+ * suppressed entirely under reduced motion by the `.confetti` rule in reviewSession.module.css.
+ */
+function Confetti() {
+  const [pieces] = useState(createConfettiPieces);
+
+  return (
+    <div className={styles.confetti} aria-hidden="true">
+      {pieces.map((piece) => (
+        <span
+          key={piece.id}
+          className={styles.confettiPiece}
+          // SAFETY: React's CSSProperties type has no slot for a custom property, but
+          // `--confetti-drift` is a plain style declaration a browser accepts like any other.
+          style={
+            {
+              left: piece.left,
+              background: piece.color,
+              animationDelay: piece.delay,
+              "--confetti-drift": piece.drift,
+            } as CSSProperties
+          }
+        />
+      ))}
+    </div>
+  );
+}
+
+/** Where a Review Session ends: what it earned, the Streak it extended, and a small celebration. */
+export function SessionSummary({
+  view,
+  currentStreak,
+  onRepeatForgotten,
+  onFinish,
+}: {
+  view: SummaryView;
+  currentStreak: number;
+  onRepeatForgotten: () => void;
+  onFinish: () => void;
+}) {
+  const { t } = useTranslation();
+  const headingRef = useRef<HTMLHeadingElement>(null);
+
+  // The summary replaces the Exercise screen in place, so nothing else moves focus there for a
+  // screen reader — move it to the heading ourselves, as Dialog and Login do for their own arrivals.
+  useEffect(() => {
+    requestAnimationFrame(() => headingRef.current?.focus());
+  }, []);
+
+  return (
+    <RequireSession>
+      <AppShell title={t("review.title")}>
+        <section className={styles.summary}>
+          {view.firstRound && <Confetti />}
+          <h2 ref={headingRef} tabIndex={-1}>
+            {t("review.summary")}
+          </h2>
+          <dl className={styles.summaryStats}>
+            <div>
+              <dt>{t("review.summaryReviews")}</dt>
+              <dd>{view.cumulativeReviewSubmissions}</dd>
+            </div>
+            <div>
+              <dt>{t("review.summaryPoints")}</dt>
+              <dd>{view.cumulativeOptimisticPoints}</dd>
+            </div>
+            <div>
+              <dt>{t("me.streak")}</dt>
+              <dd>{currentStreak}</dd>
+            </div>
+          </dl>
+          <div>
+            {view.canRepeatForgotten && (
+              <button type="button" onClick={onRepeatForgotten}>
+                {t("review.repeat")}
+              </button>
+            )}
+            <button type="button" onClick={onFinish}>
+              {t("common.finish")}
+            </button>
+          </div>
+        </section>
+      </AppShell>
+    </RequireSession>
+  );
+}

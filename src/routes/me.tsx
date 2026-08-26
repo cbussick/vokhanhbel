@@ -84,6 +84,10 @@ function MeRoute() {
               )}
             </dd>
           </div>
+          <div>
+            <dt>{t("me.streak")}</dt>
+            <dd>{data.currentStreak}</dd>
+          </div>
         </dl>
         {data.dailyRecap && (
           <section className={styles.recap}>
