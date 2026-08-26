@@ -764,6 +764,13 @@
     display: none;
   }
 
+  /* The summary fades itself in from nothing. Every other animation here is already suppressed under
+     reduced motion and this one was simply missed — which also left an axe scan compositing the
+     stats labels through a half-finished opacity and reporting them as too faint. */
+  .summary {
+    animation: none;
+  }
+
   .swipeCardDraggable {
     transition: none;
   }
