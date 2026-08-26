@@ -2,6 +2,8 @@ import { useEffect, useId, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { Topic } from "../contracts/topic";
 import { nextTypeAheadState, type TypeAheadState } from "../lib/typeAhead";
+import { ListboxOption } from "../shared/ui/ListboxOption";
+import { ListboxRoot } from "../shared/ui/ListboxRoot";
 import { AddIcon } from "./AddIcon";
 import { TopicIcon } from "./TopicIcon";
 import selectStyles from "./CollectionSelect.module.css";
@@ -148,12 +150,12 @@ export function TopicSelect({
   };
 
   return (
-    <div
-      ref={rootRef}
-      className={styles.root}
-      onBlur={(event) => {
-        if (!event.currentTarget.contains(event.relatedTarget)) setIsOpen(false);
+    <ListboxRoot
+      rootRef={(element) => {
+        rootRef.current = element;
       }}
+      className={styles.root}
+      onFocusLeave={() => setIsOpen(false)}
     >
       <button
         id={id}
@@ -183,46 +185,38 @@ export function TopicSelect({
             const isActive = index === activeIndex;
 
             return (
-              <li
-                ref={(element) => {
+              <ListboxOption
+                optionRef={(element) => {
                   optionRefs.current[index] = element;
                 }}
                 id={`${listboxId}-${index}`}
                 key={topic.id}
-                role="option"
                 className={selectStyles.option}
-                aria-selected={selected.has(topic.id)}
-                data-active={isActive || undefined}
-                onPointerDown={(event) => {
-                  event.preventDefault();
-                  toggle(index);
-                }}
-                onPointerMove={() => setActiveIndex(index)}
+                selected={selected.has(topic.id)}
+                active={isActive}
+                onActivate={() => toggle(index)}
+                onActive={() => setActiveIndex(index)}
               >
                 <TopicIcon icon={topic.icon} size="compact" />
                 <span>{topic.name}</span>
-              </li>
+              </ListboxOption>
             );
           })}
           {canCreate && (
-            <li
-              ref={(element) => {
+            <ListboxOption
+              optionRef={(element) => {
                 optionRefs.current[createIndex] = element;
               }}
               id={`${listboxId}-${createIndex}`}
-              role="option"
               className={`${selectStyles.option} ${selectStyles.createOption}`}
-              aria-selected="false"
-              data-active={activeIndex === createIndex || undefined}
-              onPointerDown={(event) => {
-                event.preventDefault();
-                toggle(createIndex);
-              }}
-              onPointerMove={() => setActiveIndex(createIndex)}
+              selected={false}
+              active={activeIndex === createIndex}
+              onActivate={() => toggle(createIndex)}
+              onActive={() => setActiveIndex(createIndex)}
             >
               <AddIcon />
               <span>{t("topics.create")}</span>
-            </li>
+            </ListboxOption>
           )}
         </ul>
       )}
@@ -247,6 +241,6 @@ export function TopicSelect({
           ))}
         </ul>
       )}
-    </div>
+    </ListboxRoot>
   );
 }

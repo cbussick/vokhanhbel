@@ -2,6 +2,8 @@ import { useEffect, useId, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { Collection } from "../contracts/collection";
 import { nextTypeAheadState, type TypeAheadState } from "../lib/typeAhead";
+import { ListboxOption } from "../shared/ui/ListboxOption";
+import { ListboxRoot } from "../shared/ui/ListboxRoot";
 import { AddIcon } from "./AddIcon";
 import { CollectionIcon } from "./CollectionIcon";
 import styles from "./CollectionSelect.module.css";
@@ -165,12 +167,12 @@ export function CollectionSelect({
   };
 
   return (
-    <div
-      ref={rootRef}
-      className={styles.root}
-      onBlur={(event) => {
-        if (!event.currentTarget.contains(event.relatedTarget)) setIsOpen(false);
+    <ListboxRoot
+      rootRef={(element) => {
+        rootRef.current = element;
       }}
+      className={styles.root}
+      onFocusLeave={() => setIsOpen(false)}
     >
       <button
         id={id}
@@ -195,49 +197,41 @@ export function CollectionSelect({
             const isActive = index === activeIndex;
 
             return (
-              <li
-                ref={(element) => {
+              <ListboxOption
+                optionRef={(element) => {
                   optionRefs.current[index] = element;
                 }}
                 id={`${listboxId}-${index}`}
                 key={collection.id}
-                role="option"
                 className={styles.option}
-                aria-selected={collection.id === value}
-                data-active={isActive || undefined}
-                onPointerDown={(event) => {
-                  event.preventDefault();
-                  select(index);
-                }}
-                onPointerMove={() => setActiveIndex(index)}
+                selected={collection.id === value}
+                active={isActive}
+                onActivate={() => select(index)}
+                onActive={() => setActiveIndex(index)}
               >
                 <CollectionIcon icon={collection.icon} size="compact" />
                 <span>{collection.name}</span>
-              </li>
+              </ListboxOption>
             );
           })}
           {canCreate && (
-            <li
-              ref={(element) => {
+            <ListboxOption
+              optionRef={(element) => {
                 optionRefs.current[createIndex] = element;
               }}
               id={`${listboxId}-${createIndex}`}
-              role="option"
               className={`${styles.option} ${styles.createOption}`}
-              aria-selected="false"
-              data-active={activeIndex === createIndex || undefined}
-              onPointerDown={(event) => {
-                event.preventDefault();
-                select(createIndex);
-              }}
-              onPointerMove={() => setActiveIndex(createIndex)}
+              selected={false}
+              active={activeIndex === createIndex}
+              onActivate={() => select(createIndex)}
+              onActive={() => setActiveIndex(createIndex)}
             >
               <AddIcon />
               <span>{t("collections.create")}</span>
-            </li>
+            </ListboxOption>
           )}
         </ul>
       )}
-    </div>
+    </ListboxRoot>
   );
 }
