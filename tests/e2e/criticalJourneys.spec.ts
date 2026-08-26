@@ -61,7 +61,20 @@ async function json(route: Route, body: unknown, status = 200) {
 }
 
 async function installMockApi(page: Page, authenticated = true) {
-  const state = { authenticated, cards: [createCard()] };
+  const state = {
+    authenticated,
+    cards: [createCard()],
+    collections: [mockCollection],
+    topics: [] as Array<{
+      id: string;
+      collectionId: string;
+      name: string;
+      icon: "shapes";
+      createdAt: string;
+      updatedAt: string;
+      deletedAt: null;
+    }>,
+  };
   await page.route("**/api/**", async (route) => {
     const request = route.request();
     const pathname = new URL(request.url()).pathname;
@@ -79,8 +92,8 @@ async function installMockApi(page: Page, authenticated = true) {
       return route.fulfill({ status: 204 });
     }
     if (pathname === "/api/collections" && request.method() === "GET")
-      return json(route, [mockCollection]);
-    if (pathname === "/api/topics" && request.method() === "GET") return json(route, []);
+      return json(route, state.collections);
+    if (pathname === "/api/topics" && request.method() === "GET") return json(route, state.topics);
     if (pathname === "/api/cards" && request.method() === "GET") return json(route, state.cards);
     if (pathname === "/api/cards" && request.method() === "POST") {
       const input = request.postDataJSON() as {
@@ -133,6 +146,85 @@ async function installMockApi(page: Page, authenticated = true) {
   });
 
   return state;
+}
+
+async function dragListboxUpWithTouch(page: Page, listbox: Locator) {
+  const box = await listbox.boundingBox();
+  const initialScrollTop = await listbox.evaluate<number>(
+    (element) => (element as { scrollTop: number }).scrollTop,
+  );
+
+  expect(box).not.toBeNull();
+
+  const session = await page.context().newCDPSession(page);
+  await session.send("Emulation.setTouchEmulationEnabled", { enabled: true, maxTouchPoints: 1 });
+
+  const x = box!.x + box!.width / 2;
+  const startY = box!.y + box!.height - 36;
+  const endY = box!.y + 36;
+
+  await session.send("Input.dispatchTouchEvent", {
+    type: "touchStart",
+    touchPoints: [{ x, y: startY }],
+  });
+  for (let step = 1; step <= 8; step += 1) {
+    await session.send("Input.dispatchTouchEvent", {
+      type: "touchMove",
+      touchPoints: [{ x, y: startY + ((endY - startY) * step) / 8 }],
+    });
+  }
+  await session.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
+
+  await expect
+    .poll(() => listbox.evaluate<number>((element) => (element as { scrollTop: number }).scrollTop))
+    .toBeGreaterThan(initialScrollTop);
+
+  let previousScrollTop = -1;
+  let stableChecks = 0;
+  await expect
+    .poll(
+      async () => {
+        const scrollTop = await listbox.evaluate<number>(
+          (element) => (element as { scrollTop: number }).scrollTop,
+        );
+
+        stableChecks = Math.abs(scrollTop - previousScrollTop) < 0.5 ? stableChecks + 1 : 0;
+        previousScrollTop = scrollTop;
+
+        return stableChecks;
+      },
+      { intervals: [100], timeout: 5_000 },
+    )
+    .toBeGreaterThanOrEqual(3);
+}
+
+async function tapWithTouch(page: Page, target: Locator) {
+  const box = await target.boundingBox();
+
+  expect(box).not.toBeNull();
+
+  await page.touchscreen.tap(box!.x + box!.width / 2, box!.y + box!.height / 2);
+}
+
+async function fullyVisibleListboxOption(listbox: Locator) {
+  const listboxBox = await listbox.boundingBox();
+
+  expect(listboxBox).not.toBeNull();
+
+  const options = listbox.getByRole("option");
+  for (let index = 0; index < (await options.count()); index += 1) {
+    const option = options.nth(index);
+    const optionBox = await option.boundingBox();
+
+    if (
+      optionBox &&
+      optionBox.y >= listboxBox!.y &&
+      optionBox.y + optionBox.height <= listboxBox!.y + listboxBox!.height
+    )
+      return option;
+  }
+
+  throw new Error("The listbox has no fully visible option");
 }
 
 async function expectNoSeriousAxeViolations(page: Page) {
@@ -803,6 +895,75 @@ test("presents form dialogs as full-screen tasks on mobile", async ({ page }) =>
   await page.getByRole("button", { name: "Thema hinzufügen" }).click();
   const topicDialog = page.getByRole("dialog", { name: "Thema erstellen" });
   await expectMobileFullscreenDialog(topicDialog, 320, 700);
+});
+
+test.describe("mobile dropdown touch interaction", () => {
+  test.use({ hasTouch: true });
+
+  test("does not select a Topic while the Learner touch-scrolls its options", async ({
+    page,
+    browserName,
+  }) => {
+    test.skip(browserName !== "chromium", "Chromium provides the touch input session.");
+    await page.setViewportSize({ width: 320, height: 700 });
+    const state = await installMockApi(page);
+    state.cards = [];
+    state.topics = Array.from({ length: 20 }, (_, index) => ({
+      id: `${String(index + 1).padStart(8, "0")}-0000-4000-8000-000000000000`,
+      collectionId: mockCollection.id,
+      name: `Thema ${String(index + 1).padStart(2, "0")}`,
+      icon: "shapes" as const,
+      createdAt: fixedNow,
+      updatedAt: fixedNow,
+      deletedAt: null,
+    }));
+    await page.goto(`/cards/${mockCollection.id}`);
+    await page.getByRole("button", { name: "Karte hinzufügen" }).first().click();
+    await page.getByRole("combobox", { name: "Themen" }).click();
+
+    const listbox = page.getByRole("listbox");
+    await dragListboxUpWithTouch(page, listbox);
+
+    await expect(listbox.getByRole("option", { selected: true })).toHaveCount(0);
+    const topicOption = await fullyVisibleListboxOption(listbox);
+    await tapWithTouch(page, topicOption);
+    await expect(topicOption).toHaveAttribute("aria-selected", "true");
+  });
+
+  test("does not select a Collection while the Learner touch-scrolls its options", async ({
+    page,
+    browserName,
+  }) => {
+    test.skip(browserName !== "chromium", "Chromium provides the touch input session.");
+    await page.setViewportSize({ width: 320, height: 700 });
+    const state = await installMockApi(page);
+    state.cards = [];
+    state.collections = Array.from({ length: 20 }, (_, index) => ({
+      id:
+        index === 0
+          ? mockCollection.id
+          : `${String(index + 1).padStart(8, "0")}-0000-4000-8000-000000000000`,
+      name: `Sammlung ${String(index + 1).padStart(2, "0")}`,
+      icon: "flag-vn",
+      createdAt: fixedNow,
+      updatedAt: fixedNow,
+      deletedAt: null,
+    }));
+    await page.goto(`/cards/${mockCollection.id}`);
+    await page.getByRole("button", { name: "Karte hinzufügen" }).first().click();
+
+    const combobox = page.getByRole("combobox", { name: "Sammlung" });
+    await expect(combobox).toContainText("Sammlung 01");
+    await combobox.click();
+    const listbox = page.getByRole("listbox");
+    await dragListboxUpWithTouch(page, listbox);
+
+    await expect(combobox).toContainText("Sammlung 01");
+    const collectionOption = await fullyVisibleListboxOption(listbox);
+    const collectionName = await collectionOption.textContent();
+    await tapWithTouch(page, collectionOption);
+    await expect(combobox).toContainText(collectionName!);
+  });
 });
 
 test("gives the Tutor dialog full-screen chrome and a pinned composer on mobile", async ({
