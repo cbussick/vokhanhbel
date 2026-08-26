@@ -3,7 +3,7 @@ import { apiPaths } from "../contracts/apiPaths";
 import type { AudioMetadata, Card } from "../contracts/card";
 import { problemTypes } from "../contracts/problem";
 import type { ReviewSubmissionInput } from "../contracts/review";
-import { planExercises } from "../domain/exercisePlanner";
+import { leadingGroupedExerciseKind, planExercises } from "../domain/exercisePlanner";
 import type { GroupedExerciseKind, PlannedExercise } from "../domain/exercisePlanner";
 import type { Grade } from "../domain/review";
 import { getPointsForGrade, reviewSessionSize } from "../domain/review";
@@ -94,29 +94,19 @@ export interface SwipeOptionView {
   correct: boolean;
 }
 
-/**
- * One Card in the Swipe deck, in the position `currentCard` occupies whenever this view's `kind` is
- * `"swipe"` — the deck's shrink-on-rejection floor (`shrinkSwipeDeck`) never lets it fall to zero
- * Cards while the Exercise itself still exists, so a card here is never undefined.
- */
+/** One Card thrown into one of two buckets — the whole Exercise, not a position within a deck. */
 export interface SwipeExerciseView {
   kind: "swipe";
   position: number;
   total: number;
-  /** The deck's Cards, in stacked presentation order — for rendering the Cards still waiting behind
-   * `currentCard`. */
-  cards: Card[];
   currentCard: Card;
-  /** `currentCard`'s two options, left first — exactly one has `correct: true`. */
+  /** The Card's two options, left first — exactly one has `correct: true`. */
   options: SwipeOptionView[];
-  /** True once `currentCard` has been swiped or tapped; the Session advances past it only on
-   * "Weiter", the same pause every other Exercise in this app gives before moving on. */
+  /** True once the Card has been swiped or tapped; the Session advances past it only on "Weiter",
+   * the same pause every other Exercise in this app gives before moving on. */
   resolved: boolean;
   /** Whether the final verdict was correct — only meaningful once `resolved` is true. */
   correct: boolean;
-  /** True when `currentCard` is the last Card left in the deck — "Weiter" here leaves the whole
-   * Exercise rather than only moving to the next Card. */
-  isLastCard: boolean;
   issue: ReviewSubmissionIssue | undefined;
   issueRequestId: string | undefined;
   tutorConversation: TutorConversationMessage[];
@@ -164,12 +154,9 @@ interface ReviewSessionContextValue {
    * without grading either, a match grades the Card `knew_it` or `almost` and enqueues its Review
    * Submission immediately — see the reducer's `matchingPairResolved` for why immediately. */
   attemptMatchingPair: (frontCardId: string, backCardId: string) => void;
-  /** Commits the current deck Card onto the option with this id — by drag or by tap, both call this
-   * the same way. Grades `knew_it` or `forgot` and pauses the deck on the resolution, correct or
-   * wrong, until `continueSwipeCard`. */
+  /** Commits the Swipe Card into the bucket with this id — by drag or by tap, both call this the
+   * same way. Grades `knew_it` or `forgot` and holds on the resolution until `advanceExercise`. */
   chooseSwipeOption: (optionCardId: string) => void;
-  /** Dismisses the current Card's resolution, moving the deck to the next Card. */
-  continueSwipeCard: () => void;
   advanceExercise: () => void;
   skipCard: () => void;
   repeatForgotten: () => void;
@@ -285,50 +272,36 @@ function toReviewSessionView(
   }
 
   if (exercise.kind === "swipe") {
-    const resolvedEntries = state.swipe?.resolved ?? [];
-    const resolvedByCardId = new Map(resolvedEntries.map((entry) => [entry.cardId, entry]));
-    const awaitingContinueCardId = state.swipe?.awaitingContinueCardId;
-    // While a resolution is on screen, the "current" Card stays the one just graded until Weiter;
-    // otherwise it's whichever Card in the deck hasn't resolved yet. `shrinkSwipeDeck` never lets
-    // the deck reach zero Cards while the Exercise itself still exists, so one is always found.
-    const currentCardId = awaitingContinueCardId ?? exercise.deck[resolvedEntries.length]!.cardId;
-    const currentSwipeCard = exercise.cards.find((swiped) => swiped.id === currentCardId)!;
-    const currentDeckEntry = exercise.deck.find((entry) => entry.cardId === currentCardId)!;
-    const resolvedEntry = resolvedByCardId.get(currentCardId);
+    const swipe = state.swipe;
     // The correct option's own text when the resolved pick was correct; otherwise the only other
     // (necessarily wrong) option's text — Swipe has just two, so which was chosen never needs its
     // own field, the way `MultipleChoiceProgress.resolvedOptionId` needs one for four candidates.
-    const chosenOptionText = resolvedEntry
-      ? (currentDeckEntry.options.find((option) => option.correct === resolvedEntry.correct)
-          ?.text ?? null)
+    const chosenOptionText = swipe
+      ? (exercise.options.find((option) => option.correct === swipe.correct)?.text ?? null)
       : null;
 
     return {
       kind: "swipe",
       position,
       total,
-      cards: exercise.cards,
-      currentCard: currentSwipeCard,
-      options: currentDeckEntry.options.map((option) => ({
+      currentCard,
+      options: exercise.options.map((option) => ({
         cardId: option.cardId,
         text: option.text,
         correct: option.correct,
       })),
-      resolved: Boolean(resolvedEntry),
-      correct: resolvedEntry?.correct ?? false,
-      isLastCard: exercise.cards[exercise.cards.length - 1]?.id === currentCardId,
+      resolved: swipe !== undefined,
+      correct: swipe?.correct ?? false,
       issue: state.issue,
       issueRequestId: state.issueRequestId,
       tutorConversation: conversation,
       tutorExercise: {
-        cards: exercise.cards.map((swiped) => ({
-          cardId: swiped.id,
-          outcome: resolvedByCardId.has(swiped.id)
-            ? resolvedByCardId.get(swiped.id)!.correct
-              ? "knew_it"
-              : "forgot"
-            : null,
-        })),
+        cards: [
+          {
+            cardId: currentCard.id,
+            outcome: swipe ? (swipe.correct ? "knew_it" : "forgot") : null,
+          },
+        ],
         chosenOptionText,
       },
     };
@@ -386,15 +359,19 @@ export function ReviewSessionProvider({ children }: { children: ReactNode }) {
 
     if (initialQueue.length === 0) return;
 
-    const exercises = planExercises(initialQueue, pool, Math.random, getLastGroupedExerciseKind());
-    // The grouped kind this Session actually planned (if any) becomes next Session's preference —
-    // see `groupedExerciseOrder` in exercisePlanner.ts for how the alternation reads it back.
+    const previousGroupedKind = getLastGroupedExerciseKind();
+    const exercises = planExercises(initialQueue, pool, Math.random, previousGroupedKind);
+    // The grouped kind this Session actually planned becomes next Session's preference — see
+    // `groupedExerciseOrder` in exercisePlanner.ts for how the alternation reads it back. When it
+    // planned none, the kind that merely led the attempt is remembered instead, so a Sammlung that
+    // can never assemble a matching board still alternates round to Swipe's turn rather than
+    // leading with matching every Session and never reaching it.
     const groupedKind = exercises.find(
       (exercise): exercise is Extract<PlannedExercise, { kind: GroupedExerciseKind }> =>
         exercise.kind === "matching" || exercise.kind === "swipe",
     )?.kind;
 
-    if (groupedKind) setLastGroupedExerciseKind(groupedKind);
+    setLastGroupedExerciseKind(groupedKind ?? leadingGroupedExerciseKind(previousGroupedKind));
 
     dispatch({
       type: "reviewSessionStarted",
@@ -560,17 +537,11 @@ export function ReviewSessionProvider({ children }: { children: ReactNode }) {
 
     if (!exercise || exercise.kind !== "swipe") return;
 
-    // A resolution is still on screen — the Learner needs to continue past it before the next
-    // Card in the deck can be swiped.
-    if (state.swipe?.awaitingContinueCardId) return;
+    // The resolution is still on screen — Swipe has no retry, so nothing more can be committed.
+    if (state.swipe) return;
 
-    const resolvedCount = state.swipe?.resolved.length ?? 0;
-    const currentDeckEntry = exercise.deck[resolvedCount];
-
-    if (!currentDeckEntry) return;
-
-    const option = currentDeckEntry.options.find((candidate) => candidate.cardId === optionCardId);
-    const card = exercise.cards.find((candidate) => candidate.id === currentDeckEntry.cardId);
+    const option = exercise.options.find((candidate) => candidate.cardId === optionCardId);
+    const card = exercise.cards[0];
 
     if (!option || !card) return;
 
@@ -595,8 +566,6 @@ export function ReviewSessionProvider({ children }: { children: ReactNode }) {
     dispatch({ type: "swipeCardResolved", correct: option.correct, submission });
     enqueueSubmission(submission, handleRejectedReviewSubmission);
   };
-
-  const continueSwipeCard = () => dispatch({ type: "swipeCardAdvanced" });
 
   const advanceExercise = () => dispatch({ type: "exerciseAdvanced" });
   const repeatForgotten = () => dispatch({ type: "forgottenRepeated" });
@@ -623,7 +592,6 @@ export function ReviewSessionProvider({ children }: { children: ReactNode }) {
     chooseOption,
     attemptMatchingPair,
     chooseSwipeOption,
-    continueSwipeCard,
     advanceExercise,
     skipCard,
     repeatForgotten,

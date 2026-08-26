@@ -1,6 +1,5 @@
 import { useRef, useState, type PointerEvent } from "react";
 import { useTranslation } from "react-i18next";
-import { prefersReducedMotion } from "../../lib/browserState";
 import { issueBlocksInput } from "../../state/review/reviewSessionReducer";
 import type { SwipeExerciseView } from "../../state/ReviewSessionContext";
 import { useReviewSession } from "../../state/ReviewSessionContext";
@@ -8,27 +7,33 @@ import { CardFace } from "../audio/CardFace";
 import { TutorDialog } from "../TutorDialog";
 import { ExerciseScreen } from "./ExerciseScreen";
 import { OptionOutcome, optionModifierClassName, type OptionVerdict } from "./optionAppearance";
-import { TutorButton } from "./TutorButton";
+import { ResolutionFooter } from "./ResolutionFooter";
 import styles from "./reviewSession.module.css";
 
-/** How long the fly-off/spring-back CSS transition takes, so the local "still flying" state clears
- * in step with it. Zero under reduced motion, so the outgoing Card is simply gone next paint. */
-function swipeFlightDuration(): number {
-  return prefersReducedMotion() ? 0 : 260;
+/** Ties the buckets to the one visible copy of the Exercise's instruction. */
+const swipeInstructionId = "swipe-instruction";
+
+/** How far along the travel available on one side the Card must be dragged before releasing it
+ * counts as choosing that side, and the shortest such distance in pixels — on a narrow screen the
+ * proportional distance alone would be small enough to trip on a stray movement. */
+const commitTravelRatio = 0.55;
+const commitTravelMinimum = 32;
+
+function clamp(value: number, min: number, max: number): number {
+  return Math.min(Math.max(value, min), max);
 }
 
-function pointInRect(x: number, y: number, rect: DOMRect | undefined): boolean {
-  return (
-    rect !== undefined && x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom
-  );
+/** The drag distance that arms a side, never more than the travel that side actually has. */
+function commitThreshold(travel: number): number {
+  return Math.min(Math.max(travel * commitTravelRatio, commitTravelMinimum), travel);
 }
 
 /**
- * A deck of three Cards, answered by dragging the top one onto a target or by tapping it. Built on
- * pointer events with geometric hit-testing (`getBoundingClientRect` against the two target
- * buttons' rectangles, checked in `onPointerMove`) rather than mouse-enter detection — the earlier
- * implementation this idea came from detected its drop target that way, so its drag never worked on
- * a phone at all. Tapping a target calls the exact same `commit` path as a completed drag, and
+ * One Card thrown into one of two buckets, by dragging it far enough toward one or by tapping it.
+ * Built on pointer events rather than mouse-enter detection — the earlier implementation this idea
+ * came from detected its drop target that way, so its drag never worked on a phone at all. Which
+ * side a drag chooses is decided by distance travelled, not by where the pointer ends up: see
+ * `commitThreshold`. Tapping a bucket calls the exact same `commit` path as a completed drag, and
  * needs no pointer handling of its own, which is what makes it the keyboard route for free.
  */
 export function SwipeExercise({
@@ -38,7 +43,7 @@ export function SwipeExercise({
   tutorDisabled,
   onClose,
   onChoose,
-  onContinue,
+  onAdvance,
   onOpenTutor,
   onCloseTutor,
 }: {
@@ -48,40 +53,27 @@ export function SwipeExercise({
   tutorDisabled: boolean;
   onClose: () => void;
   onChoose: (optionCardId: string) => void;
-  onContinue: () => void;
+  onAdvance: () => void;
   onOpenTutor: () => void;
   onCloseTutor: () => void;
 }) {
   const { t } = useTranslation();
   const reviewSession = useReviewSession();
-  const [dragCardId, setDragCardId] = useState<string | undefined>(undefined);
+  const [dragging, setDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
-  const [dragHoverSide, setDragHoverSide] = useState<"left" | "right" | undefined>(undefined);
-  const [flying, setFlying] = useState<{ cardId: string; direction: "left" | "right" } | undefined>(
-    undefined,
-  );
-  const leftTargetRef = useRef<HTMLButtonElement>(null);
-  const rightTargetRef = useRef<HTMLButtonElement>(null);
+  // The side the Card has been dragged far enough to choose — released now, it lands there.
+  const [armedSide, setArmedSide] = useState<"left" | "right" | undefined>(undefined);
+  const arenaRef = useRef<HTMLFieldSetElement>(null);
+  const cardRef = useRef<HTMLDivElement>(null);
 
   const inputBlocked = issueBlocksInput(view.issue);
   const interactive = !view.resolved && !inputBlocked;
 
-  const flyOff = (cardId: string, direction: "left" | "right") => {
-    setFlying({ cardId, direction });
-
-    const duration = swipeFlightDuration();
-
-    window.setTimeout(
-      () => setFlying((current) => (current?.cardId === cardId ? undefined : current)),
-      duration,
-    );
-  };
-
   const resetDrag = () => {
-    setDragCardId(undefined);
+    setDragging(false);
     setDragOffset({ x: 0, y: 0 });
-    setDragHoverSide(undefined);
+    setArmedSide(undefined);
   };
 
   const commit = (optionCardId: string) => {
@@ -89,38 +81,56 @@ export function SwipeExercise({
     resetDrag();
   };
 
-  const handlePointerDown = (event: PointerEvent<HTMLDivElement>, cardId: string) => {
+  const handlePointerDown = (event: PointerEvent<HTMLDivElement>) => {
     if (!interactive) return;
 
     event.currentTarget.setPointerCapture(event.pointerId);
-    setDragCardId(cardId);
+    setDragging(true);
     setDragStart({ x: event.clientX, y: event.clientY });
     setDragOffset({ x: 0, y: 0 });
   };
 
   const handlePointerMove = (event: PointerEvent<HTMLDivElement>) => {
-    if (!dragCardId) return;
+    if (!dragging) return;
 
-    setDragOffset({ x: event.clientX - dragStart.x, y: event.clientY - dragStart.y });
+    const requested = { x: event.clientX - dragStart.x, y: (event.clientY - dragStart.y) * 0.15 };
+    const arena = arenaRef.current?.getBoundingClientRect();
+    const card = cardRef.current?.getBoundingClientRect();
 
-    const overLeft = pointInRect(
-      event.clientX,
-      event.clientY,
-      leftTargetRef.current?.getBoundingClientRect(),
+    if (!arena || !card) return;
+
+    // `card` is measured mid-drag, so the offset already applied to it comes back off to recover the
+    // resting rect the new offset is measured against.
+    const travelLeft = card.left - dragOffset.x - arena.left;
+    const travelRight = arena.right - (card.right - dragOffset.x);
+    // The Card stays inside the arena: dragged past an edge it stops there rather than sliding out
+    // across the rest of the screen.
+    const bounded = {
+      x: clamp(requested.x, -travelLeft, travelRight),
+      y: clamp(
+        requested.y,
+        arena.top - (card.top - dragOffset.y),
+        arena.bottom - (card.bottom - dragOffset.y),
+      ),
+    };
+
+    setDragOffset(bounded);
+    // Distance decides, not what the pointer happens to be over. A thumb dragging a Card on a phone
+    // is nowhere near the bucket it is aiming at, and the Card itself is bound inside the arena, so
+    // asking the pointer to reach the target made the gesture far harder than it looks.
+    setArmedSide(
+      bounded.x <= -commitThreshold(travelLeft)
+        ? "left"
+        : bounded.x >= commitThreshold(travelRight)
+          ? "right"
+          : undefined,
     );
-    const overRight = pointInRect(
-      event.clientX,
-      event.clientY,
-      rightTargetRef.current?.getBoundingClientRect(),
-    );
-
-    setDragHoverSide(overLeft ? "left" : overRight ? "right" : undefined);
   };
 
   const handlePointerUp = () => {
-    if (!dragCardId) return;
+    if (!dragging) return;
 
-    const side = dragHoverSide;
+    const side = armedSide;
     const optionCardId =
       side === "left"
         ? view.options[0]?.cardId
@@ -134,29 +144,31 @@ export function SwipeExercise({
       return;
     }
 
-    // Released nowhere in particular: springs back to centre instead of answering.
+    // Released short of either threshold: springs back to centre instead of answering.
     resetDrag();
   };
 
-  // The resolution — correct or wrong — is on screen until this fires, so the fly-off always
-  // happens here, toward whichever side the Learner actually chose: the option whose own
-  // correctness matches the verdict is the one she picked, since Swipe has only the two.
-  const handleContinue = () => {
-    if (view.resolved) {
-      const chosenIndex = view.options.findIndex((option) => option.correct === view.correct);
+  const renderBucket = (index: number, side: "left" | "right") => {
+    const option = view.options[index];
 
-      flyOff(view.currentCard.id, chosenIndex === 0 ? "left" : "right");
-    }
+    if (!option) return null;
 
-    onContinue();
+    const verdict: OptionVerdict = {
+      dead: !option.correct && view.resolved && !view.correct,
+      revealedCorrect: view.resolved && option.correct,
+    };
+
+    return (
+      <button
+        type="button"
+        className={`${styles.swipeBucket} ${armedSide === side ? styles.swipeBucketArmed : ""} ${optionModifierClassName(verdict)}`}
+        onClick={() => commit(option.cardId)}
+      >
+        {option.text}
+        <OptionOutcome verdict={verdict} />
+      </button>
+    );
   };
-
-  // The current Card plus whatever's genuinely still unresolved behind it, in deck order —
-  // everything still worth stacking on screen. Resolved Cards always precede it in `view.cards`,
-  // which `toReviewSessionView` and `shrinkSwipeDeck` both keep in lockstep with the deck's order.
-  const currentCardIndex = view.cards.findIndex((card) => card.id === view.currentCard.id);
-  const upcomingCards = view.cards.slice(currentCardIndex);
-  const peekClassNames = [styles.swipeCardPeek1, styles.swipeCardPeek2];
 
   return (
     <ExerciseScreen
@@ -165,6 +177,14 @@ export function SwipeExercise({
       issueKey={issueKey}
       issueRequestId={view.issueRequestId}
       onClose={onClose}
+      footer={
+        <ResolutionFooter
+          resolved={view.resolved}
+          verdict={t(view.correct ? "review.answerCorrect" : "review.answerWrong")}
+          onAdvance={onAdvance}
+          tutor={{ onOpen: onOpenTutor, disabled: tutorDisabled }}
+        />
+      }
       dialog={
         tutorOpen &&
         view.resolved && (
@@ -178,89 +198,38 @@ export function SwipeExercise({
         )
       }
     >
-      <p className={styles.optionsLegend}>{t("review.swipeLegend")}</p>
-      <div className={styles.swipeDeck}>
-        {flying && (
+      <p id={swipeInstructionId} className={styles.exerciseInstruction}>
+        {t("review.swipeLegend")}
+      </p>
+      <fieldset
+        ref={arenaRef}
+        className={styles.swipeArena}
+        aria-labelledby={swipeInstructionId}
+        disabled={view.resolved || inputBlocked}
+      >
+        {renderBucket(0, "left")}
+        <div className={styles.swipeDeck}>
           <div
-            key={`flying-${flying.cardId}`}
-            aria-hidden="true"
-            className={`${styles.swipeCard} ${styles.swipeCardFlying} ${
-              flying.direction === "left" ? styles.swipeCardFlyingLeft : styles.swipeCardFlyingRight
-            }`}
+            ref={cardRef}
+            className={`${styles.swipeCard} ${interactive ? styles.swipeCardDraggable : ""}`}
+            style={
+              dragging
+                ? {
+                    transform: `translate(${dragOffset.x}px, ${dragOffset.y}px) rotate(${dragOffset.x / 18}deg)`,
+                    transition: "none",
+                  }
+                : undefined
+            }
+            onPointerDown={handlePointerDown}
+            onPointerMove={handlePointerMove}
+            onPointerUp={handlePointerUp}
+            onPointerCancel={handlePointerUp}
           >
-            <CardFace
-              face={view.cards.find((card) => card.id === flying.cardId)!.front}
-              label="front"
-            />
+            <CardFace face={view.currentCard.front} label="front" />
           </div>
-        )}
-        {upcomingCards.slice(0, 3).map((deckCard, index) =>
-          index === 0 ? (
-            <div
-              key={deckCard.id}
-              className={`${styles.swipeCard} ${styles.swipeCardCurrent}`}
-              style={
-                dragCardId === deckCard.id
-                  ? {
-                      transform: `translate(${dragOffset.x}px, ${dragOffset.y * 0.15}px) rotate(${dragOffset.x / 18}deg)`,
-                      transition: "none",
-                    }
-                  : undefined
-              }
-              onPointerDown={(event) => handlePointerDown(event, deckCard.id)}
-              onPointerMove={handlePointerMove}
-              onPointerUp={handlePointerUp}
-              onPointerCancel={handlePointerUp}
-            >
-              <CardFace face={deckCard.front} label="front" />
-            </div>
-          ) : (
-            <div
-              key={deckCard.id}
-              aria-hidden="true"
-              className={`${styles.swipeCard} ${peekClassNames[index - 1] ?? ""}`}
-            >
-              <CardFace face={deckCard.front} label="front" />
-            </div>
-          ),
-        )}
-      </div>
-      <fieldset className={styles.swipeTargets} disabled={view.resolved || inputBlocked}>
-        <legend className={styles.visuallyHidden}>{t("review.swipeLegend")}</legend>
-        {view.options.map((option, index) => {
-          const verdict: OptionVerdict = {
-            dead: !option.correct && view.resolved && !view.correct,
-            revealedCorrect: view.resolved && option.correct,
-          };
-          const side = index === 0 ? "left" : "right";
-
-          return (
-            <button
-              key={option.cardId}
-              ref={side === "left" ? leftTargetRef : rightTargetRef}
-              type="button"
-              className={`${styles.option} ${styles.swipeTarget} ${
-                dragHoverSide === side ? styles.swipeTargetHover : ""
-              } ${optionModifierClassName(verdict)}`}
-              onClick={() => commit(option.cardId)}
-            >
-              {option.text}
-              <OptionOutcome verdict={verdict} />
-            </button>
-          );
-        })}
+        </div>
+        {renderBucket(1, "right")}
       </fieldset>
-      {view.resolved && (
-        <>
-          <p className={styles.outcome} role="status">
-            {t(view.correct ? "review.answerCorrect" : "review.answerWrong")}
-          </p>
-          <TutorButton onClick={onOpenTutor} disabled={tutorDisabled} />
-          <button type="button" className={styles.revealButton} onClick={handleContinue}>
-            {t("review.continue")}
-          </button>
-        </>
-      )}
     </ExerciseScreen>
   );
 }

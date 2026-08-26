@@ -164,6 +164,7 @@ export const de = {
       cardFront: "Kartenvorderseite",
       cardBack: "Kartenrückseite",
       requestId: "Fehler-ID: {{requestId}}",
+      flipLegend: "Denk an die Antwort, dann dreh die Karte um",
       grading: "Wie gut wusstest du die Antwort?",
       forgot: "Vergessen",
       almost: "Fast gewusst",

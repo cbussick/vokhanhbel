@@ -3,6 +3,13 @@ import { useOnlineStatus } from "../lib/browserState";
 import { useReviewSubmissions } from "../state/ReviewSubmissionContext";
 import styles from "./ConnectivityBanner.module.css";
 
+/**
+ * Two presentations for two very different situations. Being offline, or having Review Submissions
+ * the server refused, is a standing state the Learner has to know about and may need to act on — it
+ * earns the sticky bar. A sync in flight is neither: it resolves on its own within a second, so it
+ * shows as a floating toast that reassures without taking a row of the layout and shifting the
+ * Exercise she is in the middle of answering.
+ */
 export function ConnectivityBanner() {
   const { t } = useTranslation();
   const { submissionSync } = useReviewSubmissions();
@@ -16,8 +23,16 @@ export function ConnectivityBanner() {
   else if (!online) message = t("connectivity.offline");
   else if (submissionSync.failedCount > 0)
     message = t("connectivity.failed", { count: submissionSync.failedCount });
-  else if (submissionSync.syncing) message = t("connectivity.syncing");
-  if (!message) return null;
+
+  // `aria-live` rather than `role="status"`, matching the bar below: the two announce the same way,
+  // and a second `status` role floating over every screen made `getByRole("status")` ambiguous for
+  // any Exercise that has one of its own, whenever a sync happened to still be in flight.
+  if (!message)
+    return submissionSync.syncing ? (
+      <p className={styles.toast} aria-live="polite">
+        {t("connectivity.syncing")}
+      </p>
+    ) : null;
 
   return (
     <aside className={styles.banner} aria-live="polite">

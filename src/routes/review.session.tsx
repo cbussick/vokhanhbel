@@ -1,7 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Navigate, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
-import { useTranslation } from "react-i18next";
 import { FlipCardExercise } from "../components/review/FlipCardExercise";
 import { MatchingExercise } from "../components/review/MatchingExercise";
 import { MultipleChoiceExercise } from "../components/review/MultipleChoiceExercise";
@@ -27,7 +26,6 @@ const issueKeysByIssue = {
  * the Exercises share and the handlers that reset it as the Session advances.
  */
 function ReviewSessionRoute() {
-  const { t } = useTranslation();
   const navigate = useNavigate();
   const reviewSession = useReviewSession();
   const online = useOnlineStatus();
@@ -39,8 +37,6 @@ function ReviewSessionRoute() {
   const [frontAudioAvailable, setFrontAudioAvailable] = useState(true);
   const [backAudioAvailable, setBackAudioAvailable] = useState(true);
   const [unavailableOptionIds, setUnavailableOptionIds] = useState<ReadonlySet<string>>(new Set());
-  const [selectedFrontCardId, setSelectedFrontCardId] = useState<string | undefined>(undefined);
-  const [matchingMismatch, setMatchingMismatch] = useState("");
 
   if (reviewSession.view.kind === "idle") return <Navigate to="/review" />;
 
@@ -56,8 +52,6 @@ function ReviewSessionRoute() {
     setFrontAudioAvailable(true);
     setBackAudioAvailable(true);
     setUnavailableOptionIds(new Set());
-    setSelectedFrontCardId(undefined);
-    setMatchingMismatch("");
   };
 
   const setOptionAvailability = (optionId: string, available: boolean) => {
@@ -116,18 +110,10 @@ function ReviewSessionRoute() {
         view={view}
         issueKey={issueKey}
         online={online}
-        selectedFrontCardId={selectedFrontCardId}
-        mismatchAnnouncement={matchingMismatch}
         tutorOpen={tutorOpen}
         tutorCard={view.cards.find((candidate) => candidate.id === tutorSubjectCardId)}
         onClose={close}
         onAdvance={advance}
-        onSelectFront={setSelectedFrontCardId}
-        onAttemptPair={(frontCardId, backCardId) => {
-          reviewSession.attemptMatchingPair(frontCardId, backCardId);
-          setSelectedFrontCardId(undefined);
-          setMatchingMismatch(frontCardId === backCardId ? "" : t("review.matchingMismatch"));
-        }}
         onOpenTutor={(cardId) => {
           setTutorSubjectCardId(cardId);
           setTutorOpen(true);
@@ -144,13 +130,6 @@ function ReviewSessionRoute() {
   const tutorDisabled = !online && Boolean(card.front.text) && Boolean(card.back.text);
 
   if (view.kind === "swipe") {
-    // Every Card's own "Weiter" dismisses its resolution; on the deck's last Card, it also leaves
-    // the whole Exercise in the same tap — sparing a second, redundant confirmation.
-    const continueSwipeDeck = () => {
-      reviewSession.continueSwipeCard();
-      if (view.isLastCard) advance();
-    };
-
     return (
       <SwipeExercise
         view={view}
@@ -159,7 +138,7 @@ function ReviewSessionRoute() {
         tutorDisabled={tutorDisabled}
         onClose={close}
         onChoose={reviewSession.chooseSwipeOption}
-        onContinue={continueSwipeDeck}
+        onAdvance={advance}
         onOpenTutor={() => setTutorOpen(true)}
         onCloseTutor={() => setTutorOpen(false)}
       />

@@ -1100,8 +1100,12 @@ for (const viewport of [
     await page
       .getByRole("button", { name: viewport.name === "mobile" ? "Zurück" : "Schließen" })
       .click();
-    await page.getByRole("button", { name: /Gewusst/ }).click();
+    // Graded forgot rather than knew_it so the summary this baseline captures is the two-button
+    // one — the repeat action beside the finish action, which is where their relative weight, and
+    // the room the longer German label needs, are actually visible.
+    await page.getByRole("button", { name: "Vergessen" }).click();
     await expect(page.getByRole("heading", { name: "Gut gemacht!" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Vergessene wiederholen" })).toBeVisible();
     await expectNoSeriousAxeViolations(page);
     await expect(page).toHaveScreenshot(`review-summary-${viewport.name}.png`, {
       animations: "disabled",
@@ -1341,11 +1345,30 @@ for (const viewport of [
     await page.keyboard.press("Enter");
     await expect(frontApfel).toHaveAttribute("aria-pressed", "true");
     await backPear.click();
-    await expect(page.getByRole("status")).toHaveText(/kein Paar/);
+    // Scoped to the rejection's own live region: the reserved footer holds a second, still-empty
+    // status region for the board's outcome.
+    await expect(page.getByRole("status").filter({ hasText: /kein Paar/ })).toHaveCount(1);
+    await expect(page).toHaveScreenshot(`review-matching-mismatch-${viewport.name}.png`, {
+      animations: "disabled",
+    });
 
-    await frontApfel.click();
+    // Either column may open an attempt: a back tapped first, then its front, pairs just the same.
     await backApple.click();
+    await expect(backApple).toHaveAttribute("aria-pressed", "true");
+    // Selected by pointer rather than by keyboard, so this captures the selected state on its own
+    // without a focus ring on top of it — it has to read as picked up next to the plain entries.
+    await expect(page).toHaveScreenshot(`review-matching-selected-${viewport.name}.png`, {
+      animations: "disabled",
+    });
+    await frontApfel.click();
     await expect(frontApfel).toHaveAccessibleName(/zugeordnet/);
+
+    // Mid-board a matched entry is disabled, having nothing left to match against — but it is a
+    // finished answer, not an unavailable control, so it must not be dimmed like one.
+    await expect(frontApfel).toBeDisabled();
+    await expect(frontApfel).toHaveCSS("opacity", "1");
+
+    // The rest front-first, the other way round.
     await page.getByRole("button", { name: /^die Birne/ }).click();
     await backPear.click();
     await page.getByRole("button", { name: /^der Pfirsich/ }).click();
@@ -1405,6 +1428,36 @@ for (const viewport of [
       animations: "disabled",
     });
 
+    // Dragging the Card well past the arena must not hand the page a scrollbar to chase it with.
+    // Brought back to the middle before release, so it falls short of either threshold and springs
+    // back — the rest of this journey still starts from an unanswered Card.
+    const cardBox = (await page.getByText("der Apfel").boundingBox())!;
+    const cardCentre = { x: cardBox.x + cardBox.width / 2, y: cardBox.y + cardBox.height / 2 };
+
+    await page.mouse.move(cardCentre.x, cardCentre.y);
+    await page.mouse.down();
+    await page.mouse.move(viewport.width - 4, viewport.height - 12, { steps: 8 });
+    expect(
+      await page.evaluate<number>("document.documentElement.scrollWidth"),
+      "dragging a Swipe Card must not overflow the page horizontally",
+    ).toBeLessThanOrEqual(await page.evaluate<number>("document.documentElement.clientWidth"));
+    expect(
+      await page.evaluate<number>("document.documentElement.scrollHeight"),
+      "dragging a Swipe Card must not overflow the page vertically",
+    ).toBeLessThanOrEqual(await page.evaluate<number>("document.documentElement.clientHeight"));
+    // Held past the threshold: the bucket it would land in says so, which is the only signal the
+    // gesture gives before release.
+    await expect(page).toHaveScreenshot(`review-swipe-armed-${viewport.name}.png`, {
+      animations: "disabled",
+    });
+
+    await page.mouse.move(cardCentre.x, cardCentre.y, { steps: 8 });
+    await page.mouse.up();
+    // Parked clear of every control, so no stray hover state reaches the screenshots below.
+    await page.mouse.move(2, 2);
+    await expect(page.getByText("Richtig!")).toBeHidden();
+    await expect(page.getByText("Leider falsch.")).toBeHidden();
+
     // Tapping an answer commits it identically to a drag, and is the keyboard route.
     await wrongOption.focus();
     await expect(wrongOption).toBeFocused();
@@ -1431,22 +1484,52 @@ for (const viewport of [
       .getByRole("button", { name: viewport.name === "mobile" ? "Zurück" : "Schließen" })
       .click();
 
+    await continueButton.focus();
+    await expect(continueButton).toBeFocused();
     await continueButton.click();
+
+    // One Card per Swipe Exercise, and one grouped Exercise per Session — so the two Cards behind it
+    // follow as flip Cards, each with a single distractor that is enough for Swipe but not for
+    // multiple choice.
     await expect(page.getByText("die Birne")).toBeVisible();
+    await page.getByRole("button", { name: "Antwort zeigen" }).click();
+    await page
+      .getByRole("button", { name: /Gewusst/ })
+      .first()
+      .click();
+    await expect(page.getByText("der Pfirsich")).toBeVisible();
+    await page.getByRole("button", { name: "Antwort zeigen" }).click();
+    await page
+      .getByRole("button", { name: /Gewusst/ })
+      .first()
+      .click();
+    await expect(page.getByRole("heading", { name: "Gut gemacht!" })).toBeVisible();
+    await page.getByRole("button", { name: "Fertig" }).click();
 
     // A correct answer resolves the same way — green only, no red — and still waits for "Weiter"
-    // rather than auto-advancing, the same pause every other Exercise gives.
-    await page.getByRole("button", { name: "das Haus" }).click();
+    // rather than auto-advancing, the same pause every other Exercise gives. It needs a second
+    // Session, since a Swipe Exercise is answered once and there is only one per Session.
+    await page.getByRole("button", { name: "Review starten" }).click();
+    await expect(page.getByText("der Apfel")).toBeVisible();
+
+    // Answered by dragging this time rather than tapping: past the threshold toward "the apple" on
+    // the right, released without the pointer ever reaching the bucket itself.
+    const secondCard = (await page.getByText("der Apfel").boundingBox())!;
+
+    await page.mouse.move(
+      secondCard.x + secondCard.width / 2,
+      secondCard.y + secondCard.height / 2,
+    );
+    await page.mouse.down();
+    await page.mouse.move(viewport.width - 4, secondCard.y + secondCard.height / 2, { steps: 8 });
+    await page.mouse.up();
+    await page.mouse.move(2, 2);
+
     await expect(page.getByText("Richtig!")).toBeVisible();
-    await expect(page.getByRole("button", { name: "das Haus" })).toHaveAccessibleName(/richtig/);
+    await expect(page.getByRole("button", { name: "the apple" })).toHaveAccessibleName(/richtig/);
     await expectNoSeriousAxeViolations(page);
     await expect(page).toHaveScreenshot(`review-swipe-resolved-correct-${viewport.name}.png`, {
       animations: "disabled",
     });
-
-    await continueButton.focus();
-    await expect(continueButton).toBeFocused();
-    await continueButton.click();
-    await expect(page.getByText("der Pfirsich")).toBeVisible();
   });
 }

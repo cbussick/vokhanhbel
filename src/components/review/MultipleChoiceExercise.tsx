@@ -8,7 +8,7 @@ import { audioOnlyFaceUnavailable } from "./audioOnlyFace";
 import { AudioUnavailableNotice } from "./AudioUnavailableNotice";
 import { ExerciseScreen } from "./ExerciseScreen";
 import { MultipleChoiceOptions } from "./MultipleChoiceOptions";
-import { TutorButton } from "./TutorButton";
+import { ResolutionFooter } from "./ResolutionFooter";
 import styles from "./reviewSession.module.css";
 
 /**
@@ -59,6 +59,14 @@ export function MultipleChoiceExercise({
       issueKey={issueKey}
       issueRequestId={view.issueRequestId}
       onClose={onClose}
+      footer={
+        <ResolutionFooter
+          resolved={view.resolved}
+          verdict={t(view.correct ? "review.answerCorrect" : "review.answerWrong")}
+          onAdvance={onAdvance}
+          tutor={{ onOpen: onOpenTutor, disabled: tutorDisabled }}
+        />
+      }
       dialog={
         tutorOpen &&
         view.resolved && (
@@ -87,17 +95,6 @@ export function MultipleChoiceExercise({
         onOptionAvailabilityChange={onOptionAvailabilityChange}
         onChoose={reviewSession.chooseOption}
       />
-      {view.resolved && (
-        <>
-          <p className={styles.outcome} role="status">
-            {t(view.correct ? "review.answerCorrect" : "review.answerWrong")}
-          </p>
-          <TutorButton onClick={onOpenTutor} disabled={tutorDisabled} />
-          <button type="button" className={styles.revealButton} onClick={onAdvance}>
-            {t("review.continue")}
-          </button>
-        </>
-      )}
       {(frontRequiredUnavailable || optionsAudioUnavailable) && (
         <AudioUnavailableNotice onSkip={onSkip} />
       )}

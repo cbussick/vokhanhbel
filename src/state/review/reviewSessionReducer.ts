@@ -1,8 +1,4 @@
-import type {
-  MatchingExercise,
-  PlannedExercise,
-  SwipeExercise,
-} from "../../domain/exercisePlanner";
+import type { MatchingExercise, PlannedExercise } from "../../domain/exercisePlanner";
 import type { ReviewSubmission } from "./reviewSubmission";
 
 export type ReviewSubmissionIssue = "too-old" | "clock" | "deleted" | "conflict";
@@ -53,28 +49,15 @@ interface MatchingProgress {
 }
 
 /**
- * A Card already graded within the current Swipe deck, in resolution order. Which specific option
- * was chosen doesn't need recording: a Swipe Card has exactly two options, so `correct` alone tells
- * the view which one it was — the correct option's own text when `true`, the other (only wrong)
- * option's text when `false`. See `SwipeExerciseView.tutorExercise` in ReviewSessionContext.tsx.
- */
-interface ResolvedSwipeCard {
-  cardId: string;
-  correct: boolean;
-}
-
-/**
- * Progress through the current Swipe deck. Unlike matching, only one Card is live at a time, and
- * unlike multiple choice there is no retry: a swipe grades — and enqueues its Review Submission —
- * the instant it commits, correct or wrong, which is what lets leaving mid-deck keep the Cards
- * already swiped. The deck still holds on that Card, `awaitingContinueCardId`, until "Weiter" moves
- * it to the next one — the same pause every other Exercise gives before advancing, letting the
- * Learner take in green (and, for a miss, the red beside it) at her own pace. Reset whenever
- * `currentIndex` moves.
+ * The verdict on the current Swipe Exercise, once it has one. Unlike multiple choice there is no
+ * retry: a swipe grades — and enqueues its Review Submission — the instant it commits, correct or
+ * wrong. Which specific option was chosen doesn't need recording either; a Swipe Card has exactly
+ * two, so `correct` alone tells the view which one it was — the correct option's own text when
+ * `true`, the other (only wrong) option's text when `false`. See `SwipeExerciseView.tutorExercise`
+ * in ReviewSessionContext.tsx. Reset whenever `currentIndex` moves.
  */
 interface SwipeProgress {
-  resolved: ResolvedSwipeCard[];
-  awaitingContinueCardId: string | undefined;
+  correct: boolean;
 }
 
 export type ReviewSessionState =
@@ -109,7 +92,6 @@ type ReviewSessionAction =
   | { type: "matchingPairMismatched"; cardIds: [string, string] }
   | { type: "matchingPairResolved"; submission: ReviewSubmission }
   | { type: "swipeCardResolved"; correct: boolean; submission: ReviewSubmission }
-  | { type: "swipeCardAdvanced" }
   | { type: "exerciseAdvanced" }
   | { type: "cardSkipped" }
   | { type: "forgottenRepeated" }
@@ -178,39 +160,6 @@ function shrinkMatchingExercise(
   return {
     replacement: { ...exercise, cards },
     matching: { resolvedCardIds, taintedCardIds },
-  };
-}
-
-interface SwipeShrinkResult {
-  replacement: PlannedExercise | undefined;
-  swipe: SwipeProgress | undefined;
-}
-
-/**
- * Removes `removedCardId` from a Swipe deck after its Review Submission is rejected as `deleted` or
- * `too-old` — the same reasoning as `shrinkMatchingExercise`: re-appending the whole deck would make
- * the Learner re-swipe Cards she already resolved. Unlike matching, a deck of one Card is still a
- * meaningful binary decision — nothing here is "the only one left, so it's obvious" the way a lone
- * matching pair is — so there is no flip-Card floor: the deck just shrinks until nothing is left to
- * grade, at which point it disappears entirely, like a deleted Card's Exercise does.
- */
-function shrinkSwipeDeck(
-  exercise: SwipeExercise,
-  swipe: SwipeProgress | undefined,
-  removedCardId: string,
-): SwipeShrinkResult {
-  const cards = exercise.cards.filter((card) => card.id !== removedCardId);
-  const deck = exercise.deck.filter((deckCard) => deckCard.cardId !== removedCardId);
-  const resolved = (swipe?.resolved ?? []).filter((entry) => entry.cardId !== removedCardId);
-  const awaitingContinueCardId =
-    swipe?.awaitingContinueCardId === removedCardId ? undefined : swipe?.awaitingContinueCardId;
-  const unresolved = cards.filter((card) => !resolved.some((entry) => entry.cardId === card.id));
-
-  if (unresolved.length === 0) return { replacement: undefined, swipe: undefined };
-
-  return {
-    replacement: { ...exercise, cards, deck },
-    swipe: { resolved, awaitingContinueCardId },
   };
 }
 
@@ -339,26 +288,8 @@ export function reviewSessionReducer(
         totalReviewSubmissions: state.reviewSession.totalReviewSubmissions + 1,
         optimisticPoints: state.reviewSession.optimisticPoints + action.submission.optimisticPoints,
       };
-      const resolvedCard: ResolvedSwipeCard = {
-        cardId: action.submission.card.id,
-        correct: action.correct,
-      };
 
-      return {
-        ...state,
-        reviewSession,
-        swipe: {
-          resolved: [...(state.swipe?.resolved ?? []), resolvedCard],
-          // Every swipe pauses the deck on its own resolution, correct or wrong, until "Weiter" —
-          // see the SwipeProgress doc comment for why.
-          awaitingContinueCardId: action.submission.card.id,
-        },
-      };
-    }
-    case "swipeCardAdvanced": {
-      if (state.status !== "reviewing" || !state.swipe?.awaitingContinueCardId) return state;
-
-      return { ...state, swipe: { ...state.swipe, awaitingContinueCardId: undefined } };
+      return { ...state, reviewSession, swipe: { correct: action.correct } };
     }
     case "exerciseAdvanced": {
       if (state.status !== "reviewing") return state;
@@ -369,7 +300,7 @@ export function reviewSessionReducer(
           : exercise?.kind === "matching"
             ? (state.matching?.resolvedCardIds.length ?? 0) === exercise.cards.length
             : exercise?.kind === "swipe"
-              ? (state.swipe?.resolved.length ?? 0) === exercise.cards.length
+              ? state.swipe !== undefined
               : false;
 
       if (!resolved) return state;
@@ -469,38 +400,33 @@ export function reviewSessionReducer(
 
       const rejectedExercise = exerciseWithCard(reviewSession.exercises, action.submission.card.id);
 
-      // A matching board or a Swipe deck shrinks rather than following the single-Card
-      // too-old/deleted paths below: re-appending or dropping the whole Exercise would throw away
-      // the other Cards already graded. See shrinkMatchingExercise and shrinkSwipeDeck.
+      // A matching board shrinks rather than following the single-Card too-old/deleted paths below:
+      // re-appending or dropping the whole board would throw away the pairs already graded. A Swipe
+      // Exercise grades one Card and so has nothing to protect — it takes those paths like any
+      // other single-Card Exercise. See shrinkMatchingExercise.
       if (
         (action.issue === "too-old" || action.issue === "deleted") &&
-        (rejectedExercise?.kind === "matching" || rejectedExercise?.kind === "swipe")
+        rejectedExercise?.kind === "matching"
       ) {
-        const isMatching = rejectedExercise.kind === "matching";
-        const matchingShrunk = isMatching
-          ? shrinkMatchingExercise(
-              rejectedExercise,
-              state.status === "reviewing" ? state.matching : undefined,
-              action.submission.card.id,
-            )
-          : undefined;
-        const swipeShrunk = !isMatching
-          ? shrinkSwipeDeck(
-              rejectedExercise,
-              state.status === "reviewing" ? state.swipe : undefined,
-              action.submission.card.id,
-            )
-          : undefined;
-        const replacement = matchingShrunk?.replacement ?? swipeShrunk?.replacement;
+        const shrunk = shrinkMatchingExercise(
+          rejectedExercise,
+          state.status === "reviewing" ? state.matching : undefined,
+          action.submission.card.id,
+        );
         const exercises = reviewSession.exercises.flatMap((exercise) =>
-          exercise === rejectedExercise ? (replacement ? [replacement] : []) : [exercise],
+          exercise === rejectedExercise
+            ? shrunk.replacement
+              ? [shrunk.replacement]
+              : []
+            : [exercise],
         );
         const currentIndex = findNextUngradedExercise(exercises, roundSubmissions);
 
         if (currentIndex < 0)
           return { status: "summary", reviewSession: { ...reviewSession, exercises } };
 
-        const replaced = replacement !== undefined && exercises[currentIndex] === replacement;
+        const replaced =
+          shrunk.replacement !== undefined && exercises[currentIndex] === shrunk.replacement;
 
         return {
           status: "reviewing",
@@ -508,8 +434,8 @@ export function reviewSessionReducer(
           currentIndex,
           revealed: false,
           multipleChoice: undefined,
-          matching: replaced ? matchingShrunk?.matching : undefined,
-          swipe: replaced ? swipeShrunk?.swipe : undefined,
+          matching: replaced ? shrunk.matching : undefined,
+          swipe: undefined,
           issue: action.issue,
           issueRequestId: action.requestId,
         };

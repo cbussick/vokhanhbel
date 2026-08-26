@@ -11,6 +11,13 @@ import styles from "./reviewSession.module.css";
  *
  * `dialog` is a slot rather than part of `children` because the Tutor dialog belongs beside the
  * scrolling body, not inside it.
+ *
+ * `footer` is a slot for the same reason plus one of its own: the controls an Exercise reveals once
+ * it has resolved — the verdict, Tutopher, "Weiter" — arrive all at once and used to shove the
+ * Exercise upward at the exact moment the Learner was reading her answer. Reserving their height
+ * from the start costs a band of empty space during the question and buys a screen that never moves
+ * under her. It is reserved rather than overlaid because in multiple choice the options sit at the
+ * bottom, and a panel sliding over them would cover the very answers she is checking.
  */
 export function ExerciseScreen({
   position,
@@ -20,6 +27,7 @@ export function ExerciseScreen({
   onClose,
   children,
   dialog,
+  footer,
 }: {
   position: number;
   total: number;
@@ -28,6 +36,7 @@ export function ExerciseScreen({
   onClose: () => void;
   children: ReactNode;
   dialog?: ReactNode;
+  footer: ReactNode;
 }) {
   const { t } = useTranslation();
 
@@ -63,6 +72,7 @@ export function ExerciseScreen({
               </p>
             )}
             {children}
+            <div className={styles.resolutionFooter}>{footer}</div>
           </div>
           {dialog}
         </section>
