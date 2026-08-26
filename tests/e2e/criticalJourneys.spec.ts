@@ -61,6 +61,24 @@ async function json(route: Route, body: unknown, status = 200) {
 }
 
 async function installMockApi(page: Page, authenticated = true) {
+  // The Exercise planner shuffles options, matching columns and the Swipe deck with `Math.random`,
+  // and the summary confetti places its pieces the same way. Left unseeded, that content lands
+  // somewhere new on every run, so every visual baseline covering an Exercise would be unstable by
+  // construction. Seeding it here keeps the app's own code untouched and makes a planned Session
+  // reproducible, which is also what lets these tests name the option they expect to be correct.
+  await page.addInitScript(() => {
+    let seed = 0x2f6e2b1;
+
+    Math.random = () => {
+      seed = (seed + 0x6d2b79f5) | 0;
+
+      let mixed = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+
+      mixed = (mixed + Math.imul(mixed ^ (mixed >>> 7), 61 | mixed)) ^ mixed;
+
+      return ((mixed ^ (mixed >>> 14)) >>> 0) / 4_294_967_296;
+    };
+  });
   const state = {
     authenticated,
     cards: [createCard()],
@@ -132,6 +150,7 @@ async function installMockApi(page: Page, authenticated = true) {
         totalPoints: 35,
         activeCardCount: state.cards.length,
         reviewsThisWeek: 4,
+        currentStreak: 3,
         bestDay: { date: "2026-07-14", reviewCount: 4 },
         dailyRecap: { period: "today", date: "2026-07-14", reviewCount: 4, knewItCount: 3 },
       });
@@ -818,6 +837,7 @@ test("uses desktop space for route content without overstretching focused work",
   const activeCardsBox = await page.getByText("Aktive Karten").locator("..").boundingBox();
   const weeklyReviewsBox = await page.getByText("Reviews diese Woche").locator("..").boundingBox();
   const bestDayBox = await page.getByText("Bester Tag").locator("..").boundingBox();
+  const streakTile = page.getByText("Streak", { exact: true }).locator("..");
 
   expect(pointsBox).not.toBeNull();
   expect(activeCardsBox).not.toBeNull();
@@ -827,10 +847,17 @@ test("uses desktop space for route content without overstretching focused work",
   expect(activeCardsBox!.y).toBeGreaterThan(pointsBox!.y);
   expect(Math.abs(activeCardsBox!.y - weeklyReviewsBox!.y)).toBeLessThanOrEqual(1);
   expect(Math.abs(weeklyReviewsBox!.y - bestDayBox!.y)).toBeLessThanOrEqual(1);
+  // The Streak sits beside the other figures on "Ich", never in the permanent app header.
+  await expect(streakTile).toBeVisible();
+  await expect(streakTile.locator("dd")).toHaveText("3");
+  await expect(page.getByRole("banner").getByText("Streak", { exact: true })).toBeHidden();
 
   await page.getByRole("link", { name: /Wiederholen/ }).click();
   await page.getByRole("button", { name: "Review starten" }).click();
-  await expect(page.getByRole("button", { name: "Antwort zeigen" })).toBeVisible();
+  // The progress indicator, not a flip Card's "Antwort zeigen": these three Cards can supply one
+  // distractor but not three, so the planner now gives them Swipe rather than falling back to flip.
+  // This test is about the focused layout's width, which every Exercise kind shares.
+  await expect(page.getByRole("progressbar")).toBeVisible();
 
   const focusedMainBox = await page.locator("main").boundingBox();
   const layoutWidth = await page.evaluate<number>("document.body.clientWidth");
@@ -1075,6 +1102,7 @@ for (const viewport of [
       .click();
     await page.getByRole("button", { name: /Gewusst/ }).click();
     await expect(page.getByRole("heading", { name: "Gut gemacht!" })).toBeVisible();
+    await expectNoSeriousAxeViolations(page);
     await expect(page).toHaveScreenshot(`review-summary-${viewport.name}.png`, {
       animations: "disabled",
     });
@@ -1136,5 +1164,289 @@ for (const viewport of [
     await expect(page).toHaveScreenshot(`review-audio-only-back-${viewport.name}.png`, {
       animations: "disabled",
     });
+  });
+}
+
+for (const viewport of [
+  { name: "mobile", width: 390, height: 844 },
+  { name: "tablet", width: 768, height: 900 },
+  { name: "desktop", width: 1440, height: 1000 },
+] as const) {
+  test(`answers a multiple-choice Exercise accessibly at ${viewport.name} width`, async ({
+    page,
+    browserName,
+  }) => {
+    test.skip(browserName !== "chromium", "One browser owns the cross-platform visual baselines.");
+    await page.setViewportSize(viewport);
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    const state = await installMockApi(page);
+
+    // Four Cards in one Collection with distinct backs, so each is eligible for multiple choice.
+    // The last two deliberately share a front: a matching board needs four Cards with no repeated
+    // text in either column, so the repeat leaves only three candidates and keeps matching — which
+    // the planner would otherwise pick ahead of multiple choice — out of this Session entirely.
+    state.cards = [
+      createCard("der Apfel", "the apple"),
+      createCard("die Birne", "the pear"),
+      createCard("der Pfirsich", "the peach"),
+      createCard("der Pfirsich", "the plum"),
+    ];
+    await page.goto("/review");
+    await page.getByRole("button", { name: "Review starten" }).click();
+
+    const wrongOption = page.getByRole("button", { name: "the pear" });
+    const correctOption = page.getByRole("button", { name: "the apple" });
+
+    await expect(page.getByText("der Apfel")).toBeVisible();
+    await expect(wrongOption).toBeVisible();
+    await expectNoSeriousAxeViolations(page);
+    await expect(page).toHaveScreenshot(`review-multiple-choice-unanswered-${viewport.name}.png`, {
+      animations: "disabled",
+    });
+
+    await wrongOption.click();
+    await expect(wrongOption).toBeDisabled();
+    await expect(page.getByRole("button", { name: "Weiter" })).toBeHidden();
+    await expectNoSeriousAxeViolations(page);
+    await expect(page).toHaveScreenshot(`review-multiple-choice-retry-${viewport.name}.png`, {
+      animations: "disabled",
+    });
+
+    await correctOption.click();
+    const tutorButton = page.getByRole("button", { name: "Mit Tutopher reden" });
+    const continueButton = page.getByRole("button", { name: "Weiter" });
+
+    await expect(continueButton).toBeVisible();
+    await expect(page.getByText("Richtig!")).toBeVisible();
+    // The outcome is announced through a live region, not only shown as text.
+    await expect(page.getByRole("status")).toHaveText("Richtig!");
+    // Colour is not the only signal: each option also carries an accessible-name label.
+    await expect(correctOption).toHaveAccessibleName(/richtig/);
+    await expect(wrongOption).toHaveAccessibleName(/falsch/);
+    await expectNoSeriousAxeViolations(page);
+    await expect(page).toHaveScreenshot(`review-multiple-choice-resolved-${viewport.name}.png`, {
+      animations: "disabled",
+    });
+
+    // Both controls the resolved state offers are keyboard reachable and operable.
+    await tutorButton.focus();
+    await expect(tutorButton).toBeFocused();
+    await page.keyboard.press("Enter");
+    await expect(page.getByRole("dialog", { name: "Tutopher" })).toBeVisible();
+    await page
+      .getByRole("button", { name: viewport.name === "mobile" ? "Zurück" : "Schließen" })
+      .click();
+    await continueButton.focus();
+    await expect(continueButton).toBeFocused();
+  });
+}
+
+for (const viewport of [
+  { name: "mobile", width: 390, height: 844 },
+  { name: "tablet", width: 768, height: 900 },
+  { name: "desktop", width: 1440, height: 1000 },
+] as const) {
+  test(`answers an audio multiple-choice Exercise accessibly at ${viewport.name} width`, async ({
+    page,
+    browserName,
+  }) => {
+    test.skip(browserName !== "chromium", "One browser owns the cross-platform visual baselines.");
+    await page.setViewportSize(viewport);
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    const state = await installMockApi(page);
+
+    // Four Cards in one Collection, each with a recorded back and no back text: every one is
+    // eligible to supply the others' audio distractors (VOK-17).
+    state.cards = [
+      createCard("der Apfel", { text: null, audio: audio("88888888-8888-4888-8888-888888888895") }),
+      createCard("die Birne", { text: null, audio: audio("88888888-8888-4888-8888-888888888896") }),
+      createCard("der Pfirsich", {
+        text: null,
+        audio: audio("88888888-8888-4888-8888-888888888897"),
+      }),
+      createCard("die Pflaume", {
+        text: null,
+        audio: audio("88888888-8888-4888-8888-888888888898"),
+      }),
+    ];
+    await page.goto("/review");
+    await page.getByRole("button", { name: "Review starten" }).click();
+
+    const option = (index: number) => page.getByRole("button", { name: `Option ${index} wählen` });
+    const weiter = page.getByRole("button", { name: "Weiter" });
+
+    await expect(page.getByText("der Apfel")).toBeVisible();
+    await expect(option(4)).toBeVisible();
+    await expectNoSeriousAxeViolations(page);
+    await expect(page).toHaveScreenshot(
+      `review-multiple-choice-audio-unanswered-${viewport.name}.png`,
+      { animations: "disabled" },
+    );
+
+    // Audio options carry no readable answer, so which one is correct is unknown here — but a
+    // first wrong pick only knocks that option out and re-asks (ADR-0014), and a second pick,
+    // right or wrong, always resolves the Exercise. Two clicks reach the resolved state either way.
+    await option(1).click();
+    await Promise.race([
+      weiter.waitFor({ state: "visible" }),
+      page.getByRole("button", { name: "Option 1 wählen", disabled: true }).waitFor({
+        state: "visible",
+      }),
+    ]);
+    if (!(await weiter.isVisible())) await option(2).click();
+    await expect(weiter).toBeVisible();
+    await expectNoSeriousAxeViolations(page);
+    await expect(page).toHaveScreenshot(
+      `review-multiple-choice-audio-resolved-${viewport.name}.png`,
+      { animations: "disabled" },
+    );
+  });
+
+  test(`matches a board accessibly, by keyboard, at ${viewport.name} width`, async ({
+    page,
+    browserName,
+  }) => {
+    test.skip(browserName !== "chromium", "One browser owns the cross-platform visual baselines.");
+    await page.setViewportSize(viewport);
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    const state = await installMockApi(page);
+
+    // Four Cards in one Collection, text on both faces, no duplicate front or back: an eligible
+    // matching group.
+    state.cards = [
+      createCard("der Apfel", "the apple"),
+      createCard("die Birne", "the pear"),
+      createCard("der Pfirsich", "the peach"),
+      createCard("die Pflaume", "the plum"),
+    ];
+    await page.goto("/review");
+    await page.getByRole("button", { name: "Review starten" }).click();
+
+    // Regex names, not exact strings: a matched entry's accessible name later grows a
+    // "· zugeordnet" suffix, and these locators need to keep resolving after that happens.
+    const frontApfel = page.getByRole("button", { name: /^der Apfel/ });
+    const backPear = page.getByRole("button", { name: /^the pear/ });
+    const backApple = page.getByRole("button", { name: /^the apple/ });
+
+    await expect(frontApfel).toBeVisible();
+    await expect(backPear).toBeVisible();
+    await expectNoSeriousAxeViolations(page);
+    await expect(page).toHaveScreenshot(`review-matching-unresolved-${viewport.name}.png`, {
+      animations: "disabled",
+    });
+
+    // A mis-pairing is announced, not just coloured, and costs nothing but a retry.
+    await frontApfel.focus();
+    await expect(frontApfel).toBeFocused();
+    await page.keyboard.press("Enter");
+    await expect(frontApfel).toHaveAttribute("aria-pressed", "true");
+    await backPear.click();
+    await expect(page.getByRole("status")).toHaveText(/kein Paar/);
+
+    await frontApfel.click();
+    await backApple.click();
+    await expect(frontApfel).toHaveAccessibleName(/zugeordnet/);
+    await page.getByRole("button", { name: /^die Birne/ }).click();
+    await backPear.click();
+    await page.getByRole("button", { name: /^der Pfirsich/ }).click();
+    await page.getByRole("button", { name: /^the peach/ }).click();
+    await page.getByRole("button", { name: /^die Pflaume/ }).click();
+    await page.getByRole("button", { name: /^the plum/ }).click();
+
+    const continueButton = page.getByRole("button", { name: "Weiter" });
+
+    await expect(page.getByText("Alle Paare gefunden!")).toBeVisible();
+    await expectNoSeriousAxeViolations(page);
+    await expect(page).toHaveScreenshot(`review-matching-resolved-${viewport.name}.png`, {
+      animations: "disabled",
+    });
+
+    // A resolved pair opens Tutopher for its own Card, reachable by keyboard like any other.
+    await frontApfel.focus();
+    await expect(frontApfel).toBeFocused();
+    await page.keyboard.press("Enter");
+    await expect(page.getByRole("dialog", { name: "Tutopher" })).toBeVisible();
+    await page
+      .getByRole("button", { name: viewport.name === "mobile" ? "Zurück" : "Schließen" })
+      .click();
+    await continueButton.focus();
+    await expect(continueButton).toBeFocused();
+  });
+
+  test(`swipes a Card onto an answer accessibly, by tap and by keyboard, at ${viewport.name} width`, async ({
+    page,
+    browserName,
+  }) => {
+    test.skip(browserName !== "chromium", "One browser owns the cross-platform visual baselines.");
+    await page.setViewportSize(viewport);
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    const state = await installMockApi(page);
+
+    // Three Cards, isolated in their own Collection: "die Birne" and "der Pfirsich" share a back,
+    // so each of the three ends up with exactly one distinct-text distractor — enough for Swipe,
+    // one short of multiple choice's three (VOK-19's own eligibility, ahead of the flip fallback).
+    state.cards = [
+      createCard("der Apfel", "the apple"),
+      createCard("die Birne", "das Haus"),
+      createCard("der Pfirsich", "das Haus"),
+    ];
+    await page.goto("/review");
+    await page.getByRole("button", { name: "Review starten" }).click();
+
+    const wrongOption = page.getByRole("button", { name: "das Haus" });
+    const correctOption = page.getByRole("button", { name: "the apple" });
+    const continueButton = page.getByRole("button", { name: "Weiter" });
+
+    await expect(page.getByText("der Apfel")).toBeVisible();
+    await expect(wrongOption).toBeVisible();
+    await expect(correctOption).toBeVisible();
+    await expectNoSeriousAxeViolations(page);
+    await expect(page).toHaveScreenshot(`review-swipe-unanswered-${viewport.name}.png`, {
+      animations: "disabled",
+    });
+
+    // Tapping an answer commits it identically to a drag, and is the keyboard route.
+    await wrongOption.focus();
+    await expect(wrongOption).toBeFocused();
+    await page.keyboard.press("Enter");
+
+    await expect(page.getByText("Leider falsch.")).toBeVisible();
+    await expect(page.getByRole("status")).toHaveText("Leider falsch.");
+    await expect(correctOption).toHaveAccessibleName(/richtig/);
+    await expect(wrongOption).toHaveAccessibleName(/falsch/);
+    await expectNoSeriousAxeViolations(page);
+    await expect(page).toHaveScreenshot(`review-swipe-resolved-wrong-${viewport.name}.png`, {
+      animations: "disabled",
+    });
+
+    // Tutopher and "Weiter" are both reachable by keyboard from the resolution, like every other
+    // Exercise's resolved state.
+    const tutorButton = page.getByRole("button", { name: "Mit Tutopher reden" });
+
+    await tutorButton.focus();
+    await expect(tutorButton).toBeFocused();
+    await page.keyboard.press("Enter");
+    await expect(page.getByRole("dialog", { name: "Tutopher" })).toBeVisible();
+    await page
+      .getByRole("button", { name: viewport.name === "mobile" ? "Zurück" : "Schließen" })
+      .click();
+
+    await continueButton.click();
+    await expect(page.getByText("die Birne")).toBeVisible();
+
+    // A correct answer resolves the same way — green only, no red — and still waits for "Weiter"
+    // rather than auto-advancing, the same pause every other Exercise gives.
+    await page.getByRole("button", { name: "das Haus" }).click();
+    await expect(page.getByText("Richtig!")).toBeVisible();
+    await expect(page.getByRole("button", { name: "das Haus" })).toHaveAccessibleName(/richtig/);
+    await expectNoSeriousAxeViolations(page);
+    await expect(page).toHaveScreenshot(`review-swipe-resolved-correct-${viewport.name}.png`, {
+      animations: "disabled",
+    });
+
+    await continueButton.focus();
+    await expect(continueButton).toBeFocused();
+    await continueButton.click();
+    await expect(page.getByText("der Pfirsich")).toBeVisible();
   });
 }

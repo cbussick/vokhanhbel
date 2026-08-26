@@ -1,27 +1,46 @@
-/* eslint-disable jsx-a11y/no-noninteractive-tabindex -- visible Card faces are intentionally keyboard-scrollable regions */
+import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Navigate, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { AppShell } from "../components/AppShell";
-import { CardFace } from "../components/audio/CardFace";
-import { RequireSession } from "../components/RequireSession";
-import { TutorDialog } from "../components/TutorDialog";
+import { FlipCardExercise } from "../components/review/FlipCardExercise";
+import { MatchingExercise } from "../components/review/MatchingExercise";
+import { MultipleChoiceExercise } from "../components/review/MultipleChoiceExercise";
+import { SessionSummary } from "../components/review/SessionSummary";
+import { SwipeExercise } from "../components/review/SwipeExercise";
 import type { Grade } from "../domain/review";
-import { useOnlineStatus } from "../lib/browserState";
+import { prefersReducedMotion, useOnlineStatus } from "../lib/browserState";
+import { statsQuery } from "../lib/queries";
 import { useReviewSession } from "../state/ReviewSessionContext";
-import styles from "./reviewSession.module.css";
 
 export const Route = createFileRoute("/review/session")({ component: ReviewSessionRoute });
 
+const issueKeysByIssue = {
+  "too-old": "review.tooOld",
+  clock: "review.clock",
+  deleted: "review.removed",
+  conflict: "review.conflict",
+} as const;
+
+/**
+ * Dispatches the Review Session's current view to the Exercise that renders it. The screen chrome
+ * lives in `ExerciseScreen`, and each Exercise owns its own body — this route holds only the state
+ * the Exercises share and the handlers that reset it as the Session advances.
+ */
 function ReviewSessionRoute() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const reviewSession = useReviewSession();
   const online = useOnlineStatus();
+  // Read the Streak from the same query "Ich" reads, so the two never diverge (see ADR-0008).
+  const stats = useQuery(statsQuery);
   const [tutorOpen, setTutorOpen] = useState(false);
+  const [tutorSubjectCardId, setTutorSubjectCardId] = useState<string | undefined>(undefined);
   const [revealComplete, setRevealComplete] = useState(false);
   const [frontAudioAvailable, setFrontAudioAvailable] = useState(true);
   const [backAudioAvailable, setBackAudioAvailable] = useState(true);
+  const [unavailableOptionIds, setUnavailableOptionIds] = useState<ReadonlySet<string>>(new Set());
+  const [selectedFrontCardId, setSelectedFrontCardId] = useState<string | undefined>(undefined);
+  const [matchingMismatch, setMatchingMismatch] = useState("");
 
   if (reviewSession.view.kind === "idle") return <Navigate to="/review" />;
 
@@ -30,217 +49,160 @@ function ReviewSessionRoute() {
     void navigate({ to: "/review" });
   };
 
+  const resetFaceState = () => {
+    setRevealComplete(false);
+    setTutorOpen(false);
+    setTutorSubjectCardId(undefined);
+    setFrontAudioAvailable(true);
+    setBackAudioAvailable(true);
+    setUnavailableOptionIds(new Set());
+    setSelectedFrontCardId(undefined);
+    setMatchingMismatch("");
+  };
+
+  const setOptionAvailability = (optionId: string, available: boolean) => {
+    setUnavailableOptionIds((current) => {
+      const next = new Set(current);
+
+      if (available) next.delete(optionId);
+      else next.add(optionId);
+
+      return next;
+    });
+  };
+
   const reveal = () => {
-    if (reviewSession.view.kind !== "card" || reviewSession.view.revealed) return;
+    if (reviewSession.view.kind !== "flip" || reviewSession.view.revealed) return;
 
     reviewSession.revealAnswer();
 
-    const duration = matchMedia("(prefers-reduced-motion: reduce)").matches ? 120 : 250;
+    const duration = prefersReducedMotion() ? 120 : 250;
 
     window.setTimeout(() => setRevealComplete(true), duration);
   };
 
-  const issueKey =
-    reviewSession.view.kind === "card" && reviewSession.view.issue === "too-old"
-      ? "review.tooOld"
-      : reviewSession.view.kind === "card" && reviewSession.view.issue === "clock"
-        ? "review.clock"
-        : reviewSession.view.kind === "card" && reviewSession.view.issue === "deleted"
-          ? "review.removed"
-          : reviewSession.view.kind === "card" && reviewSession.view.issue === "conflict"
-            ? "review.conflict"
-            : undefined;
+  const grade = (value: Grade) => {
+    reviewSession.gradeCard(value);
+    resetFaceState();
+  };
+
+  const advance = () => {
+    reviewSession.advanceExercise();
+    resetFaceState();
+  };
+
+  const skip = () => {
+    reviewSession.skipCard();
+    resetFaceState();
+  };
 
   if (reviewSession.view.kind === "summary") {
     return (
-      <RequireSession>
-        <AppShell title={t("review.title")}>
-          <section className={styles.summary}>
-            {reviewSession.view.firstRound && (
-              <div className={styles.confetti} aria-hidden="true">
-                ✦ · ✦ · ✦
-              </div>
-            )}
-            <h2>{t("review.summary")}</h2>
-            <p>
-              {t("review.summaryText", {
-                reviews: reviewSession.view.cumulativeReviewSubmissions,
-                points: reviewSession.view.cumulativeOptimisticPoints,
-              })}
-            </p>
-            <div>
-              {reviewSession.view.canRepeatForgotten && (
-                <button type="button" onClick={reviewSession.repeatForgotten}>
-                  {t("review.repeat")}
-                </button>
-              )}
-              <button type="button" onClick={close}>
-                {t("common.finish")}
-              </button>
-            </div>
-          </section>
-        </AppShell>
-      </RequireSession>
+      <SessionSummary
+        view={reviewSession.view}
+        currentStreak={stats.data?.currentStreak ?? 0}
+        onRepeatForgotten={reviewSession.repeatForgotten}
+        onFinish={close}
+      />
     );
   }
 
-  const card = reviewSession.view.currentCard;
-  const frontRequiredUnavailable =
-    !card.front.text && Boolean(card.front.audio) && !frontAudioAvailable;
-  const backRequiredUnavailable =
-    reviewSession.view.revealed &&
-    !card.back.text &&
-    Boolean(card.back.audio) &&
-    !backAudioAvailable;
+  const view = reviewSession.view;
+  const issueKey = view.issue ? issueKeysByIssue[view.issue] : undefined;
 
-  const grade = (value: Grade) => {
-    reviewSession.gradeCard(value);
-    setRevealComplete(false);
-    setTutorOpen(false);
-    setFrontAudioAvailable(true);
-    setBackAudioAvailable(true);
-  };
+  if (view.kind === "matching") {
+    return (
+      <MatchingExercise
+        view={view}
+        issueKey={issueKey}
+        online={online}
+        selectedFrontCardId={selectedFrontCardId}
+        mismatchAnnouncement={matchingMismatch}
+        tutorOpen={tutorOpen}
+        tutorCard={view.cards.find((candidate) => candidate.id === tutorSubjectCardId)}
+        onClose={close}
+        onAdvance={advance}
+        onSelectFront={setSelectedFrontCardId}
+        onAttemptPair={(frontCardId, backCardId) => {
+          reviewSession.attemptMatchingPair(frontCardId, backCardId);
+          setSelectedFrontCardId(undefined);
+          setMatchingMismatch(frontCardId === backCardId ? "" : t("review.matchingMismatch"));
+        }}
+        onOpenTutor={(cardId) => {
+          setTutorSubjectCardId(cardId);
+          setTutorOpen(true);
+        }}
+        onCloseTutor={() => {
+          setTutorOpen(false);
+          setTutorSubjectCardId(undefined);
+        }}
+      />
+    );
+  }
+
+  const card = view.currentCard;
+  const tutorDisabled = !online && Boolean(card.front.text) && Boolean(card.back.text);
+
+  if (view.kind === "swipe") {
+    // Every Card's own "Weiter" dismisses its resolution; on the deck's last Card, it also leaves
+    // the whole Exercise in the same tap — sparing a second, redundant confirmation.
+    const continueSwipeDeck = () => {
+      reviewSession.continueSwipeCard();
+      if (view.isLastCard) advance();
+    };
+
+    return (
+      <SwipeExercise
+        view={view}
+        issueKey={issueKey}
+        tutorOpen={tutorOpen}
+        tutorDisabled={tutorDisabled}
+        onClose={close}
+        onChoose={reviewSession.chooseSwipeOption}
+        onContinue={continueSwipeDeck}
+        onOpenTutor={() => setTutorOpen(true)}
+        onCloseTutor={() => setTutorOpen(false)}
+      />
+    );
+  }
+
+  if (view.kind === "multipleChoice") {
+    return (
+      <MultipleChoiceExercise
+        view={view}
+        issueKey={issueKey}
+        frontAudioAvailable={frontAudioAvailable}
+        unavailableOptionIds={unavailableOptionIds}
+        tutorOpen={tutorOpen}
+        tutorDisabled={tutorDisabled}
+        onClose={close}
+        onAdvance={advance}
+        onSkip={skip}
+        onFrontAudioAvailabilityChange={setFrontAudioAvailable}
+        onOptionAvailabilityChange={setOptionAvailability}
+        onOpenTutor={() => setTutorOpen(true)}
+        onCloseTutor={() => setTutorOpen(false)}
+      />
+    );
+  }
 
   return (
-    <RequireSession>
-      <AppShell title={t("review.title")} variant="focused">
-        <section className={styles.session}>
-          <header className={styles.sessionHeader}>
-            <button type="button" aria-label={t("review.close")} onClick={close}>
-              <svg aria-hidden="true" viewBox="0 0 24 24">
-                <path d="m5 5 14 14M19 5 5 19" />
-              </svg>
-            </button>
-            <div className={styles.progressWrap}>
-              <span aria-hidden="true">
-                {reviewSession.view.position} / {reviewSession.view.total}
-              </span>
-              <progress
-                id="review-progress"
-                aria-label={t("review.progress", {
-                  current: reviewSession.view.position,
-                  total: reviewSession.view.total,
-                })}
-                value={reviewSession.view.position - 1}
-                max={reviewSession.view.total}
-              />
-            </div>
-          </header>
-          <div className={styles.sessionBody}>
-            {issueKey && (
-              <p className={styles.issue} role="alert">
-                {t(issueKey)}
-                {reviewSession.view.issueRequestId && (
-                  <span>
-                    {" "}
-                    {t("review.requestId", { requestId: reviewSession.view.issueRequestId })}
-                  </span>
-                )}
-              </p>
-            )}
-            <div
-              className={`${styles.reviewCard} ${reviewSession.view.revealed ? styles.revealed : ""}`}
-            >
-              <section
-                className={styles.face}
-                aria-label={t("review.cardFront")}
-                aria-hidden={reviewSession.view.revealed}
-                tabIndex={reviewSession.view.revealed ? -1 : 0}
-              >
-                <CardFace
-                  face={card.front}
-                  label="front"
-                  onAudioAvailabilityChange={setFrontAudioAvailable}
-                />
-              </section>
-              <section
-                className={`${styles.face} ${styles.back}`}
-                aria-label={t("review.cardBack")}
-                aria-hidden={!reviewSession.view.revealed}
-                tabIndex={reviewSession.view.revealed ? 0 : -1}
-              >
-                <CardFace
-                  face={card.back}
-                  label="back"
-                  onAudioAvailabilityChange={setBackAudioAvailable}
-                />
-              </section>
-            </div>
-            {!reviewSession.view.revealed && (
-              <button
-                type="button"
-                className={styles.revealButton}
-                onClick={reveal}
-                disabled={frontRequiredUnavailable}
-              >
-                {t("review.reveal")}
-              </button>
-            )}
-            {reviewSession.view.revealed && revealComplete && (
-              <>
-                <button
-                  type="button"
-                  className={styles.tutorButton}
-                  onClick={() => setTutorOpen(true)}
-                  disabled={!online && Boolean(card.front.text) && Boolean(card.back.text)}
-                >
-                  <svg aria-hidden="true" viewBox="0 0 24 24">
-                    <path d="M12 2.5c.7 4.5 2.9 6.7 7.4 7.4-4.5.7-6.7 2.9-7.4 7.4-.7-4.5-2.9-6.7-7.4-7.4 4.5-.7 6.7-2.9 7.4-7.4Z" />
-                    <path
-                      d="M19 15.5c.35 2.2 1.45 3.3 3.65 3.65-2.2.35-3.3 1.45-3.65 3.65-.35-2.2-1.45-3.3-3.65-3.65 2.2-.35 3.3-1.45 3.65-3.65Z"
-                      opacity=".65"
-                    />
-                  </svg>
-                  {t("tutor.open")}
-                </button>
-                <fieldset
-                  className={styles.grades}
-                  disabled={
-                    backRequiredUnavailable ||
-                    reviewSession.view.issue === "clock" ||
-                    reviewSession.view.issue === "conflict"
-                  }
-                >
-                  <legend>{t("review.grading")}</legend>
-                  <button type="button" onClick={() => grade("forgot")}>
-                    {t("review.forgot")}
-                  </button>
-                  <button type="button" onClick={() => grade("almost")}>
-                    {t("review.almost")}
-                  </button>
-                  <button type="button" onClick={() => grade("knew_it")}>
-                    {t("review.knewIt")}
-                  </button>
-                </fieldset>
-              </>
-            )}
-            {(frontRequiredUnavailable || backRequiredUnavailable) && (
-              <div className={styles.audioUnavailable} role="alert">
-                <p>{t("review.audioRequiredUnavailable")}</p>
-                <button
-                  type="button"
-                  onClick={() => {
-                    reviewSession.skipCard();
-                    setRevealComplete(false);
-                    setFrontAudioAvailable(true);
-                    setBackAudioAvailable(true);
-                  }}
-                >
-                  {t("review.skipCard")}
-                </button>
-              </div>
-            )}
-          </div>
-          {tutorOpen && (
-            <TutorDialog
-              card={card}
-              messages={reviewSession.view.tutorConversation}
-              updateMessages={reviewSession.updateTutorConversation}
-              onClose={() => setTutorOpen(false)}
-            />
-          )}
-        </section>
-      </AppShell>
-    </RequireSession>
+    <FlipCardExercise
+      view={view}
+      issueKey={issueKey}
+      revealComplete={revealComplete}
+      frontAudioAvailable={frontAudioAvailable}
+      backAudioAvailable={backAudioAvailable}
+      tutorOpen={tutorOpen}
+      tutorDisabled={tutorDisabled}
+      onClose={close}
+      onReveal={reveal}
+      onGrade={grade}
+      onSkip={skip}
+      onFrontAudioAvailabilityChange={setFrontAudioAvailable}
+      onBackAudioAvailabilityChange={setBackAudioAvailable}
+      onOpenTutor={() => setTutorOpen(true)}
+      onCloseTutor={() => setTutorOpen(false)}
+    />
   );
 }

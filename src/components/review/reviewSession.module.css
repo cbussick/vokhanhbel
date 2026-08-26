@@ -224,6 +224,222 @@
   --grade-background: var(--color-success);
 }
 
+.visuallyHidden {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.promptFace {
+  display: grid;
+  place-items: center;
+  flex: 1 1 0;
+  min-block-size: 12rem;
+  padding: var(--space-6);
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-large);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-medium);
+}
+
+.options {
+  display: grid;
+  gap: var(--space-3);
+  padding: 0;
+  border: 0;
+}
+
+.optionsLegend {
+  padding: 0;
+  color: var(--color-text-secondary);
+  font-size: var(--font-sm);
+  font-weight: 600;
+}
+
+.optionsGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--space-2);
+}
+
+.option {
+  min-block-size: 56px;
+  display: grid;
+  place-items: center;
+  padding: var(--space-2);
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-medium);
+  background: var(--color-surface);
+  font-weight: 700;
+  text-align: center;
+}
+
+.optionDead {
+  border-color: var(--color-danger);
+  background: var(--color-danger);
+  color: #fff;
+}
+
+/* No `color: #fff` here, unlike .optionDead: white on --color-success is 2.4:1 and fails WCAG AA,
+   while the inherited --color-text is 5.2:1. This matches the green grade button, which has always
+   left its text colour alone for the same reason. */
+.optionCorrect {
+  border-color: var(--color-success);
+  background: var(--color-success);
+}
+
+.audioOption {
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-2);
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-medium);
+  background: var(--color-surface);
+}
+
+.chooseOption {
+  min-block-size: 44px;
+  border: 0;
+  border-radius: var(--radius-medium);
+  background: var(--color-primary);
+  color: var(--color-primary-text);
+  font-weight: 700;
+}
+
+.matchingBoard {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--space-3);
+}
+
+.matchingColumn {
+  display: grid;
+  gap: var(--space-2);
+  align-content: start;
+  padding: 0;
+  border: 0;
+}
+
+.matchingColumn legend {
+  padding: 0;
+  color: var(--color-text-secondary);
+  font-size: var(--font-sm);
+  font-weight: 600;
+}
+
+.matchingEntry {
+  min-block-size: 56px;
+  display: grid;
+  place-items: center;
+  padding: var(--space-2);
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-medium);
+  background: var(--color-surface);
+  font-weight: 700;
+  text-align: center;
+}
+
+.matchingEntrySelected {
+  border-color: var(--color-primary);
+  background: color-mix(in srgb, var(--color-primary) 12%, var(--color-surface));
+}
+
+/* Text colour left inherited, as in .optionCorrect: white on --color-success fails WCAG AA. */
+.matchingEntryMatched {
+  border-color: var(--color-success);
+  background: var(--color-success);
+}
+
+.swipeDeck {
+  position: relative;
+  flex: 1 1 0;
+  min-block-size: 12rem;
+}
+
+.swipeCard {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: var(--space-6);
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-large);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-medium);
+
+  /* Pointer-driven drag owns horizontal movement; without this a touch drag also pans the page. */
+  touch-action: none;
+}
+
+.swipeCardCurrent,
+.swipeCardFlying {
+  transition:
+    transform var(--duration-fast) var(--ease-standard),
+    opacity var(--duration-fast);
+}
+
+.swipeCardCurrent {
+  z-index: 3;
+  cursor: grab;
+}
+
+.swipeCardCurrent:active {
+  cursor: grabbing;
+}
+
+.swipeCardPeek1 {
+  z-index: 2;
+  transform: translateY(0.5rem) scale(0.96);
+  opacity: 0.85;
+}
+
+.swipeCardPeek2 {
+  z-index: 1;
+  transform: translateY(1rem) scale(0.92);
+  opacity: 0.7;
+}
+
+.swipeCardFlying {
+  z-index: 4;
+}
+
+.swipeCardFlyingLeft {
+  transform: translateX(-140%) rotate(-20deg);
+  opacity: 0;
+}
+
+.swipeCardFlyingRight {
+  transform: translateX(140%) rotate(20deg);
+  opacity: 0;
+}
+
+.swipeTargets {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--space-2);
+  padding: 0;
+  border: 0;
+}
+
+.swipeTarget {
+  transition: outline-color var(--duration-fast);
+}
+
+.swipeTargetHover {
+  outline: 3px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.outcome {
+  font-weight: 800;
+  text-align: center;
+}
+
 .issue {
   padding: var(--space-3);
   border: 1px solid var(--color-danger);
@@ -232,6 +448,7 @@
 }
 
 .summary {
+  position: relative;
   min-block-size: 28rem;
   display: grid;
   place-content: center;
@@ -247,6 +464,26 @@
 .summary h2 {
   font-family: var(--font-display);
   font-size: var(--font-3xl);
+  outline: none;
+}
+
+.summaryStats {
+  display: grid;
+  grid-auto-flow: column;
+  gap: var(--space-6);
+}
+
+.summaryStats dt {
+  color: var(--color-text-secondary);
+  font-size: var(--font-sm);
+  font-weight: 700;
+}
+
+.summaryStats dd {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--font-2xl);
+  font-weight: 800;
 }
 
 .summary > div:last-child {
@@ -264,9 +501,22 @@
 }
 
 .confetti {
-  color: var(--color-success);
-  font-size: var(--font-3xl);
-  animation: celebrate var(--duration-celebration) var(--ease-enter);
+  position: absolute;
+  inset: 0;
+  overflow: clip;
+  pointer-events: none;
+}
+
+.confettiPiece {
+  position: absolute;
+  inset-block-start: -8%;
+  inline-size: 0.5rem;
+  block-size: 0.875rem;
+  border-radius: var(--radius-small);
+  animation-name: confetti-fall;
+  animation-duration: var(--duration-celebration);
+  animation-timing-function: var(--ease-enter);
+  animation-fill-mode: forwards;
 }
 
 @keyframes grades-in {
@@ -282,10 +532,17 @@
   }
 }
 
-@keyframes celebrate {
-  50% {
-    translate: 0 -1rem;
-    scale: 1.2;
+@keyframes confetti-fall {
+  from {
+    translate: 0 0;
+    rotate: 0deg;
+    opacity: 1;
+  }
+
+  to {
+    translate: calc(var(--confetti-drift) * 4rem) 480%;
+    rotate: calc(var(--confetti-drift) * 540deg);
+    opacity: 0;
   }
 }
 
@@ -314,6 +571,11 @@
 
   .confetti {
     display: none;
+  }
+
+  .swipeCardCurrent,
+  .swipeCardFlying {
+    transition: none;
   }
 }
 
@@ -351,5 +613,17 @@
 
   .grades button:hover:not(:disabled) {
     background: color-mix(in srgb, var(--grade-background) 80%, white);
+  }
+
+  .option:hover:not(:disabled) {
+    background: var(--color-surface-hover);
+  }
+
+  .chooseOption:hover:not(:disabled) {
+    background: var(--color-primary-hover);
+  }
+
+  .matchingEntry:hover:not(:disabled) {
+    background: var(--color-surface-hover);
   }
 }

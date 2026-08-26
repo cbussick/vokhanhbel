@@ -8,7 +8,7 @@ export const apiPaths = {
   card: (cardId: string) => `/api/cards/${cardId}`,
   collection: (collectionId: string) => `/api/collections/${collectionId}`,
   topic: (topicId: string) => `/api/topics/${topicId}`,
-  tutorReplies: (cardId: string) => `/api/cards/${cardId}/tutor-replies`,
+  tutorReplies: "/api/tutor-replies",
   audio: (audioId: string) => `/api/audio/${audioId}`,
   stageAudio: "/api/audio",
 } as const;

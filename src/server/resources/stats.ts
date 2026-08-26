@@ -1,6 +1,8 @@
 import { z } from "zod";
 import { statsSchema, type Stats } from "../../contracts/stats.js";
-import { berlinTimeZone } from "../../domain/time.js";
+import { boxSchema } from "../../domain/review.js";
+import { calculateStreak } from "../../domain/streak.js";
+import { berlinTimeZone, toBerlinDay } from "../../domain/time.js";
 import { getPool } from "../database/client.js";
 
 const databaseNumberSchema = z.union([z.number(), z.string().regex(/^\d+$/u)]);
@@ -16,6 +18,36 @@ const dayRowSchema = z.object({
   review_count: databaseNumberSchema,
   knew_it_count: databaseNumberSchema,
 });
+
+const streakCardRowSchema = z.object({
+  id: z.uuid(),
+  created_at: z.date(),
+  deleted_at: z.date().nullable(),
+});
+
+const streakReviewRowSchema = z.object({
+  card_id: z.uuid(),
+  reviewed_at: z.date(),
+  box_after: boxSchema,
+});
+
+async function getCurrentStreak(): Promise<number> {
+  const cardRows = await getPool().query("SELECT id, created_at, deleted_at FROM cards");
+  const reviewRows = await getPool().query("SELECT card_id, reviewed_at, box_after FROM reviews");
+
+  const cards = cardRows.rows.map((row) => {
+    const parsed = streakCardRowSchema.parse(row);
+
+    return { id: parsed.id, createdAt: parsed.created_at, deletedAt: parsed.deleted_at };
+  });
+  const reviews = reviewRows.rows.map((row) => {
+    const parsed = streakReviewRowSchema.parse(row);
+
+    return { cardId: parsed.card_id, reviewedAt: parsed.reviewed_at, boxAfter: parsed.box_after };
+  });
+
+  return calculateStreak(cards, reviews, new Date());
+}
 
 export async function getStats(): Promise<Stats> {
   const summary = await getPool().query(
@@ -45,18 +77,15 @@ export async function getStats(): Promise<Stats> {
   );
   const row = statsRowSchema.parse(summary.rows[0]);
   const bestDay = best.rows[0] ? dayRowSchema.parse(best.rows[0]) : undefined;
-  const today = new Intl.DateTimeFormat("en-CA", {
-    timeZone: berlinTimeZone,
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).format(new Date());
+  const today = toBerlinDay(new Date());
   const recap = recent.rows[0] ? dayRowSchema.parse(recent.rows[0]) : undefined;
+  const currentStreak = await getCurrentStreak();
 
   return statsSchema.parse({
     totalPoints: Number(row.total_points),
     activeCardCount: Number(row.active_card_count),
     reviewsThisWeek: Number(row.reviews_this_week),
+    currentStreak,
     bestDay: bestDay ? { date: bestDay.date, reviewCount: Number(bestDay.review_count) } : null,
     dailyRecap: recap
       ? {
