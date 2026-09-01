@@ -31,7 +31,13 @@ export async function createCollection(input: CollectionInput) {
   try {
     const rows = await getDatabase()
       .insert(collections)
-      .values({ name: input.name, normalizedName: input.name, icon: input.icon })
+      .values({
+        name: input.name,
+        normalizedName: input.name,
+        icon: input.icon,
+        frontLanguage: input.frontLanguage,
+        backLanguage: input.backLanguage,
+      })
       .returning();
 
     return mapCollection(rows[0]!);
@@ -49,6 +55,8 @@ export async function updateCollection(collectionId: string, input: CollectionIn
         name: input.name,
         normalizedName: input.name,
         icon: input.icon,
+        frontLanguage: input.frontLanguage,
+        backLanguage: input.backLanguage,
         updatedAt: new Date(),
       })
       .where(and(eq(collections.id, collectionId), isNull(collections.deletedAt)))

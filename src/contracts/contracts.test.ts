@@ -39,10 +39,12 @@ describe("public contracts", () => {
     ).toBe(true);
   });
 
-  it("normalizes a Collection name and keeps it within 60 characters", () => {
+  it("normalizes a Collection name, keeps it within 60 characters, and declares no language", () => {
     expect(collectionInputSchema.parse({ name: "  Viet   namesisch ", icon: "flag-vn" })).toEqual({
       name: "Viet namesisch",
       icon: "flag-vn",
+      frontLanguage: null,
+      backLanguage: null,
     });
     expect(collectionInputSchema.safeParse({ name: "  ", icon: "book" }).success).toBe(false);
     expect(collectionInputSchema.safeParse({ name: "x".repeat(61), icon: "book" }).success).toBe(
@@ -67,6 +69,39 @@ describe("public contracts", () => {
         deletedAt: null,
       }).icon,
     ).toBe(defaultCollectionIcon);
+  });
+
+  it("accepts only full locales as a Collection face language and degrades unknown ones", () => {
+    expect(
+      collectionInputSchema.parse({
+        name: "Vietnamesisch",
+        icon: "flag-vn",
+        frontLanguage: "vi-VN",
+        backLanguage: null,
+      }),
+    ).toMatchObject({ frontLanguage: "vi-VN", backLanguage: null });
+    expect(
+      collectionInputSchema.safeParse({
+        name: "Vietnamesisch",
+        icon: "flag-vn",
+        frontLanguage: "vi",
+      }).success,
+    ).toBe(false);
+
+    const now = new Date().toISOString();
+    // A locale a newer deploy supports must still render here, as a face without a language.
+    expect(
+      collectionSchema.parse({
+        id: crypto.randomUUID(),
+        name: "Englisch",
+        icon: "flag-gb",
+        frontLanguage: "en-GB",
+        backLanguage: "de-DE",
+        createdAt: now,
+        updatedAt: now,
+        deletedAt: null,
+      }),
+    ).toMatchObject({ frontLanguage: null, backLanguage: "de-DE" });
   });
 
   it("moves a Card between Collections without other fields", () => {

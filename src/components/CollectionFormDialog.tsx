@@ -5,10 +5,12 @@ import { apiPaths } from "../contracts/apiPaths";
 import {
   collectionIconKeys,
   collectionInputSchema,
+  collectionLanguages,
   collectionSchema,
   defaultCollectionIcon,
   type Collection,
   type CollectionIconKey,
+  type CollectionLanguage,
 } from "../contracts/collection";
 import { problemTypes } from "../contracts/problem";
 import { apiRequest, ApiError } from "../lib/apiClient";
@@ -18,6 +20,53 @@ import { CollectionIcon } from "./CollectionIcon";
 import { Dialog } from "./Dialog";
 import { PendingActionContent } from "./PendingActionContent";
 import styles from "./Dialog.module.css";
+
+/**
+ * The empty option is the stored null, not a locale standing in for "not a language". Leaving it
+ * chosen is what says a face has no language, so the field needs no separate yes/no step.
+ */
+function LanguageField({
+  id,
+  label,
+  value,
+  disabled,
+  onChange,
+}: {
+  id: string;
+  label: string;
+  value: CollectionLanguage | null;
+  disabled: boolean;
+  onChange: (language: CollectionLanguage | null) => void;
+}) {
+  const { t } = useTranslation();
+
+  return (
+    <>
+      <label htmlFor={id} className={styles.fieldHeading}>
+        {label}
+      </label>
+      <span id={`${id}-hint`} className={styles.hint}>
+        {t("collections.languageHint")}
+      </span>
+      <select
+        id={id}
+        aria-describedby={`${id}-hint`}
+        value={value ?? ""}
+        disabled={disabled}
+        onChange={(event) =>
+          onChange(collectionLanguages.find((language) => language === event.target.value) ?? null)
+        }
+      >
+        <option value="">{t("collections.noLanguage")}</option>
+        {collectionLanguages.map((language) => (
+          <option key={language} value={language}>
+            {t(`collections.languages.${language}`)}
+          </option>
+        ))}
+      </select>
+    </>
+  );
+}
 
 export function CollectionFormDialog({
   collection,
@@ -39,6 +88,8 @@ export function CollectionFormDialog({
 
   const [name, setName] = useState(collection?.name ?? "");
   const [icon, setIcon] = useState<CollectionIconKey>(collection?.icon ?? defaultCollectionIcon);
+  const [frontLanguage, setFrontLanguage] = useState(collection?.frontLanguage ?? null);
+  const [backLanguage, setBackLanguage] = useState(collection?.backLanguage ?? null);
   const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
   const [error, setError] = useState<string>();
 
@@ -54,7 +105,7 @@ export function CollectionFormDialog({
 
   const save = useMutation({
     mutationFn: async () => {
-      const input = collectionInputSchema.parse({ name, icon });
+      const input = collectionInputSchema.parse({ name, icon, frontLanguage, backLanguage });
 
       return collectionSchema.parse(
         collection
@@ -199,6 +250,20 @@ export function CollectionFormDialog({
               </div>
             ))}
           </fieldset>
+          <LanguageField
+            id="collection-front-language"
+            label={t("collections.frontLanguage")}
+            value={frontLanguage}
+            disabled={isPending}
+            onChange={setFrontLanguage}
+          />
+          <LanguageField
+            id="collection-back-language"
+            label={t("collections.backLanguage")}
+            value={backLanguage}
+            disabled={isPending}
+            onChange={setBackLanguage}
+          />
           {error && (
             <p role="alert" className={styles.error}>
               {error}

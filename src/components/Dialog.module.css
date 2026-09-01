@@ -302,13 +302,18 @@
   outline-offset: 2px;
 }
 
-.body input {
+.body input,
+.body select {
   inline-size: 100%;
   min-block-size: 48px;
   padding: var(--space-2) var(--space-3);
   border: 2px solid var(--color-border);
   border-radius: var(--radius-medium);
   background: white;
+}
+
+.body select {
+  font-weight: 700;
 }
 
 .body textarea {

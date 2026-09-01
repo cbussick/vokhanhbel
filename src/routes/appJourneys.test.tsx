@@ -2,6 +2,7 @@ import { act, fireEvent, screen, waitFor, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
 import { describe, expect, it, vi } from "vitest";
+import type { CollectionInput } from "../contracts/collection";
 import { renderApp } from "../test/renderApp";
 import { mockServer, testCards, testCollections, testTopics } from "../test/server";
 
@@ -329,12 +330,12 @@ describe("rendered app journeys", () => {
     expect(screen.getByRole("heading", { name: "Karte erstellen" })).toBeVisible();
   });
 
-  it("creates a Collection with the chosen icon", async () => {
+  it("creates a Collection with the chosen icon and no declared language", async () => {
     const user = userEvent.setup();
-    let created: { name?: string; icon?: string } = {};
+    let created: Partial<CollectionInput> = {};
     mockServer.use(
       http.post("/api/collections", async ({ request }) => {
-        created = (await request.json()) as { name?: string; icon?: string };
+        created = (await request.json()) as Partial<CollectionInput>;
 
         return HttpResponse.json({ ...testCollections[0]!, ...created }, { status: 201 });
       }),
@@ -345,10 +346,72 @@ describe("rendered app journeys", () => {
     await user.type(await screen.findByLabelText("Name der Sammlung"), "Französisch");
 
     expect(screen.getByRole("radio", { name: "Standard" })).toBeChecked();
+    expect(screen.getByLabelText("Sprache der Vorderseite")).toHaveValue("");
+    expect(screen.getByLabelText("Sprache der Rückseite")).toHaveValue("");
     await user.click(screen.getByRole("radio", { name: "Vietnam" }));
     await user.click(screen.getByRole("button", { name: "Speichern" }));
 
-    await waitFor(() => expect(created).toEqual({ name: "Französisch", icon: "flag-vn" }));
+    await waitFor(() =>
+      expect(created).toEqual({
+        name: "Französisch",
+        icon: "flag-vn",
+        frontLanguage: null,
+        backLanguage: null,
+      }),
+    );
+  });
+
+  it("creates a Collection that declares a language for each Card face", async () => {
+    const user = userEvent.setup();
+    let created: Partial<CollectionInput> = {};
+    mockServer.use(
+      http.post("/api/collections", async ({ request }) => {
+        created = (await request.json()) as Partial<CollectionInput>;
+
+        return HttpResponse.json({ ...testCollections[0]!, ...created }, { status: 201 });
+      }),
+    );
+    await renderApp("/cards");
+
+    await user.click(await screen.findByRole("button", { name: "Sammlung hinzufügen" }));
+    await user.type(await screen.findByLabelText("Name der Sammlung"), "Vietnamesisch B1");
+    await user.selectOptions(screen.getByLabelText("Sprache der Vorderseite"), "vi-VN");
+    await user.selectOptions(screen.getByLabelText("Sprache der Rückseite"), "de-DE");
+    await user.click(screen.getByRole("button", { name: "Speichern" }));
+
+    await waitFor(() =>
+      expect(created).toEqual({
+        name: "Vietnamesisch B1",
+        icon: "book",
+        frontLanguage: "vi-VN",
+        backLanguage: "de-DE",
+      }),
+    );
+  });
+
+  it("changes the declared languages of a Collection after it was created", async () => {
+    const user = userEvent.setup();
+    let updated: Partial<CollectionInput> = {};
+    mockServer.use(
+      http.patch(`/api/collections/${testCollections[0]!.id}`, async ({ request }) => {
+        updated = (await request.json()) as Partial<CollectionInput>;
+
+        return HttpResponse.json({ ...testCollections[0]!, ...updated });
+      }),
+    );
+    await renderApp(`/cards/${testCollections[0]!.id}`);
+
+    await user.click(await screen.findByRole("button", { name: "Sammlung bearbeiten" }));
+    expect(await screen.findByLabelText("Sprache der Vorderseite")).toHaveValue("vi-VN");
+    expect(screen.getByLabelText("Sprache der Rückseite")).toHaveValue("de-DE");
+
+    await user.selectOptions(screen.getByLabelText("Sprache der Vorderseite"), "en-US");
+    await user.selectOptions(screen.getByLabelText("Sprache der Rückseite"), "");
+    await user.click(screen.getByRole("button", { name: "Speichern" }));
+
+    await waitFor(() =>
+      expect(updated).toMatchObject({ frontLanguage: "en-US", backLanguage: null }),
+    );
   });
 
   it("closes an edited Collection without asking, and only confirms deletion", async () => {
