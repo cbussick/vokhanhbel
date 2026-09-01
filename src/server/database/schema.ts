@@ -43,14 +43,18 @@ export const collections = pgTable(
     check("collections_name_length", sql`char_length(${table.name}) between 1 and 60`),
     // Deliberately a length bound, not a value list: adding an icon stays a code-only change.
     check("collections_icon_length", sql`char_length(${table.icon}) between 1 and 40`),
-    // Same reasoning as the icon: adding a supported locale stays a code-only change.
+    /**
+     * Same reasoning as the icon: adding a supported locale stays a code-only change. The floor is
+     * the length of the shortest full locale, `ll-CC`, so the column cannot hold a bare language
+     * code that the contract rejects.
+     */
     check(
       "collections_front_language_length",
-      sql`${table.frontLanguage} is null or char_length(${table.frontLanguage}) between 2 and 35`,
+      sql`${table.frontLanguage} is null or char_length(${table.frontLanguage}) between 5 and 35`,
     ),
     check(
       "collections_back_language_length",
-      sql`${table.backLanguage} is null or char_length(${table.backLanguage}) between 2 and 35`,
+      sql`${table.backLanguage} is null or char_length(${table.backLanguage}) between 5 and 35`,
     ),
     check("collections_name_normalized", sql`${table.name} = normalize_card_text(${table.name})`),
     check("collections_normalized_name_matches", sql`${table.normalizedName} = ${table.name}`),

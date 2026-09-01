@@ -1,5 +1,5 @@
 {
-  "id": "1d68e76a-f6b0-47c8-adb1-d01dcf7a2769",
+  "id": "981f7ede-ff19-458b-8649-bf3bfb149137",
   "prevId": "6ebe96f1-ec49-496b-95c5-97ae913d38ba",
   "version": "7",
   "dialect": "postgresql",
@@ -802,11 +802,11 @@
         },
         "collections_front_language_length": {
           "name": "collections_front_language_length",
-          "value": "\"collections\".\"front_language\" is null or char_length(\"collections\".\"front_language\") between 2 and 35"
+          "value": "\"collections\".\"front_language\" is null or char_length(\"collections\".\"front_language\") between 5 and 35"
         },
         "collections_back_language_length": {
           "name": "collections_back_language_length",
-          "value": "\"collections\".\"back_language\" is null or char_length(\"collections\".\"back_language\") between 2 and 35"
+          "value": "\"collections\".\"back_language\" is null or char_length(\"collections\".\"back_language\") between 5 and 35"
         },
         "collections_name_normalized": {
           "name": "collections_name_normalized",

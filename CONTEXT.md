@@ -15,8 +15,19 @@ _Avoid_: Flashcard, word
 **Collection**:
 A named group of Cards. Every Card belongs to exactly one Collection, which scopes the Card list,
 front uniqueness, and a Review Session. Usually one Collection per learned language, but any grouping
-the Learner wants.
+the Learner wants. A Collection may declare a Face Language for each side of its Cards.
 _Avoid_: Deck, set, category, folder
+
+**Face Language**:
+The language a Collection declares for one side of its Cards: one for the front, one for the back.
+The Learner declares either, both, or neither, and changes them whenever she wants. A Face Language
+is a full locale (`vi-VN`, `de-DE`, `en-US`), never a bare language code, so regional variants stay
+distinguishable and map onto a spoken voice. It is chosen explicitly rather than derived from the
+UI language, which would write a German-only assumption into stored data. Null means none declared;
+nothing else stands for that, and a Collection declaring neither behaves exactly like a Collection
+from before Face Languages existed. A locale the running build does not offer is kept as declared
+rather than rewritten — whether it can be spoken is decided where it is used.
+_Avoid_: Locale (the representation, not the concept), language code, TTS language, card language
 
 **Topic**:
 A named grouping of Cards inside one Collection. A Card may belong to many Topics in its Collection,

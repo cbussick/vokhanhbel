@@ -39,12 +39,10 @@ describe("public contracts", () => {
     ).toBe(true);
   });
 
-  it("normalizes a Collection name, keeps it within 60 characters, and declares no language", () => {
+  it("normalizes a Collection name and keeps it within 60 characters", () => {
     expect(collectionInputSchema.parse({ name: "  Viet   namesisch ", icon: "flag-vn" })).toEqual({
       name: "Viet namesisch",
       icon: "flag-vn",
-      frontLanguage: null,
-      backLanguage: null,
     });
     expect(collectionInputSchema.safeParse({ name: "  ", icon: "book" }).success).toBe(false);
     expect(collectionInputSchema.safeParse({ name: "x".repeat(61), icon: "book" }).success).toBe(
@@ -71,7 +69,7 @@ describe("public contracts", () => {
     ).toBe(defaultCollectionIcon);
   });
 
-  it("accepts only full locales as a Collection face language and degrades unknown ones", () => {
+  it("declares a Collection face language as a full locale, and leaves an absent one alone", () => {
     expect(
       collectionInputSchema.parse({
         name: "Vietnamesisch",
@@ -80,28 +78,37 @@ describe("public contracts", () => {
         backLanguage: null,
       }),
     ).toMatchObject({ frontLanguage: "vi-VN", backLanguage: null });
+    // A bare language code is not a locale, and neither is a locale this build does not offer.
+    for (const frontLanguage of ["vi", "en-GB"])
+      expect(
+        collectionInputSchema.safeParse({ name: "Vietnamesisch", icon: "flag-vn", frontLanguage })
+          .success,
+      ).toBe(false);
+    // Absent rather than null, so an older client's request cannot clear what it never sent.
     expect(
-      collectionInputSchema.safeParse({
-        name: "Vietnamesisch",
-        icon: "flag-vn",
-        frontLanguage: "vi",
-      }).success,
-    ).toBe(false);
+      collectionInputSchema.parse({ name: "Vietnamesisch", icon: "flag-vn" }),
+    ).not.toHaveProperty("frontLanguage");
+  });
 
+  it("keeps a stored Collection language a newer deploy declared", () => {
     const now = new Date().toISOString();
-    // A locale a newer deploy supports must still render here, as a face without a language.
+    const stored = {
+      id: crypto.randomUUID(),
+      name: "Englisch",
+      icon: "flag-gb",
+      createdAt: now,
+      updatedAt: now,
+      deletedAt: null,
+    };
+
     expect(
-      collectionSchema.parse({
-        id: crypto.randomUUID(),
-        name: "Englisch",
-        icon: "flag-gb",
-        frontLanguage: "en-GB",
-        backLanguage: "de-DE",
-        createdAt: now,
-        updatedAt: now,
-        deletedAt: null,
-      }),
-    ).toMatchObject({ frontLanguage: null, backLanguage: "de-DE" });
+      collectionSchema.parse({ ...stored, frontLanguage: "en-GB", backLanguage: "de-DE" }),
+    ).toMatchObject({ frontLanguage: "en-GB", backLanguage: "de-DE" });
+    // A response from before the columns existed declares nothing rather than failing to parse.
+    expect(collectionSchema.parse(stored)).toMatchObject({
+      frontLanguage: null,
+      backLanguage: null,
+    });
   });
 
   it("moves a Card between Collections without other fields", () => {

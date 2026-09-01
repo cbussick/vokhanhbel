@@ -24,12 +24,7 @@ import { createTopic, deleteTopic, listTopics } from "../../src/server/resources
 import { consumeTutorAllowance, createTutorStream } from "../../src/server/resources/tutor.js";
 
 const inDefaultCollection = { collectionId: defaultCollectionId };
-const englishCollection = {
-  name: "Englisch",
-  icon: "flag-gb",
-  frontLanguage: null,
-  backLanguage: null,
-} as const;
+const englishCollection = { name: "Englisch", icon: "flag-gb" } as const;
 
 afterEach(() => setAudioObjectStoreForTests(undefined));
 
@@ -176,20 +171,36 @@ describe("PostgreSQL application behavior", () => {
     });
   });
 
-  it("stores and replaces the languages a Collection declares for its Card faces", async () => {
+  it("stores the languages a Collection declares, and only changes the ones an update names", async () => {
     const declared = await createCollection({
       ...englishCollection,
       frontLanguage: "vi-VN",
       backLanguage: "de-DE",
     });
-
     expect(declared).toMatchObject({ frontLanguage: "vi-VN", backLanguage: "de-DE" });
+
+    // What a client on an older build sends. It knows nothing of either language, so it moves
+    // neither: naming no language must not be the same request as clearing both.
+    await expect(updateCollection(declared.id, englishCollection)).resolves.toMatchObject({
+      frontLanguage: "vi-VN",
+      backLanguage: "de-DE",
+    });
+
     await expect(
       updateCollection(declared.id, {
         ...englishCollection,
         frontLanguage: "en-US",
+        backLanguage: null,
       }),
     ).resolves.toMatchObject({ frontLanguage: "en-US", backLanguage: null });
+  });
+
+  it("refuses a Collection language that is not a full locale", async () => {
+    await expect(
+      getPool().query(
+        `INSERT INTO collections (name, normalized_name, front_language) VALUES ('Bare', 'Bare', 'vi')`,
+      ),
+    ).rejects.toThrow();
   });
 
   it("rejects Collection names that bypass stored normalization", async () => {

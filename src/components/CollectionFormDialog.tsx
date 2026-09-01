@@ -5,12 +5,10 @@ import { apiPaths } from "../contracts/apiPaths";
 import {
   collectionIconKeys,
   collectionInputSchema,
-  collectionLanguages,
   collectionSchema,
   defaultCollectionIcon,
   type Collection,
   type CollectionIconKey,
-  type CollectionLanguage,
 } from "../contracts/collection";
 import { problemTypes } from "../contracts/problem";
 import { apiRequest, ApiError } from "../lib/apiClient";
@@ -18,13 +16,10 @@ import { useOnlineStatus } from "../lib/browserState";
 import { queryKeys } from "../lib/queryKeys";
 import { CollectionIcon } from "./CollectionIcon";
 import { Dialog } from "./Dialog";
+import { LanguageSelect } from "./LanguageSelect";
 import { PendingActionContent } from "./PendingActionContent";
 import styles from "./Dialog.module.css";
 
-/**
- * The empty option is the stored null, not a locale standing in for "not a language". Leaving it
- * chosen is what says a face has no language, so the field needs no separate yes/no step.
- */
 function LanguageField({
   face,
   value,
@@ -32,9 +27,9 @@ function LanguageField({
   onChange,
 }: {
   face: "front" | "back";
-  value: CollectionLanguage | null;
+  value: string | null;
   disabled: boolean;
-  onChange: (language: CollectionLanguage | null) => void;
+  onChange: (language: string | null) => void;
 }) {
   const { t } = useTranslation();
   const id = `collection-${face}-language`;
@@ -47,22 +42,13 @@ function LanguageField({
       <span id={`${id}-hint`} className={styles.hint}>
         {t("collections.languageHint")}
       </span>
-      <select
+      <LanguageSelect
         id={id}
-        aria-describedby={`${id}-hint`}
-        value={value ?? ""}
+        describedBy={`${id}-hint`}
+        value={value}
+        onChange={onChange}
         disabled={disabled}
-        onChange={(event) =>
-          onChange(collectionLanguages.find((language) => language === event.target.value) ?? null)
-        }
-      >
-        <option value="">{t("collections.noLanguage")}</option>
-        {collectionLanguages.map((language) => (
-          <option key={language} value={language}>
-            {t(`collections.languages.${language}`)}
-          </option>
-        ))}
-      </select>
+      />
     </>
   );
 }
@@ -104,7 +90,15 @@ export function CollectionFormDialog({
 
   const save = useMutation({
     mutationFn: async () => {
-      const input = collectionInputSchema.parse({ name, icon, frontLanguage, backLanguage });
+      // Only a language the Learner actually changed goes on the wire. Leaving an untouched one
+      // out keeps a locale this build cannot offer exactly as declared, and a Collection with no
+      // language sends the same request it did before Collections had languages at all.
+      const input = collectionInputSchema.parse({
+        name,
+        icon,
+        ...(frontLanguage !== (collection?.frontLanguage ?? null) && { frontLanguage }),
+        ...(backLanguage !== (collection?.backLanguage ?? null) && { backLanguage }),
+      });
 
       return collectionSchema.parse(
         collection

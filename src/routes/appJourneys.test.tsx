@@ -24,6 +24,19 @@ async function cardDialogReady() {
   return dialog;
 }
 
+function languagePicker(face: "Vorderseite" | "Rückseite") {
+  return screen.getByRole("combobox", { name: `Sprache der ${face}` });
+}
+
+async function chooseLanguage(
+  user: ReturnType<typeof userEvent.setup>,
+  face: "Vorderseite" | "Rückseite",
+  option: string,
+) {
+  await user.click(languagePicker(face));
+  await user.click(await screen.findByRole("option", { name: option }));
+}
+
 function summaryStat(label: string) {
   return screen.getByText(label, { selector: "dt" }).nextElementSibling as HTMLElement;
 }
@@ -346,19 +359,13 @@ describe("rendered app journeys", () => {
     await user.type(await screen.findByLabelText("Name der Sammlung"), "Französisch");
 
     expect(screen.getByRole("radio", { name: "Standard" })).toBeChecked();
-    expect(screen.getByLabelText("Sprache der Vorderseite")).toHaveValue("");
-    expect(screen.getByLabelText("Sprache der Rückseite")).toHaveValue("");
+    expect(languagePicker("Vorderseite")).toHaveTextContent("Keine Angabe");
+    expect(languagePicker("Rückseite")).toHaveTextContent("Keine Angabe");
     await user.click(screen.getByRole("radio", { name: "Vietnam" }));
     await user.click(screen.getByRole("button", { name: "Speichern" }));
 
-    await waitFor(() =>
-      expect(created).toEqual({
-        name: "Französisch",
-        icon: "flag-vn",
-        frontLanguage: null,
-        backLanguage: null,
-      }),
-    );
+    // Byte for byte the request a Collection made before Collections had languages at all.
+    await waitFor(() => expect(created).toEqual({ name: "Französisch", icon: "flag-vn" }));
   });
 
   it("creates a Collection that declares a language for each Card face", async () => {
@@ -375,8 +382,8 @@ describe("rendered app journeys", () => {
 
     await user.click(await screen.findByRole("button", { name: "Sammlung hinzufügen" }));
     await user.type(await screen.findByLabelText("Name der Sammlung"), "Vietnamesisch B1");
-    await user.selectOptions(screen.getByLabelText("Sprache der Vorderseite"), "vi-VN");
-    await user.selectOptions(screen.getByLabelText("Sprache der Rückseite"), "de-DE");
+    await chooseLanguage(user, "Vorderseite", "Vietnamesisch");
+    await chooseLanguage(user, "Rückseite", "Deutsch");
     await user.click(screen.getByRole("button", { name: "Speichern" }));
 
     await waitFor(() =>
@@ -402,16 +409,47 @@ describe("rendered app journeys", () => {
     await renderApp(`/cards/${testCollections[0]!.id}`);
 
     await user.click(await screen.findByRole("button", { name: "Sammlung bearbeiten" }));
-    expect(await screen.findByLabelText("Sprache der Vorderseite")).toHaveValue("vi-VN");
-    expect(screen.getByLabelText("Sprache der Rückseite")).toHaveValue("de-DE");
+    await waitFor(() => expect(languagePicker("Vorderseite")).toHaveTextContent("Vietnamesisch"));
+    expect(languagePicker("Rückseite")).toHaveTextContent("Deutsch");
 
-    await user.selectOptions(screen.getByLabelText("Sprache der Vorderseite"), "en-US");
-    await user.selectOptions(screen.getByLabelText("Sprache der Rückseite"), "");
+    await chooseLanguage(user, "Vorderseite", "Englisch (USA)");
+    await chooseLanguage(user, "Rückseite", "Keine Angabe");
     await user.click(screen.getByRole("button", { name: "Speichern" }));
 
     await waitFor(() =>
-      expect(updated).toMatchObject({ frontLanguage: "en-US", backLanguage: null }),
+      expect(updated).toEqual({
+        name: "Vietnamesisch",
+        icon: "flag-vn",
+        frontLanguage: "en-US",
+        backLanguage: null,
+      }),
     );
+  });
+
+  it("keeps a language this build cannot offer when the Learner only renames", async () => {
+    const user = userEvent.setup();
+    const foreign = { ...testCollections[1]!, frontLanguage: "en-GB", backLanguage: null };
+    let updated: Partial<CollectionInput> = {};
+    mockServer.use(
+      http.get("/api/collections", () => HttpResponse.json([testCollections[0], foreign])),
+      http.patch(`/api/collections/${foreign.id}`, async ({ request }) => {
+        updated = (await request.json()) as Partial<CollectionInput>;
+
+        return HttpResponse.json({ ...foreign, ...updated });
+      }),
+    );
+    await renderApp(`/cards/${foreign.id}`);
+
+    await user.click(await screen.findByRole("button", { name: "Sammlung bearbeiten" }));
+    // No translated name exists for it, so it shows as the locale — visible, and still selected.
+    await waitFor(() => expect(languagePicker("Vorderseite")).toHaveTextContent("en-GB"));
+
+    const name = await screen.findByLabelText("Name der Sammlung");
+    await user.clear(name);
+    await user.type(name, "Englisch B1");
+    await user.click(screen.getByRole("button", { name: "Speichern" }));
+
+    await waitFor(() => expect(updated).toEqual({ name: "Englisch B1", icon: "flag-gb" }));
   });
 
   it("closes an edited Collection without asking, and only confirms deletion", async () => {

@@ -35,8 +35,8 @@ export async function createCollection(input: CollectionInput) {
         name: input.name,
         normalizedName: input.name,
         icon: input.icon,
-        frontLanguage: input.frontLanguage,
-        backLanguage: input.backLanguage,
+        frontLanguage: input.frontLanguage ?? null,
+        backLanguage: input.backLanguage ?? null,
       })
       .returning();
 
@@ -55,6 +55,7 @@ export async function updateCollection(collectionId: string, input: CollectionIn
         name: input.name,
         normalizedName: input.name,
         icon: input.icon,
+        // Undefined, so an omitted language keeps the stored one; an explicit null clears it.
         frontLanguage: input.frontLanguage,
         backLanguage: input.backLanguage,
         updatedAt: new Date(),
