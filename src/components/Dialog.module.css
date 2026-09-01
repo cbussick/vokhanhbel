@@ -312,10 +312,6 @@
   background: white;
 }
 
-.body select {
-  font-weight: 700;
-}
-
 .body textarea {
   inline-size: 100%;
   min-block-size: 7rem;

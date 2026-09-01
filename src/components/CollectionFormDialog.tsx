@@ -26,24 +26,23 @@ import styles from "./Dialog.module.css";
  * chosen is what says a face has no language, so the field needs no separate yes/no step.
  */
 function LanguageField({
-  id,
-  label,
+  face,
   value,
   disabled,
   onChange,
 }: {
-  id: string;
-  label: string;
+  face: "front" | "back";
   value: CollectionLanguage | null;
   disabled: boolean;
   onChange: (language: CollectionLanguage | null) => void;
 }) {
   const { t } = useTranslation();
+  const id = `collection-${face}-language`;
 
   return (
     <>
       <label htmlFor={id} className={styles.fieldHeading}>
-        {label}
+        {t(`collections.${face}Language`)}
       </label>
       <span id={`${id}-hint`} className={styles.hint}>
         {t("collections.languageHint")}
@@ -251,15 +250,13 @@ export function CollectionFormDialog({
             ))}
           </fieldset>
           <LanguageField
-            id="collection-front-language"
-            label={t("collections.frontLanguage")}
+            face="front"
             value={frontLanguage}
             disabled={isPending}
             onChange={setFrontLanguage}
           />
           <LanguageField
-            id="collection-back-language"
-            label={t("collections.backLanguage")}
+            face="back"
             value={backLanguage}
             disabled={isPending}
             onChange={setBackLanguage}
