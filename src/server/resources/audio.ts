@@ -60,9 +60,33 @@ export async function deleteAudioObject(
   }
 }
 
+/** A clip the Learner recorded herself, which carries no synthesis detail. */
+export interface RecordedAudioProvenance {
+  source: "recorded";
+}
+
+/** A clip a text-to-speech provider produced, down to the exact text it was given. */
+export interface GeneratedAudioProvenance {
+  source: "generated";
+  speechProvider: string;
+  speechVoice: string;
+  speechLanguage: string;
+  synthesizedText: string;
+}
+
+export type AudioProvenance = RecordedAudioProvenance | GeneratedAudioProvenance;
+
+const noSpeechProvenance = {
+  speechProvider: null,
+  speechVoice: null,
+  speechLanguage: null,
+  synthesizedText: null,
+} as const;
+
 export async function stageAudio(
   sessionHash: string,
   bytes: Uint8Array,
+  provenance: AudioProvenance,
   suppliedContentType?: string,
   requestId?: string,
 ): Promise<AudioMetadata> {
@@ -86,6 +110,9 @@ export async function stageAudio(
         durationMs: inspected.durationMs,
         checksum: inspected.checksum,
         stagedUntil: new Date(Date.now() + stagedLifetimeMilliseconds),
+        ...(provenance.source === "generated"
+          ? provenance
+          : { source: provenance.source, ...noSpeechProvenance }),
       })
       .returning();
     const row = rows[0]!;

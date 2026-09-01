@@ -130,6 +130,33 @@ that preview credentials cannot list, read, write, or delete production objects.
 endpoint, isolation result, lifecycle result, and accepted no-backup limitation without recording
 credentials, object keys, or audio content.
 
+## Google Cloud Text-to-Speech
+
+Pronunciation audio is synthesized server-side behind the `SpeechProvider` interface. A human
+prepares the credential; no automated step creates it.
+
+1. Create a Google Cloud project and attach a billing account to it.
+2. Enable the Cloud Text-to-Speech API in that project.
+3. Create a service account and grant it only the Cloud Text-to-Speech role
+   (`roles/cloudtts.user`). Grant no other role.
+4. Create a JSON key for that service account and download it once.
+5. Copy three values out of the key file into the matching Vercel server environment. Never put
+   them into a `VITE_*` variable.
+
+```dotenv
+GOOGLE_TTS_PROJECT_ID=<project_id from the key file>
+GOOGLE_TTS_CLIENT_EMAIL=<client_email from the key file>
+GOOGLE_TTS_PRIVATE_KEY=<private_key from the key file>
+```
+
+`GOOGLE_TTS_PRIVATE_KEY` may keep the `\n` escapes the key file uses; the adapter restores the PEM
+line breaks. The key is long-lived, so rotate it by hand: create a second key, replace the
+environment values, confirm generation still works, then delete the old key.
+
+One voice is pinned per supported locale in `src/server/tts/speechProvider.ts`. Changing a voice is
+a code change, not a configuration change. No suite needs the credential: every test substitutes
+the provider, so all checks pass with no Google configuration present.
+
 The Card-face migration keeps the legacy `front` and `back` columns synchronized during the release
 window. This lets the migration run before the application deploy and keeps an application rollback
 readable. Remove those compatibility columns only in a later, separately reviewed migration after

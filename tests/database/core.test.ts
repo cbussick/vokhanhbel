@@ -61,8 +61,18 @@ describe("PostgreSQL application behavior", () => {
     const store = new InMemoryAudioObjectStore();
     const sessionHash = "audio-session";
     setAudioObjectStoreForTests(store);
-    const firstAudio = await stageAudio(sessionHash, createWavFixture(), "audio/wav");
-    const secondAudio = await stageAudio(sessionHash, createWavFixture(), "audio/wav");
+    const firstAudio = await stageAudio(
+      sessionHash,
+      createWavFixture(),
+      { source: "recorded" },
+      "audio/wav",
+    );
+    const secondAudio = await stageAudio(
+      sessionHash,
+      createWavFixture(),
+      { source: "recorded" },
+      "audio/wav",
+    );
     const first = await createCard(
       {
         ...inDefaultCollection,
@@ -94,7 +104,12 @@ describe("PostgreSQL application behavior", () => {
     const store = new FailingAudioObjectStore();
     const sessionHash = "audio-cleanup-session";
     setAudioObjectStoreForTests(store);
-    const audio = await stageAudio(sessionHash, createWavFixture(), "audio/wav");
+    const audio = await stageAudio(
+      sessionHash,
+      createWavFixture(),
+      { source: "recorded" },
+      "audio/wav",
+    );
     const card = await createCard(
       {
         ...inDefaultCollection,
@@ -122,7 +137,12 @@ describe("PostgreSQL application behavior", () => {
     const store = new InMemoryAudioObjectStore();
     const sessionHash = "audio-tutor-session";
     setAudioObjectStoreForTests(store);
-    const audio = await stageAudio(sessionHash, createWavFixture(), "audio/wav");
+    const audio = await stageAudio(
+      sessionHash,
+      createWavFixture(),
+      { source: "recorded" },
+      "audio/wav",
+    );
     const card = await createCard(
       {
         ...inDefaultCollection,

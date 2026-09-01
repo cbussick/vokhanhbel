@@ -50,6 +50,7 @@ export async function POST(request: Request): Promise<Response> {
         await stageAudio(
           sessionHash!,
           bytes,
+          { source: "recorded" },
           request.headers.get("content-type") ?? undefined,
           requestId,
         ),

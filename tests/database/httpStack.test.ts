@@ -3,6 +3,7 @@ import { GET as playAudio } from "../../api/audio/[audioId].js";
 import { POST as uploadAudio } from "../../api/audio/index.js";
 import { POST as createCard } from "../../api/cards/index.js";
 import { POST as createCollection } from "../../api/collections/index.js";
+import { POST as generatePronunciation } from "../../api/pronunciations.js";
 import { POST as createReview } from "../../api/reviews.js";
 import { POST as createSession } from "../../api/session.js";
 import { GET as readStats } from "../../api/stats.js";
@@ -15,10 +16,16 @@ import {
 import { encodePassword } from "../../src/server/auth/password.js";
 import { resetServerEnvironmentForTests } from "../../src/server/config/environment.js";
 import { getPool } from "../../src/server/database/client.js";
+import { defaultCollectionId } from "../../src/server/database/schema.js";
+import { setSpeechProviderForTests } from "../../src/server/tts/speechProvider.js";
+import { RecordingSpeechProvider } from "../../src/server/tts/speechProvider.test-helper.js";
 
 const origin = "http://localhost:4173";
 
-afterEach(() => setAudioObjectStoreForTests(undefined));
+afterEach(() => {
+  setAudioObjectStoreForTests(undefined);
+  setSpeechProviderForTests(undefined);
+});
 
 function request(path: string, method: "GET" | "POST", body?: unknown, cookie?: string): Request {
   const headers = new Headers({ origin, "sec-fetch-site": "same-origin" });
@@ -128,6 +135,11 @@ describe("real API handler stack", () => {
     const audio = (await uploadResponse.json()) as { id: string; durationMs: number };
     expect(audio).toMatchObject({ durationMs: 1_000 });
     expect(JSON.stringify(audio)).not.toContain("objectKey");
+    const recorded = await getPool().query<{ source: string; synthesized_text: string | null }>(
+      "SELECT source, synthesized_text FROM audio_assets WHERE id=$1",
+      [audio.id],
+    );
+    expect(recorded.rows[0]).toEqual({ source: "recorded", synthesized_text: null });
     const cardResponse = await createCard(
       request(
         "/api/cards",
@@ -178,5 +190,133 @@ describe("real API handler stack", () => {
     await expect(limitedResponse.json()).resolves.toMatchObject({
       type: "/problems/audio-playback-rate-limit",
     });
+  });
+
+  it("synthesizes a pronunciation, records its provenance, and claims it onto a Card face", async () => {
+    const password = "generated audio password";
+    process.env.APP_PASSWORD_HASH = await encodePassword(password);
+    resetServerEnvironmentForTests();
+    const store = new InMemoryAudioObjectStore();
+    const speech = new RecordingSpeechProvider();
+    setAudioObjectStoreForTests(store);
+    setSpeechProviderForTests(speech);
+    const loginResponse = await createSession(request("/api/session", "POST", { password }));
+    const cookie = loginResponse.headers.get("set-cookie")?.split(";", 1)[0];
+
+    const generateResponse = await generatePronunciation(
+      request("/api/pronunciations", "POST", { text: "xin chào", language: "vi-VN" }, cookie),
+    );
+
+    expect(generateResponse.status).toBe(201);
+    const audio = (await generateResponse.json()) as { id: string };
+    expect(audio).toMatchObject({
+      contentType: "audio/mpeg",
+      durationMs: 1_000,
+      byteSize: speech.speech.bytes.byteLength,
+    });
+    expect(speech.requests).toEqual([
+      { text: "xin chào", language: "vi-VN", voice: "vi-VN-Chirp3-HD-Gacrux" },
+    ]);
+
+    const stored = await getPool().query<{ object_key: string }>(
+      "SELECT object_key, source, speech_provider, speech_voice, speech_language, synthesized_text FROM audio_assets WHERE id=$1",
+      [audio.id],
+    );
+    expect(stored.rows[0]).toMatchObject({
+      source: "generated",
+      speech_provider: speech.name,
+      speech_voice: "vi-VN-Chirp3-HD-Gacrux",
+      speech_language: "vi-VN",
+      synthesized_text: "xin chào",
+    });
+    expect(store.objects.get(stored.rows[0]!.object_key)?.bytes).toEqual(speech.speech.bytes);
+
+    const cardResponse = await createCard(
+      request(
+        "/api/cards",
+        "POST",
+        {
+          collectionId: defaultCollectionId,
+          front: { text: "xin chào", audioId: audio.id },
+          back: { text: "hallo", audioId: null },
+        },
+        cookie,
+      ),
+    );
+
+    expect(cardResponse.status).toBe(201);
+    await expect(cardResponse.json()).resolves.toMatchObject({
+      front: { audio: { id: audio.id, contentType: "audio/mpeg" } },
+    });
+
+    const playbackResponse = await playAudio(
+      new Request(`${origin}/api/audio/${audio.id}`, {
+        headers: { cookie: cookie!, "sec-fetch-site": "same-origin" },
+      }),
+    );
+    expect(playbackResponse.status).toBe(200);
+    expect(new Uint8Array(await playbackResponse.arrayBuffer())).toEqual(speech.speech.bytes);
+
+    const attempt = await getPool().query<{ session_hash: string }>(
+      "SELECT session_hash FROM audio_upload_attempts LIMIT 1",
+    );
+    await getPool().query(
+      "INSERT INTO audio_upload_attempts (session_hash) SELECT $1 FROM generate_series(1, 29)",
+      [attempt.rows[0]!.session_hash],
+    );
+    const limitedResponse = await generatePronunciation(
+      request("/api/pronunciations", "POST", { text: "cảm ơn", language: "vi-VN" }, cookie),
+    );
+
+    expect(limitedResponse.status).toBe(429);
+    await expect(limitedResponse.json()).resolves.toMatchObject({
+      type: "/problems/audio-upload-rate-limit",
+    });
+    expect(speech.requests).toHaveLength(1);
+  });
+
+  it("writes nothing when synthesis fails or the locale cannot be spoken", async () => {
+    const password = "failed synthesis password";
+    process.env.APP_PASSWORD_HASH = await encodePassword(password);
+    resetServerEnvironmentForTests();
+    const store = new InMemoryAudioObjectStore();
+    const speech = new RecordingSpeechProvider();
+    speech.failure = new Error("the synthesizer is unreachable");
+    setAudioObjectStoreForTests(store);
+    setSpeechProviderForTests(speech);
+    const loginResponse = await createSession(request("/api/session", "POST", { password }));
+    const cookie = loginResponse.headers.get("set-cookie")?.split(";", 1)[0];
+
+    const failedResponse = await generatePronunciation(
+      request("/api/pronunciations", "POST", { text: "xin chào", language: "vi-VN" }, cookie),
+    );
+
+    expect(failedResponse.status).toBe(502);
+    await expect(failedResponse.json()).resolves.toMatchObject({
+      type: "/problems/pronunciation-failed",
+    });
+
+    const unsupportedResponse = await generatePronunciation(
+      request("/api/pronunciations", "POST", { text: "bonjour", language: "fr-FR" }, cookie),
+    );
+    expect(unsupportedResponse.status).toBe(422);
+    await expect(unsupportedResponse.json()).resolves.toMatchObject({
+      type: "/problems/invalid-request",
+      errors: [{ pointer: "/language" }],
+    });
+
+    const absentResponse = await generatePronunciation(
+      request("/api/pronunciations", "POST", { text: "bonjour" }, cookie),
+    );
+    expect(absentResponse.status).toBe(422);
+
+    // A rejected locale never reaches the synthesizer, and the one call that did leaves no asset
+    // record, no stored object, and no Card behind.
+    expect(speech.requests).toHaveLength(1);
+    expect(store.objects.size).toBe(0);
+    const counts = await getPool().query<{ assets: string; cards: string }>(
+      "SELECT (SELECT count(*) FROM audio_assets) AS assets, (SELECT count(*) FROM cards) AS cards",
+    );
+    expect(counts.rows[0]).toEqual({ assets: "0", cards: "0" });
   });
 });
