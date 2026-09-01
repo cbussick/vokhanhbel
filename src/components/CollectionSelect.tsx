@@ -1,9 +1,8 @@
-import { useEffect, useId, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { Collection } from "../contracts/collection";
-import { nextTypeAheadState, type TypeAheadState } from "../lib/typeAhead";
 import { ListboxOption } from "../shared/ui/ListboxOption";
 import { ListboxRoot } from "../shared/ui/ListboxRoot";
+import { useListbox } from "../shared/ui/useListbox";
 import { AddIcon } from "./AddIcon";
 import { CollectionIcon } from "./CollectionIcon";
 import styles from "./CollectionSelect.module.css";
@@ -26,47 +25,21 @@ export function CollectionSelect({
   disabled?: boolean;
 }) {
   const { t } = useTranslation();
-  const listboxId = useId();
-  const rootRef = useRef<HTMLDivElement>(null);
-  const optionRefs = useRef<(HTMLLIElement | null)[]>([]);
-  const typeAhead = useRef<TypeAheadState>({ query: "", lastKeyAt: 0 });
-  const [isOpen, setIsOpen] = useState(false);
   const canCreate = Boolean(onCreate);
   const createIndex = collections.length;
-  const lastIndex = canCreate ? createIndex : Math.max(collections.length - 1, 0);
-  const isListboxOpen = isOpen && !disabled && (collections.length > 0 || canCreate);
   const selectedIndex = collections.findIndex((collection) => collection.id === value);
-  const [activeIndex, setActiveIndex] = useState(Math.max(selectedIndex, 0));
   const selectedCollection = collections[selectedIndex];
-
-  useEffect(() => {
-    if (!isListboxOpen) return;
-
-    const closeOnOutsidePointer = (event: PointerEvent) => {
-      // SAFETY: a pointerdown dispatched on the document always targets a DOM element, so target
-      // is a Node. contains() also accepts null, so a null target would still be handled.
-      if (!rootRef.current?.contains(event.target as Node)) setIsOpen(false);
-    };
-
-    document.addEventListener("pointerdown", closeOnOutsidePointer);
-
-    return () => document.removeEventListener("pointerdown", closeOnOutsidePointer);
-  }, [isListboxOpen]);
-
-  useEffect(() => {
-    if (!isListboxOpen) return;
-
-    optionRefs.current[activeIndex]?.scrollIntoView?.({ block: "nearest" });
-  }, [activeIndex, isListboxOpen]);
-
-  const open = (index = selectedIndex >= 0 ? selectedIndex : 0) => {
-    setActiveIndex(index);
-    setIsOpen(true);
-  };
+  const listbox = useListbox({
+    optionCount: canCreate ? collections.length + 1 : collections.length,
+    selectedIndex,
+    onActivate: (index) => select(index),
+    typeAhead: { count: collections.length, labelAt: (index) => collections[index]!.name },
+    disabled,
+  });
 
   const select = (index: number) => {
     if (canCreate && index === createIndex) {
-      setIsOpen(false);
+      listbox.close();
       onCreate?.();
 
       return;
@@ -77,137 +50,68 @@ export function CollectionSelect({
     if (!collection) return;
 
     onChange(collection.id);
-    setActiveIndex(index);
-    setIsOpen(false);
+    listbox.setActiveIndex(index);
+    listbox.close();
   };
 
-  const moveActive = (offset: number) => {
-    if (collections.length === 0 && !canCreate) return;
-
-    setActiveIndex((current) => Math.min(Math.max(current + offset, 0), lastIndex));
-  };
-
-  const matchTypeAhead = (key: string) => {
-    typeAhead.current = nextTypeAheadState(typeAhead.current, key);
-    const { query } = typeAhead.current;
-
-    const startIndex = isOpen ? activeIndex : Math.max(selectedIndex, 0);
-    const matchOffset = Array.from({ length: collections.length }, (_, offset) =>
-      collections[(startIndex + offset + 1) % collections.length]!.name.toLocaleLowerCase(
-        "de",
-      ).startsWith(query.toLocaleLowerCase("de")),
-    ).findIndex(Boolean);
-
-    if (matchOffset < 0) return;
-
-    const matchIndex = (startIndex + matchOffset + 1) % collections.length;
-
-    setActiveIndex(matchIndex);
-    setIsOpen(true);
-  };
-
+  // Paging and Alt+Arrow Up stay here: a Collection list is long enough to need them, and the
+  // shared listbox behaviour is the ARIA pattern rather than every key a combobox might want.
   const handleKeyDown = (event: React.KeyboardEvent<HTMLButtonElement>) => {
-    if (event.altKey && event.key === "ArrowUp" && isOpen) {
-      event.preventDefault();
-      select(activeIndex);
+    if (listbox.isOpen) {
+      if (event.altKey && event.key === "ArrowUp") {
+        event.preventDefault();
+        select(listbox.activeIndex);
 
-      return;
+        return;
+      }
+
+      if (event.key === "PageUp" || event.key === "PageDown") {
+        event.preventDefault();
+        listbox.moveActive(event.key === "PageUp" ? -10 : 10);
+
+        return;
+      }
     }
 
-    switch (event.key) {
-      case "ArrowDown":
-        event.preventDefault();
-        if (isOpen) moveActive(1);
-        else open();
-        break;
-      case "ArrowUp":
-        event.preventDefault();
-        if (isOpen) moveActive(-1);
-        else open(selectedIndex >= 0 ? selectedIndex : lastIndex);
-        break;
-      case "Home":
-        event.preventDefault();
-        if (isOpen) setActiveIndex(0);
-        else open(0);
-        break;
-      case "End":
-        event.preventDefault();
-        if (isOpen) setActiveIndex(lastIndex);
-        else open(lastIndex);
-        break;
-      case "PageUp":
-        if (!isOpen) break;
-        event.preventDefault();
-        moveActive(-10);
-        break;
-      case "PageDown":
-        if (!isOpen) break;
-        event.preventDefault();
-        moveActive(10);
-        break;
-      case "Enter":
-      case " ":
-        event.preventDefault();
-        if (isOpen) select(activeIndex);
-        else open();
-        break;
-      case "Escape":
-        if (!isOpen) break;
-        event.preventDefault();
-        setIsOpen(false);
-        break;
-      case "Tab":
-        if (isOpen) select(activeIndex);
-        break;
-      default:
-        if (event.key.length === 1 && !event.ctrlKey && !event.metaKey && !event.altKey) {
-          matchTypeAhead(event.key);
-        }
-    }
+    listbox.handleKeyDown(event);
   };
 
   return (
-    <ListboxRoot
-      rootRef={(element) => {
-        rootRef.current = element;
-      }}
-      className={styles.root}
-      onFocusLeave={() => setIsOpen(false)}
-    >
+    <ListboxRoot rootRef={listbox.rootRef} className={styles.root} onFocusLeave={listbox.close}>
       <button
         id={id}
         type="button"
         role="combobox"
         className={styles.trigger}
-        aria-controls={listboxId}
-        aria-expanded={isListboxOpen}
+        aria-controls={listbox.listboxId}
+        aria-expanded={listbox.isOpen}
         aria-required={required}
-        aria-activedescendant={isListboxOpen ? `${listboxId}-${activeIndex}` : undefined}
+        aria-activedescendant={
+          listbox.isOpen ? `${listbox.listboxId}-${listbox.activeIndex}` : undefined
+        }
         disabled={disabled || (collections.length === 0 && !canCreate)}
-        onClick={() => (isOpen ? setIsOpen(false) : open())}
+        onClick={listbox.toggle}
         onKeyDown={handleKeyDown}
       >
         {selectedCollection && <CollectionIcon icon={selectedCollection.icon} size="compact" />}
         <span className={styles.value}>{selectedCollection?.name}</span>
         <span className={styles.chevron} aria-hidden="true" />
       </button>
-      {isListboxOpen && (
-        <ul id={listboxId} role="listbox" className={styles.listbox} aria-labelledby={id}>
+      {listbox.isOpen && (
+        <ul id={listbox.listboxId} role="listbox" className={styles.listbox} aria-labelledby={id}>
           {collections.map((collection, index) => {
-            const isActive = index === activeIndex;
+            const isActive = index === listbox.activeIndex;
 
             return (
               <ListboxOption
-                optionRef={(element) => {
-                  optionRefs.current[index] = element;
-                }}
-                id={`${listboxId}-${index}`}
+                optionRef={listbox.optionRef(index)}
+                id={`${listbox.listboxId}-${index}`}
                 key={collection.id}
                 className={styles.option}
                 selected={collection.id === value}
                 active={isActive}
                 onActivate={() => select(index)}
-                onActive={() => setActiveIndex(index)}
+                onActive={() => listbox.setActiveIndex(index)}
               >
                 <CollectionIcon icon={collection.icon} size="compact" />
                 <span>{collection.name}</span>
@@ -216,15 +120,13 @@ export function CollectionSelect({
           })}
           {canCreate && (
             <ListboxOption
-              optionRef={(element) => {
-                optionRefs.current[createIndex] = element;
-              }}
-              id={`${listboxId}-${createIndex}`}
+              optionRef={listbox.optionRef(createIndex)}
+              id={`${listbox.listboxId}-${createIndex}`}
               className={`${styles.option} ${styles.createOption}`}
               selected={false}
-              active={activeIndex === createIndex}
+              active={listbox.activeIndex === createIndex}
               onActivate={() => select(createIndex)}
-              onActive={() => setActiveIndex(createIndex)}
+              onActive={() => listbox.setActiveIndex(createIndex)}
             >
               <AddIcon />
               <span>{t("collections.create")}</span>
