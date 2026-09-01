@@ -15,6 +15,7 @@ import {
   createCollection,
   deleteCollection,
   listCollections,
+  updateCollection,
 } from "../../src/server/resources/collections.js";
 import { recordReview } from "../../src/server/resources/reviews.js";
 import { login } from "../../src/server/resources/sessions.js";
@@ -23,6 +24,7 @@ import { createTopic, deleteTopic, listTopics } from "../../src/server/resources
 import { consumeTutorAllowance, createTutorStream } from "../../src/server/resources/tutor.js";
 
 const inDefaultCollection = { collectionId: defaultCollectionId };
+const englishCollection = { name: "Englisch", icon: "flag-gb" } as const;
 
 afterEach(() => setAudioObjectStoreForTests(undefined));
 
@@ -44,7 +46,7 @@ describe("PostgreSQL application behavior", () => {
   });
 
   it("scopes front uniqueness to a single Collection", async () => {
-    const other = await createCollection({ name: "Englisch", icon: "flag-gb" });
+    const other = await createCollection(englishCollection);
     await createCard({ ...inDefaultCollection, front: "Take care", back: "Pass auf" });
 
     await expect(
@@ -158,11 +160,47 @@ describe("PostgreSQL application behavior", () => {
     ).rejects.toMatchObject({ status: 404, type: "/problems/collection-not-found" });
   });
 
-  it("gives a migrated Collection the default icon and stores a chosen one", async () => {
-    expect(await listCollections()).toMatchObject([{ id: defaultCollectionId, icon: "book" }]);
-    await expect(createCollection({ name: "Englisch", icon: "flag-gb" })).resolves.toMatchObject({
+  it("gives a migrated Collection the default icon and no declared language", async () => {
+    expect(await listCollections()).toMatchObject([
+      { id: defaultCollectionId, icon: "book", frontLanguage: null, backLanguage: null },
+    ]);
+    await expect(createCollection(englishCollection)).resolves.toMatchObject({
       icon: "flag-gb",
+      frontLanguage: null,
+      backLanguage: null,
     });
+  });
+
+  it("stores the languages a Collection declares, and only changes the ones an update names", async () => {
+    const declared = await createCollection({
+      ...englishCollection,
+      frontLanguage: "vi-VN",
+      backLanguage: "de-DE",
+    });
+    expect(declared).toMatchObject({ frontLanguage: "vi-VN", backLanguage: "de-DE" });
+
+    // What a client on an older build sends. It knows nothing of either language, so it moves
+    // neither: naming no language must not be the same request as clearing both.
+    await expect(updateCollection(declared.id, englishCollection)).resolves.toMatchObject({
+      frontLanguage: "vi-VN",
+      backLanguage: "de-DE",
+    });
+
+    await expect(
+      updateCollection(declared.id, {
+        ...englishCollection,
+        frontLanguage: "en-US",
+        backLanguage: null,
+      }),
+    ).resolves.toMatchObject({ frontLanguage: "en-US", backLanguage: null });
+  });
+
+  it("refuses a Collection language that is not a full locale", async () => {
+    await expect(
+      getPool().query(
+        `INSERT INTO collections (name, normalized_name, front_language) VALUES ('Bare', 'Bare', 'vi')`,
+      ),
+    ).rejects.toThrow();
   });
 
   it("rejects Collection names that bypass stored normalization", async () => {
@@ -177,7 +215,7 @@ describe("PostgreSQL application behavior", () => {
   });
 
   it("keeps a Collection that still holds Cards, and always keeps the last one", async () => {
-    const other = await createCollection({ name: "Englisch", icon: "flag-gb" });
+    const other = await createCollection(englishCollection);
     const card = await createCard({
       collectionId: other.id,
       front: "Take care",
@@ -200,7 +238,7 @@ describe("PostgreSQL application behavior", () => {
   });
 
   it("keeps Cards when a Topic is deleted and drops Topics when a Card moves Collection", async () => {
-    const english = await createCollection({ name: "Englisch", icon: "flag-gb" });
+    const english = await createCollection(englishCollection);
     const animals = await createTopic({
       collectionId: defaultCollectionId,
       name: "Tiere",
@@ -239,7 +277,7 @@ describe("PostgreSQL application behavior", () => {
   });
 
   it("refuses a Topic from another Collection on a Card", async () => {
-    const english = await createCollection({ name: "Englisch", icon: "flag-gb" });
+    const english = await createCollection(englishCollection);
     const englishTopic = await createTopic({
       collectionId: english.id,
       name: "Food",

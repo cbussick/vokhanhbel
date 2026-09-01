@@ -31,7 +31,13 @@ export async function createCollection(input: CollectionInput) {
   try {
     const rows = await getDatabase()
       .insert(collections)
-      .values({ name: input.name, normalizedName: input.name, icon: input.icon })
+      .values({
+        name: input.name,
+        normalizedName: input.name,
+        icon: input.icon,
+        frontLanguage: input.frontLanguage ?? null,
+        backLanguage: input.backLanguage ?? null,
+      })
       .returning();
 
     return mapCollection(rows[0]!);
@@ -49,6 +55,9 @@ export async function updateCollection(collectionId: string, input: CollectionIn
         name: input.name,
         normalizedName: input.name,
         icon: input.icon,
+        // Undefined, so an omitted language keeps the stored one; an explicit null clears it.
+        frontLanguage: input.frontLanguage,
+        backLanguage: input.backLanguage,
         updatedAt: new Date(),
       })
       .where(and(eq(collections.id, collectionId), isNull(collections.deletedAt)))

@@ -1,9 +1,8 @@
-import { useEffect, useId, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { Topic } from "../contracts/topic";
-import { nextTypeAheadState, type TypeAheadState } from "../lib/typeAhead";
 import { ListboxOption } from "../shared/ui/ListboxOption";
 import { ListboxRoot } from "../shared/ui/ListboxRoot";
+import { useListbox } from "../shared/ui/useListbox";
 import { AddIcon } from "./AddIcon";
 import { TopicIcon } from "./TopicIcon";
 import selectStyles from "./CollectionSelect.module.css";
@@ -25,47 +24,24 @@ export function TopicSelect({
   disabled?: boolean;
 }) {
   const { t } = useTranslation();
-  const listboxId = useId();
-  const rootRef = useRef<HTMLDivElement>(null);
-  const optionRefs = useRef<(HTMLLIElement | null)[]>([]);
-  const typeAhead = useRef<TypeAheadState>({ query: "", lastKeyAt: 0 });
-  const [isOpen, setIsOpen] = useState(false);
   const canCreate = Boolean(onCreate);
   const createIndex = topics.length;
-  const lastIndex = canCreate ? createIndex : Math.max(topics.length - 1, 0);
-  const isListboxOpen = isOpen && !disabled && (topics.length > 0 || canCreate);
   const selected = new Set(value);
   const selectedTopics = topics.filter((topic) => selected.has(topic.id));
-  const [activeIndex, setActiveIndex] = useState(0);
-
-  useEffect(() => {
-    if (!isListboxOpen) return;
-
-    const closeOnOutsidePointer = (event: PointerEvent) => {
-      // SAFETY: a pointerdown dispatched on the document always targets a DOM element, so target
-      // is a Node. contains() also accepts null, so a null target would still be handled.
-      if (!rootRef.current?.contains(event.target as Node)) setIsOpen(false);
-    };
-
-    document.addEventListener("pointerdown", closeOnOutsidePointer);
-
-    return () => document.removeEventListener("pointerdown", closeOnOutsidePointer);
-  }, [isListboxOpen]);
-
-  useEffect(() => {
-    if (!isListboxOpen) return;
-
-    optionRefs.current[activeIndex]?.scrollIntoView?.({ block: "nearest" });
-  }, [activeIndex, isListboxOpen]);
-
-  const open = (index = 0) => {
-    setActiveIndex(index);
-    setIsOpen(true);
-  };
+  const listbox = useListbox({
+    optionCount: canCreate ? topics.length + 1 : topics.length,
+    // Many Topics can be on at once, so no single one decides where opening lands: it lands first.
+    selectedIndex: -1,
+    onActivate: (index) => toggle(index),
+    // Toggling leaves the list open, so Tab has no pending choice to commit.
+    commitOnTab: false,
+    typeAhead: { count: topics.length, labelAt: (index) => topics[index]!.name },
+    disabled,
+  });
 
   const toggle = (index: number) => {
     if (canCreate && index === createIndex) {
-      setIsOpen(false);
+      listbox.close();
       onCreate?.();
 
       return;
@@ -80,122 +56,50 @@ export function TopicSelect({
         ? value.filter((topicId) => topicId !== topic.id)
         : [...value, topic.id],
     );
-    setActiveIndex(index);
-  };
-
-  const moveActive = (offset: number) => {
-    if (topics.length === 0 && !canCreate) return;
-
-    setActiveIndex((current) => Math.min(Math.max(current + offset, 0), lastIndex));
-  };
-
-  const matchTypeAhead = (key: string) => {
-    typeAhead.current = nextTypeAheadState(typeAhead.current, key);
-    const { query } = typeAhead.current;
-
-    const startIndex = isOpen ? activeIndex : 0;
-    const matchOffset = Array.from({ length: topics.length }, (_, offset) =>
-      topics[(startIndex + offset + 1) % topics.length]!.name.toLocaleLowerCase("de").startsWith(
-        query.toLocaleLowerCase("de"),
-      ),
-    ).findIndex(Boolean);
-
-    if (matchOffset < 0) return;
-
-    setActiveIndex((startIndex + matchOffset + 1) % topics.length);
-    setIsOpen(true);
-  };
-
-  const handleKeyDown = (event: React.KeyboardEvent<HTMLButtonElement>) => {
-    switch (event.key) {
-      case "ArrowDown":
-        event.preventDefault();
-        if (isOpen) moveActive(1);
-        else open();
-        break;
-      case "ArrowUp":
-        event.preventDefault();
-        if (isOpen) moveActive(-1);
-        else open(lastIndex);
-        break;
-      case "Home":
-        event.preventDefault();
-        if (isOpen) setActiveIndex(0);
-        else open(0);
-        break;
-      case "End":
-        event.preventDefault();
-        if (isOpen) setActiveIndex(lastIndex);
-        else open(lastIndex);
-        break;
-      case "Enter":
-      case " ":
-        event.preventDefault();
-        if (isOpen) toggle(activeIndex);
-        else open();
-        break;
-      case "Escape":
-        if (!isOpen) break;
-        event.preventDefault();
-        setIsOpen(false);
-        break;
-      case "Tab":
-        setIsOpen(false);
-        break;
-      default:
-        if (event.key.length === 1 && !event.ctrlKey && !event.metaKey && !event.altKey) {
-          matchTypeAhead(event.key);
-        }
-    }
+    listbox.setActiveIndex(index);
   };
 
   return (
-    <ListboxRoot
-      rootRef={(element) => {
-        rootRef.current = element;
-      }}
-      className={styles.root}
-      onFocusLeave={() => setIsOpen(false)}
-    >
+    <ListboxRoot rootRef={listbox.rootRef} className={styles.root} onFocusLeave={listbox.close}>
       <button
         id={id}
         type="button"
         role="combobox"
         className={selectStyles.trigger}
-        aria-controls={listboxId}
-        aria-expanded={isListboxOpen}
+        aria-controls={listbox.listboxId}
+        aria-expanded={listbox.isOpen}
         aria-haspopup="listbox"
-        aria-activedescendant={isListboxOpen ? `${listboxId}-${activeIndex}` : undefined}
+        aria-activedescendant={
+          listbox.isOpen ? `${listbox.listboxId}-${listbox.activeIndex}` : undefined
+        }
         disabled={disabled || (topics.length === 0 && !canCreate)}
-        onClick={() => (isOpen ? setIsOpen(false) : open())}
-        onKeyDown={handleKeyDown}
+        onClick={listbox.toggle}
+        onKeyDown={listbox.handleKeyDown}
       >
         <span className={selectStyles.value}>{t("topics.addExisting")}</span>
         <span className={selectStyles.chevron} aria-hidden="true" />
       </button>
-      {isListboxOpen && (
+      {listbox.isOpen && (
         <ul
-          id={listboxId}
+          id={listbox.listboxId}
           role="listbox"
           className={selectStyles.listbox}
           aria-labelledby={id}
           aria-multiselectable="true"
         >
           {topics.map((topic, index) => {
-            const isActive = index === activeIndex;
+            const isActive = index === listbox.activeIndex;
 
             return (
               <ListboxOption
-                optionRef={(element) => {
-                  optionRefs.current[index] = element;
-                }}
-                id={`${listboxId}-${index}`}
+                optionRef={listbox.optionRef(index)}
+                id={`${listbox.listboxId}-${index}`}
                 key={topic.id}
                 className={selectStyles.option}
                 selected={selected.has(topic.id)}
                 active={isActive}
                 onActivate={() => toggle(index)}
-                onActive={() => setActiveIndex(index)}
+                onActive={() => listbox.setActiveIndex(index)}
               >
                 <TopicIcon icon={topic.icon} size="compact" />
                 <span>{topic.name}</span>
@@ -204,15 +108,13 @@ export function TopicSelect({
           })}
           {canCreate && (
             <ListboxOption
-              optionRef={(element) => {
-                optionRefs.current[createIndex] = element;
-              }}
-              id={`${listboxId}-${createIndex}`}
+              optionRef={listbox.optionRef(createIndex)}
+              id={`${listbox.listboxId}-${createIndex}`}
               className={`${selectStyles.option} ${selectStyles.createOption}`}
               selected={false}
-              active={activeIndex === createIndex}
+              active={listbox.activeIndex === createIndex}
               onActivate={() => toggle(createIndex)}
-              onActive={() => setActiveIndex(createIndex)}
+              onActive={() => listbox.setActiveIndex(createIndex)}
             >
               <AddIcon />
               <span>{t("topics.create")}</span>

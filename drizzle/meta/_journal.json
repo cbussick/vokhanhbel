@@ -64,6 +64,13 @@
       "when": 1787421279346,
       "tag": "0008_add-topics",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1788288060136,
+      "tag": "0009_declare-collection-face-languages",
+      "breakpoints": true
     }
   ]
 }
