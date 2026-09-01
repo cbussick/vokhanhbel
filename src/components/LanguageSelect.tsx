@@ -1,9 +1,20 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { collectionLanguages, collectionLanguageSchema } from "../contracts/collection";
+import {
+  collectionLanguages,
+  collectionLanguageSchema,
+  type CollectionLanguage,
+} from "../contracts/collection";
 import { ListboxOption } from "../shared/ui/ListboxOption";
 import { ListboxRoot } from "../shared/ui/ListboxRoot";
 import styles from "./CollectionSelect.module.css";
+
+/** The stored locale if this build offers it, so a locale from a newer build stays recognisable. */
+function offeredLanguage(language: string): CollectionLanguage | undefined {
+  const result = collectionLanguageSchema.safeParse(language);
+
+  return result.success ? result.data : undefined;
+}
 
 /**
  * The unset option is the stored null, not a locale standing in for "not a language". Offering it
@@ -29,10 +40,13 @@ export function LanguageSelect({
   const optionRefs = useRef<(HTMLLIElement | null)[]>([]);
   const [isOpen, setIsOpen] = useState(false);
 
-  const offered: (string | null)[] = [null, ...collectionLanguages];
-  // A Collection may carry a locale a newer build declared. Listing it keeps it selectable, and so
-  // keeps it intact, instead of silently swapping the Learner's declaration for the first option.
-  const options = value !== null && !offered.includes(value) ? [...offered, value] : offered;
+  const options: (string | null)[] = [
+    null,
+    ...collectionLanguages,
+    // A Collection may carry a locale a newer build declared. Listing it keeps it selectable, and
+    // so keeps it intact, instead of silently swapping the Learner's declaration for another.
+    ...(value !== null && !offeredLanguage(value) ? [value] : []),
+  ];
   const selectedIndex = options.indexOf(value);
   const lastIndex = options.length - 1;
   const isListboxOpen = isOpen && !disabled;
@@ -61,10 +75,10 @@ export function LanguageSelect({
   const label = (language: string | null) => {
     if (language === null) return t("collections.noLanguage");
 
-    const offeredLanguage = collectionLanguageSchema.safeParse(language);
+    const offered = offeredLanguage(language);
 
     // A locale this build does not offer has no translated name, so it shows as the locale itself.
-    return offeredLanguage.success ? t(`collections.languages.${offeredLanguage.data}`) : language;
+    return offered ? t(`collections.languages.${offered}`) : language;
   };
 
   const open = (index = selectedIndex) => {
@@ -120,8 +134,6 @@ export function LanguageSelect({
         break;
       case "Tab":
         if (isOpen) select(activeIndex);
-        break;
-      default:
         break;
     }
   };
