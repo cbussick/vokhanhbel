@@ -76,7 +76,8 @@ export interface GeneratedAudioProvenance {
 
 export type AudioProvenance = RecordedAudioProvenance | GeneratedAudioProvenance;
 
-const noSpeechProvenance = {
+const recordedColumns = {
+  source: "recorded",
   speechProvider: null,
   speechVoice: null,
   speechLanguage: null,
@@ -110,9 +111,7 @@ export async function stageAudio(
         durationMs: inspected.durationMs,
         checksum: inspected.checksum,
         stagedUntil: new Date(Date.now() + stagedLifetimeMilliseconds),
-        ...(provenance.source === "generated"
-          ? provenance
-          : { source: provenance.source, ...noSpeechProvenance }),
+        ...(provenance.source === "generated" ? provenance : recordedColumns),
       })
       .returning();
     const row = rows[0]!;

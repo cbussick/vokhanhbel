@@ -145,7 +145,7 @@ describe("real API handler stack", () => {
         "/api/cards",
         "POST",
         {
-          collectionId: "00000000-0000-4000-8000-000000000001",
+          collectionId: defaultCollectionId,
           front: { text: null, audioId: audio.id },
           back: { text: "Antwort", audioId: null },
         },
@@ -197,9 +197,9 @@ describe("real API handler stack", () => {
     process.env.APP_PASSWORD_HASH = await encodePassword(password);
     resetServerEnvironmentForTests();
     const store = new InMemoryAudioObjectStore();
-    const speech = new RecordingSpeechProvider();
+    const synthesizer = new RecordingSpeechProvider();
     setAudioObjectStoreForTests(store);
-    setSpeechProviderForTests(speech);
+    setSpeechProviderForTests(synthesizer);
     const loginResponse = await createSession(request("/api/session", "POST", { password }));
     const cookie = loginResponse.headers.get("set-cookie")?.split(";", 1)[0];
 
@@ -212,9 +212,9 @@ describe("real API handler stack", () => {
     expect(audio).toMatchObject({
       contentType: "audio/mpeg",
       durationMs: 1_000,
-      byteSize: speech.speech.bytes.byteLength,
+      byteSize: synthesizer.speech.bytes.byteLength,
     });
-    expect(speech.requests).toEqual([
+    expect(synthesizer.requests).toEqual([
       { text: "xin chào", language: "vi-VN", voice: "vi-VN-Chirp3-HD-Gacrux" },
     ]);
 
@@ -224,12 +224,12 @@ describe("real API handler stack", () => {
     );
     expect(stored.rows[0]).toMatchObject({
       source: "generated",
-      speech_provider: speech.name,
+      speech_provider: synthesizer.name,
       speech_voice: "vi-VN-Chirp3-HD-Gacrux",
       speech_language: "vi-VN",
       synthesized_text: "xin chào",
     });
-    expect(store.objects.get(stored.rows[0]!.object_key)?.bytes).toEqual(speech.speech.bytes);
+    expect(store.objects.get(stored.rows[0]!.object_key)?.bytes).toEqual(synthesizer.speech.bytes);
 
     const cardResponse = await createCard(
       request(
@@ -255,7 +255,7 @@ describe("real API handler stack", () => {
       }),
     );
     expect(playbackResponse.status).toBe(200);
-    expect(new Uint8Array(await playbackResponse.arrayBuffer())).toEqual(speech.speech.bytes);
+    expect(new Uint8Array(await playbackResponse.arrayBuffer())).toEqual(synthesizer.speech.bytes);
 
     const attempt = await getPool().query<{ session_hash: string }>(
       "SELECT session_hash FROM audio_upload_attempts LIMIT 1",
@@ -272,7 +272,7 @@ describe("real API handler stack", () => {
     await expect(limitedResponse.json()).resolves.toMatchObject({
       type: "/problems/audio-upload-rate-limit",
     });
-    expect(speech.requests).toHaveLength(1);
+    expect(synthesizer.requests).toHaveLength(1);
   });
 
   it("writes nothing when synthesis fails or the locale cannot be spoken", async () => {
@@ -280,10 +280,10 @@ describe("real API handler stack", () => {
     process.env.APP_PASSWORD_HASH = await encodePassword(password);
     resetServerEnvironmentForTests();
     const store = new InMemoryAudioObjectStore();
-    const speech = new RecordingSpeechProvider();
-    speech.failure = new Error("the synthesizer is unreachable");
+    const synthesizer = new RecordingSpeechProvider();
+    synthesizer.failure = new Error("the synthesizer is unreachable");
     setAudioObjectStoreForTests(store);
-    setSpeechProviderForTests(speech);
+    setSpeechProviderForTests(synthesizer);
     const loginResponse = await createSession(request("/api/session", "POST", { password }));
     const cookie = loginResponse.headers.get("set-cookie")?.split(";", 1)[0];
 
@@ -312,7 +312,7 @@ describe("real API handler stack", () => {
 
     // A rejected locale never reaches the synthesizer, and the one call that did leaves no asset
     // record, no stored object, and no Card behind.
-    expect(speech.requests).toHaveLength(1);
+    expect(synthesizer.requests).toHaveLength(1);
     expect(store.objects.size).toBe(0);
     const counts = await getPool().query<{ assets: string; cards: string }>(
       "SELECT (SELECT count(*) FROM audio_assets) AS assets, (SELECT count(*) FROM cards) AS cards",

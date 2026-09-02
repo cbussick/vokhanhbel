@@ -33,7 +33,7 @@ export interface SpeechProvider {
  * keeps the cost tier deliberate, keeps output reproducible, and makes an upgrade a single edit.
  * All three come from the same Chirp 3 HD family.
  */
-export const pronunciationVoices = {
+const pronunciationVoices = {
   "vi-VN": "vi-VN-Chirp3-HD-Gacrux",
   "de-DE": "de-DE-Chirp3-HD-Achernar",
   "en-US": "en-US-Chirp3-HD-Despina",
