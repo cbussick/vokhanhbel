@@ -66,15 +66,15 @@ export function PronunciationGenerator({
     },
   });
 
-  // Every reason the button will not act says so in the hint, which describes both the field and
-  // the button. A reason the Learner cannot reach is no reason at all, so the button keeps its
-  // place in the tab order and refuses in `onClick` rather than going natively disabled.
-  const hint = isTooLong
+  // One derivation for why the button will not act, so the hint that describes both the field and
+  // the button always states the reason it refuses. A reason the Learner cannot reach is no reason
+  // at all, so the button keeps its place in the tab order instead of going natively disabled.
+  const refusal = isTooLong
     ? "audio.pronunciationTooLong"
     : spokenText
-      ? "audio.pronunciationHint"
+      ? undefined
       : "audio.pronunciationEmpty";
-  const isBlocked = !spokenText || isTooLong || generate.isPending;
+  const isBlocked = refusal !== undefined || generate.isPending;
 
   return (
     <div className={styles.generator}>
@@ -93,7 +93,7 @@ export function PronunciationGenerator({
         onChange={(event) => setEditedText(event.target.value)}
       />
       <p id={hintId} className={isTooLong ? styles.warning : styles.hint}>
-        {t(hint, {
+        {t(refusal ?? "audio.pronunciationHint", {
           language: t(`collections.languages.${language}`),
           max: maximumPronunciationTextLength,
         })}
