@@ -4,11 +4,15 @@ import { createNormalizedTextSchema, utcTimestampSchema, uuidSchema } from "./co
 
 export const maximumCardTextLength = 1_000;
 
+/** What any clip on a Card face has to fit in, however it was produced. */
+export const maximumAudioDurationMs = 7_000;
+export const maximumAudioBytes = 2_000_000;
+
 export const audioMetadataSchema = z.object({
   id: uuidSchema,
-  durationMs: z.number().int().positive().max(7_000),
+  durationMs: z.number().int().positive().max(maximumAudioDurationMs),
   contentType: z.enum(["audio/mpeg", "audio/mp4", "audio/webm", "audio/ogg", "audio/wav"]),
-  byteSize: z.number().int().positive().max(2_000_000),
+  byteSize: z.number().int().positive().max(maximumAudioBytes),
 });
 export type AudioMetadata = z.infer<typeof audioMetadataSchema>;
 

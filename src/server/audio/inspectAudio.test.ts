@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
+import { maximumAudioBytes } from "../../contracts/card.js";
 import { createWavFixture } from "./audioFixture.test-helper.js";
-import { inspectAudio, maximumAudioBytes } from "./inspectAudio.js";
+import { inspectAudio } from "./inspectAudio.js";
 
 function iosMp4Fixture(): Uint8Array {
   const bytes = new Uint8Array(80);

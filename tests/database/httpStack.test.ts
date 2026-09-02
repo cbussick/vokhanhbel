@@ -8,6 +8,8 @@ import { POST as createReview } from "../../api/reviews.js";
 import { POST as createSession } from "../../api/session.js";
 import { GET as readStats } from "../../api/stats.js";
 import { POST as createTopic } from "../../api/topics/index.js";
+import { maximumAudioBytes } from "../../src/contracts/card.js";
+import { maximumPronunciationTextLength } from "../../src/contracts/pronunciation.js";
 import { createWavFixture } from "../../src/server/audio/audioFixture.test-helper.js";
 import {
   InMemoryAudioObjectStore,
@@ -275,25 +277,29 @@ describe("real API handler stack", () => {
     expect(synthesizer.requests).toHaveLength(1);
   });
 
-  it("writes nothing when synthesis fails or the locale cannot be spoken", async () => {
+  it("writes nothing when the request is refused, synthesis fails, or the clip is unusable", async () => {
     const password = "failed synthesis password";
     process.env.APP_PASSWORD_HASH = await encodePassword(password);
     resetServerEnvironmentForTests();
     const store = new InMemoryAudioObjectStore();
     const synthesizer = new RecordingSpeechProvider();
-    synthesizer.failure = new Error("the synthesizer is unreachable");
     setAudioObjectStoreForTests(store);
     setSpeechProviderForTests(synthesizer);
     const loginResponse = await createSession(request("/api/session", "POST", { password }));
     const cookie = loginResponse.headers.get("set-cookie")?.split(";", 1)[0];
 
-    const failedResponse = await generatePronunciation(
-      request("/api/pronunciations", "POST", { text: "xin chào", language: "vi-VN" }, cookie),
+    const tooLongResponse = await generatePronunciation(
+      request(
+        "/api/pronunciations",
+        "POST",
+        { text: "a".repeat(maximumPronunciationTextLength + 1), language: "vi-VN" },
+        cookie,
+      ),
     );
-
-    expect(failedResponse.status).toBe(502);
-    await expect(failedResponse.json()).resolves.toMatchObject({
-      type: "/problems/pronunciation-failed",
+    expect(tooLongResponse.status).toBe(422);
+    await expect(tooLongResponse.json()).resolves.toMatchObject({
+      type: "/problems/invalid-request",
+      errors: [{ pointer: "/text" }],
     });
 
     const unsupportedResponse = await generatePronunciation(
@@ -310,9 +316,36 @@ describe("real API handler stack", () => {
     );
     expect(absentResponse.status).toBe(422);
 
-    // A rejected locale never reaches the synthesizer, and the one call that did leaves no asset
-    // record, no stored object, and no Card behind.
-    expect(synthesizer.requests).toHaveLength(1);
+    // Text too long to be spoken inside the duration cap costs nothing: the request never reaches
+    // the synthesizer, so it is never billed.
+    expect(synthesizer.requests).toEqual([]);
+
+    synthesizer.failure = new Error("the synthesizer is unreachable");
+    const failedResponse = await generatePronunciation(
+      request("/api/pronunciations", "POST", { text: "xin chào", language: "vi-VN" }, cookie),
+    );
+
+    expect(failedResponse.status).toBe(502);
+    await expect(failedResponse.json()).resolves.toMatchObject({
+      type: "/problems/pronunciation-failed",
+    });
+
+    synthesizer.failure = undefined;
+    synthesizer.speech = {
+      bytes: new Uint8Array(maximumAudioBytes + 1),
+      contentType: "audio/mpeg",
+    };
+    const oversizedResponse = await generatePronunciation(
+      request("/api/pronunciations", "POST", { text: "xin chào", language: "vi-VN" }, cookie),
+    );
+
+    expect(oversizedResponse.status).toBe(413);
+    await expect(oversizedResponse.json()).resolves.toMatchObject({
+      type: "/problems/request-too-large",
+    });
+
+    // Whatever went wrong, nothing survives it: no asset record, no stored object, no Card.
+    expect(synthesizer.requests).toHaveLength(2);
     expect(store.objects.size).toBe(0);
     const counts = await getPool().query<{ assets: string; cards: string }>(
       "SELECT (SELECT count(*) FROM audio_assets) AS assets, (SELECT count(*) FROM cards) AS cards",
