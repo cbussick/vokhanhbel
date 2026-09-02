@@ -3,6 +3,7 @@ import { z } from "zod";
 import { audioMetadataSchema, type AudioMetadata } from "../../contracts/card.js";
 import { problemTypes } from "../../contracts/problem.js";
 import { getAudioObjectStore, type AudioObjectRange } from "../audio/audioObjectStore.js";
+import type { AudioProvenance } from "../audio/audioProvenance.js";
 import { inspectAudio } from "../audio/inspectAudio.js";
 import { getDatabase, getPool } from "../database/client.js";
 import { audioAssets, audioCleanupJobs, cards } from "../database/schema.js";
@@ -59,22 +60,6 @@ export async function deleteAudioObject(
     await recordCleanupFailure(audio.id, audio.objectKey, reason, error, requestId);
   }
 }
-
-/** A clip the Learner recorded herself, which carries no synthesis detail. */
-export interface RecordedAudioProvenance {
-  source: "recorded";
-}
-
-/** A clip a text-to-speech provider produced, down to the exact text it was given. */
-export interface GeneratedAudioProvenance {
-  source: "generated";
-  speechProvider: string;
-  speechVoice: string;
-  speechLanguage: string;
-  synthesizedText: string;
-}
-
-export type AudioProvenance = RecordedAudioProvenance | GeneratedAudioProvenance;
 
 const recordedColumns = {
   source: "recorded",

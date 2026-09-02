@@ -2,6 +2,7 @@ import { TextToSpeechClient } from "@google-cloud/text-to-speech";
 import type { CollectionLanguage } from "../../contracts/collection.js";
 import { problemTypes } from "../../contracts/problem.js";
 import type { PronunciationInput } from "../../contracts/pronunciation.js";
+import type { GeneratedAudioProvenance } from "../audio/audioProvenance.js";
 import { getGoogleSpeechEnvironment } from "../config/environment.js";
 import { AppProblem } from "../http/problem.js";
 
@@ -39,12 +40,9 @@ const pronunciationVoices = {
   "en-US": "en-US-Chirp3-HD-Despina",
 } as const satisfies Record<CollectionLanguage, string>;
 
-/** Encoded speech together with the provenance a generated audio asset records. */
+/** Encoded speech together with the provenance the generated audio asset records verbatim. */
 export interface Pronunciation extends SynthesizedSpeech {
-  provider: string;
-  voice: string;
-  language: CollectionLanguage;
-  text: string;
+  provenance: GeneratedAudioProvenance;
 }
 
 export async function synthesizePronunciation(
@@ -66,7 +64,16 @@ export async function synthesizePronunciation(
     );
   }
 
-  return { ...speech, provider: provider.name, voice, language, text };
+  return {
+    ...speech,
+    provenance: {
+      source: "generated",
+      speechProvider: provider.name,
+      speechVoice: voice,
+      speechLanguage: language,
+      synthesizedText: text,
+    },
+  };
 }
 
 export function createGoogleSpeechProvider(): SpeechProvider {

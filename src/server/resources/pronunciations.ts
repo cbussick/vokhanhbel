@@ -15,19 +15,7 @@ export async function generatePronunciation(
   provider: SpeechProvider,
   requestId?: string,
 ): Promise<AudioMetadata> {
-  const pronunciation = await synthesizePronunciation(provider, input);
+  const { bytes, contentType, provenance } = await synthesizePronunciation(provider, input);
 
-  return stageAudio(
-    sessionHash,
-    pronunciation.bytes,
-    {
-      source: "generated",
-      speechProvider: pronunciation.provider,
-      speechVoice: pronunciation.voice,
-      speechLanguage: pronunciation.language,
-      synthesizedText: pronunciation.text,
-    },
-    pronunciation.contentType,
-    requestId,
-  );
+  return stageAudio(sessionHash, bytes, provenance, contentType, requestId);
 }

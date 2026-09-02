@@ -31,11 +31,14 @@ describe("pronunciation synthesis", () => {
 
       expect(provider.requests).toEqual([{ text: "xin chào", language, voice }]);
       expect(pronunciation).toMatchObject({
-        provider: provider.name,
-        voice,
-        language,
-        text: "xin chào",
         contentType: "audio/mpeg",
+        provenance: {
+          source: "generated",
+          speechProvider: provider.name,
+          speechVoice: voice,
+          speechLanguage: language,
+          synthesizedText: "xin chào",
+        },
       });
       expect(pronunciation.bytes).toBe(provider.speech.bytes);
     },
