@@ -64,12 +64,17 @@ export const testCards = [
   },
 ];
 
-/** What the pronunciation endpoint answers with: staged audio, in the shape an upload returns. */
+/**
+ * What the pronunciation endpoint answers with: staged audio, in the shape an upload returns. The
+ * synthesized text is the text the journeys below speak; the handler replaces it with whatever was
+ * actually requested, exactly as the server stores what it was given.
+ */
 export const testGeneratedAudio = {
   id: "ffffffff-ffff-4fff-8fff-ffffffffffff",
   durationMs: 1_200,
   contentType: "audio/mpeg",
   byteSize: 9_600,
+  synthesizedText: "xin chào",
 };
 
 export const mockServer = setupServer(
@@ -87,7 +92,11 @@ export const mockServer = setupServer(
       dailyRecap: null,
     }),
   ),
-  http.post("/api/pronunciations", () => HttpResponse.json(testGeneratedAudio, { status: 201 })),
+  http.post("/api/pronunciations", async ({ request }) => {
+    const { text } = (await request.json()) as { text: string };
+
+    return HttpResponse.json({ ...testGeneratedAudio, synthesizedText: text }, { status: 201 });
+  }),
   http.post("/api/reviews", async ({ request }) => {
     const input = (await request.json()) as {
       id: string;

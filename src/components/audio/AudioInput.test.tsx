@@ -64,6 +64,7 @@ describe("AudioInput microphone gate", () => {
     render(
       <AudioInput
         face="front"
+        faceText=""
         draft={null}
         existing={null}
         existingRemoved={false}
@@ -83,6 +84,7 @@ describe("AudioInput microphone gate", () => {
     render(
       <AudioInput
         face="front"
+        faceText=""
         draft={null}
         existing={null}
         existingRemoved={false}
@@ -116,6 +118,7 @@ describe("AudioInput microphone gate", () => {
     render(
       <AudioInput
         face="front"
+        faceText=""
         draft={null}
         existing={null}
         existingRemoved={false}
@@ -150,6 +153,7 @@ describe("AudioInput microphone gate", () => {
     const view = render(
       <AudioInput
         face="front"
+        faceText=""
         draft={null}
         existing={null}
         existingRemoved={false}
@@ -169,6 +173,7 @@ describe("AudioInput microphone gate", () => {
     view.rerender(
       <AudioInput
         face="front"
+        faceText=""
         draft={onDraftChange.mock.calls[0]![0]}
         existing={null}
         existingRemoved={false}
@@ -196,6 +201,7 @@ describe("AudioInput microphone gate", () => {
     const view = render(
       <AudioInput
         face="back"
+        faceText=""
         draft={null}
         existing={null}
         existingRemoved={false}
@@ -217,6 +223,7 @@ describe("AudioInput microphone gate", () => {
     view.rerender(
       <AudioInput
         face="back"
+        faceText=""
         draft={onDraftChange.mock.calls[0]![0]}
         existing={null}
         existingRemoved={false}
@@ -240,6 +247,7 @@ describe("AudioInput microphone gate", () => {
     render(
       <AudioInput
         face="front"
+        faceText=""
         draft={null}
         existing={null}
         existingRemoved={false}

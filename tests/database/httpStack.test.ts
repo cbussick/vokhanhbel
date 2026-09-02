@@ -135,7 +135,8 @@ describe("real API handler stack", () => {
 
     expect(uploadResponse.status).toBe(201);
     const audio = (await uploadResponse.json()) as { id: string; durationMs: number };
-    expect(audio).toMatchObject({ durationMs: 1_000 });
+    // A recording says nothing it was told to say, so it can never read as no longer matching.
+    expect(audio).toMatchObject({ durationMs: 1_000, synthesizedText: null });
     expect(JSON.stringify(audio)).not.toContain("objectKey");
     const recorded = await getPool().query<{ source: string; synthesized_text: string | null }>(
       "SELECT source, synthesized_text FROM audio_assets WHERE id=$1",
@@ -156,6 +157,9 @@ describe("real API handler stack", () => {
     );
 
     expect(cardResponse.status).toBe(201);
+    await expect(cardResponse.json()).resolves.toMatchObject({
+      front: { audio: { id: audio.id, synthesizedText: null } },
+    });
     const invalidOriginResponse = await playAudio(
       new Request(`${origin}/api/audio/${audio.id}`, {
         headers: {
@@ -215,6 +219,8 @@ describe("real API handler stack", () => {
       contentType: "audio/mpeg",
       durationMs: 1_000,
       byteSize: synthesizer.speech.bytes.byteLength,
+      // Answered with the clip, so the Card form can compare it against the face still being typed.
+      synthesizedText: "xin chào",
     });
     expect(synthesizer.requests).toEqual([
       { text: "xin chào", language: "vi-VN", voice: "vi-VN-Chirp3-HD-Gacrux" },
@@ -273,7 +279,7 @@ describe("real API handler stack", () => {
 
     expect(cardResponse.status).toBe(201);
     await expect(cardResponse.json()).resolves.toMatchObject({
-      front: { audio: { id: audio.id, contentType: "audio/mpeg" } },
+      front: { audio: { id: audio.id, contentType: "audio/mpeg", synthesizedText: "xin chào" } },
     });
 
     const playbackResponse = await playAudio(

@@ -73,6 +73,7 @@ function selectCards() {
         durationMs: frontAudio.durationMs,
         contentType: frontAudio.contentType,
         byteSize: frontAudio.byteSize,
+        synthesizedText: frontAudio.synthesizedText,
         deletedAt: frontAudio.deletedAt,
       },
       backAudio: {
@@ -80,6 +81,7 @@ function selectCards() {
         durationMs: backAudio.durationMs,
         contentType: backAudio.contentType,
         byteSize: backAudio.byteSize,
+        synthesizedText: backAudio.synthesizedText,
         deletedAt: backAudio.deletedAt,
       },
     })

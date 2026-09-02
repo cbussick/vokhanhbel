@@ -13,6 +13,13 @@ export const audioMetadataSchema = z.object({
   durationMs: z.number().int().positive().max(maximumAudioDurationMs),
   contentType: z.enum(["audio/mpeg", "audio/mp4", "audio/webm", "audio/ogg", "audio/wav"]),
   byteSize: z.number().int().positive().max(maximumAudioBytes),
+  /**
+   * The exact text a speech provider was given, and null for a clip the Learner recorded herself.
+   * It travels with the clip so the Card form can tell whether the clip still says what its face
+   * says while she is still typing, without asking the server about text it has never seen. The
+   * default keeps a Card snapshot a Review stored before this field existed readable.
+   */
+  synthesizedText: z.string().nullable().default(null),
 });
 export type AudioMetadata = z.infer<typeof audioMetadataSchema>;
 

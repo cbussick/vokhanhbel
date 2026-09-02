@@ -529,6 +529,108 @@ describe("rendered app journeys", () => {
     await waitFor(() => expect(created.front).toEqual({ text: "xin chào", audioId: null }));
   });
 
+  it("marks a generated pronunciation once the face says something else, and clears it on regeneration", async () => {
+    const user = userEvent.setup();
+    let generations = 0;
+    mockServer.use(
+      http.post("/api/pronunciations", async ({ request }) => {
+        const spoken = (await request.json()) as PronunciationInput;
+        generations += 1;
+
+        return HttpResponse.json(
+          { ...testGeneratedAudio, synthesizedText: spoken.text },
+          { status: 201 },
+        );
+      }),
+    );
+    await renderApp(`/cards/${testCollections[0]!.id}`);
+
+    await user.click(await screen.findByRole("button", { name: "Karte hinzufügen" }));
+    await cardDialogReady();
+    const frontText = screen.getByLabelText("Vorderseite Maximal 1.000 Zeichen");
+    await user.type(frontText, "xin chào");
+    await user.type(screen.getByLabelText("Rückseite Maximal 1.000 Zeichen"), "hallo");
+
+    const front = audioSection("Vorderseite");
+    await user.click(front.getByRole("button", { name: "Aussprache erzeugen" }));
+    const player = await front.findByRole("button", { name: "Audio Vorderseite: Abspielen" });
+
+    expect(player).toBeVisible();
+    expect(front.queryByText(/passt nicht mehr zum Text/)).not.toBeInTheDocument();
+
+    await user.type(frontText, " bạn");
+
+    expect(front.getByText(/passt nicht mehr zum Text/)).toBeVisible();
+    // The edit neither removed the clip nor paid for a new one: it stays playable and untouched.
+    expect(front.getByRole("button", { name: "Audio Vorderseite: Abspielen" })).toBeVisible();
+    expect(generations).toBe(1);
+
+    await user.click(front.getByRole("button", { name: "Aussprache erzeugen" }));
+
+    await waitFor(() => expect(generations).toBe(2));
+    await waitFor(() =>
+      expect(front.queryByText(/passt nicht mehr zum Text/)).not.toBeInTheDocument(),
+    );
+  });
+
+  it("clears the mark when the face's text returns to what the generated pronunciation says", async () => {
+    const user = userEvent.setup();
+    await renderApp(`/cards/${testCollections[0]!.id}`);
+
+    await user.click(await screen.findByRole("button", { name: "Karte hinzufügen" }));
+    await cardDialogReady();
+    const frontText = screen.getByLabelText("Vorderseite Maximal 1.000 Zeichen");
+    await user.type(frontText, "xin chào");
+    await user.type(screen.getByLabelText("Rückseite Maximal 1.000 Zeichen"), "hallo");
+
+    const front = audioSection("Vorderseite");
+    await user.click(front.getByRole("button", { name: "Aussprache erzeugen" }));
+    expect(
+      await front.findByRole("button", { name: "Audio Vorderseite: Abspielen" }),
+    ).toBeVisible();
+
+    await user.clear(frontText);
+    await user.type(frontText, "cảm ơn");
+    expect(front.getByText(/passt nicht mehr zum Text/)).toBeVisible();
+
+    await user.clear(frontText);
+    await user.type(frontText, "xin chào ");
+
+    expect(front.queryByText(/passt nicht mehr zum Text/)).not.toBeInTheDocument();
+  });
+
+  it("never marks a Learner's own recording, which says nothing it could disagree with", async () => {
+    const user = userEvent.setup();
+    const recordedCard = {
+      ...testCards[0]!,
+      front: {
+        text: "xin chào",
+        audio: {
+          id: "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
+          durationMs: 1_000,
+          contentType: "audio/wav",
+          byteSize: 8_044,
+          synthesizedText: null,
+        },
+      },
+    };
+    mockServer.use(
+      http.get("/api/cards", () => HttpResponse.json([recordedCard])),
+      http.get("/api/audio/:audioId", () => new HttpResponse(new Uint8Array([1]))),
+    );
+    await renderApp(`/cards/${testCollections[0]!.id}/${recordedCard.id}`);
+
+    const frontText = await screen.findByLabelText("Vorderseite Maximal 1.000 Zeichen");
+    const front = audioSection("Vorderseite");
+
+    expect(front.getByRole("button", { name: "Audio Vorderseite: Abspielen" })).toBeVisible();
+
+    await user.type(frontText, " bạn");
+
+    expect(frontText).toHaveValue("xin chào bạn");
+    expect(front.queryByText(/passt nicht mehr zum Text/)).not.toBeInTheDocument();
+  });
+
   it("creates a Collection with the chosen icon and no declared language", async () => {
     const user = userEvent.setup();
     let created: Partial<CollectionInput> = {};

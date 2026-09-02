@@ -200,6 +200,24 @@
   text-align: center;
 }
 
+.staleNote {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  padding: var(--space-2);
+  border: 1px solid color-mix(in srgb, var(--color-danger) 45%, var(--color-border));
+  border-radius: var(--radius-medium);
+  background: color-mix(in srgb, var(--color-danger) 8%, var(--color-surface));
+  color: var(--color-text);
+  font-size: var(--font-xs);
+  line-height: 1.35;
+}
+
+.staleNote .icon {
+  color: var(--color-danger);
+}
+
 .limits,
 .status {
   color: var(--color-text-secondary);

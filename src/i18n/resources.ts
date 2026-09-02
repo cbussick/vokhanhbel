@@ -75,6 +75,7 @@ export const de = {
       generateFailed: "Die Aussprache konnte nicht erzeugt werden. Versuch es gleich noch einmal.",
       generateRejected: "Dieser Text lässt sich nicht aussprechen. Kürze oder ändere ihn.",
       generateRateLimit: "Zu viele Audio-Anfragen. Versuch es später erneut.",
+      stale: "Die Aussprache passt nicht mehr zum Text. Du kannst sie weiter anhören.",
     },
     shell: {
       points: "{{count}} Punkte",
