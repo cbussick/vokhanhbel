@@ -8,6 +8,7 @@ import {
   updateCardInputSchema,
   type Card,
 } from "../contracts/card";
+import { offeredCollectionLanguage } from "../contracts/collection";
 import { problemTypes } from "../contracts/problem";
 import { ApiError, apiRequest } from "../lib/apiClient";
 import { useOnlineStatus } from "../lib/browserState";
@@ -68,26 +69,32 @@ export function CardFormDialog({
 
   const save = useMutation({
     mutationFn: async () => {
-      const stagedIds: string[] = [];
+      const uploadedIds: string[] = [];
+      // A generated clip is staged already, so only a clip recorded or picked here is uploaded —
+      // and only that upload is undone below, leaving a generated clip to expire on its own.
+      const claimAudio = async (draft: AudioDraft | null) => {
+        if (!draft) return undefined;
+        if (draft.origin === "staged") return draft.metadata.id;
+        const staged = await stageAudioDraft(draft.blob);
+
+        uploadedIds.push(staged.id);
+
+        return staged.id;
+      };
 
       try {
-        const stagedFront = frontDraft ? await stageAudioDraft(frontDraft.blob) : undefined;
-
-        if (stagedFront) stagedIds.push(stagedFront.id);
-        const stagedBack = backDraft ? await stageAudioDraft(backDraft.blob) : undefined;
-
-        if (stagedBack) stagedIds.push(stagedBack.id);
+        const frontAudioId = await claimAudio(frontDraft);
+        const backAudioId = await claimAudio(backDraft);
         const value = {
           collectionId,
           topicIds,
           front: {
             text: front.trim() ? front : null,
-            audioId:
-              stagedFront?.id ?? (frontAudioRemoved ? null : (card?.front.audio?.id ?? null)),
+            audioId: frontAudioId ?? (frontAudioRemoved ? null : (card?.front.audio?.id ?? null)),
           },
           back: {
             text: back.trim() ? back : null,
-            audioId: stagedBack?.id ?? (backAudioRemoved ? null : (card?.back.audio?.id ?? null)),
+            audioId: backAudioId ?? (backAudioRemoved ? null : (card?.back.audio?.id ?? null)),
           },
         };
         const input = card
@@ -103,7 +110,7 @@ export function CardFormDialog({
         return saved;
       } catch (value) {
         await Promise.allSettled(
-          stagedIds.map((audioId) => apiRequest(apiPaths.audio(audioId), { method: "DELETE" })),
+          uploadedIds.map((audioId) => apiRequest(apiPaths.audio(audioId), { method: "DELETE" })),
         );
         throw value;
       }
@@ -168,6 +175,18 @@ export function CardFormDialog({
   const selectCollection = (nextCollectionId: string) => {
     setCollectionId(nextCollectionId);
     setTopicIds([]);
+  };
+
+  /**
+   * Whether a face can be spoken is decided here, from the Collection's declaration: a locale this
+   * build offers yields the generation control, anything else — unset, or declared by a newer
+   * build — yields nothing at all.
+   */
+  const selectedCollection = (collections.data ?? []).find((entry) => entry.id === collectionId);
+  const pronunciationFor = (declared: string | null, faceText: string) => {
+    const language = offeredCollectionLanguage(declared);
+
+    return language ? { language, faceText } : undefined;
   };
 
   return (
@@ -269,6 +288,7 @@ export function CardFormDialog({
                   draft={frontDraft}
                   existing={card?.front.audio ?? null}
                   existingRemoved={frontAudioRemoved}
+                  pronunciation={pronunciationFor(selectedCollection?.frontLanguage ?? null, front)}
                   onDraftChange={setFrontDraft}
                   onExistingRemovedChange={setFrontAudioRemoved}
                 />
@@ -306,6 +326,7 @@ export function CardFormDialog({
                   draft={backDraft}
                   existing={card?.back.audio ?? null}
                   existingRemoved={backAudioRemoved}
+                  pronunciation={pronunciationFor(selectedCollection?.backLanguage ?? null, back)}
                   onDraftChange={setBackDraft}
                   onExistingRemovedChange={setBackAudioRemoved}
                 />

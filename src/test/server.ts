@@ -64,6 +64,14 @@ export const testCards = [
   },
 ];
 
+/** What the pronunciation endpoint answers with: staged audio, in the shape an upload returns. */
+export const testGeneratedAudio = {
+  id: "ffffffff-ffff-4fff-8fff-ffffffffffff",
+  durationMs: 1_200,
+  contentType: "audio/mpeg",
+  byteSize: 9_600,
+};
+
 export const mockServer = setupServer(
   http.get("/api/session", () => HttpResponse.json({ authenticated: true })),
   http.get("/api/cards", () => HttpResponse.json(testCards)),
@@ -79,6 +87,7 @@ export const mockServer = setupServer(
       dailyRecap: null,
     }),
   ),
+  http.post("/api/pronunciations", () => HttpResponse.json(testGeneratedAudio, { status: 201 })),
   http.post("/api/reviews", async ({ request }) => {
     const input = (await request.json()) as {
       id: string;

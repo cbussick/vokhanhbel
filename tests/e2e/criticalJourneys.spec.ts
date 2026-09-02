@@ -25,10 +25,25 @@ interface MockFace {
 }
 
 const fixedNow = "2026-07-14T08:00:00.000Z";
-const mockCollection = {
+interface MockCollection {
+  id: string;
+  name: string;
+  icon: string;
+  frontLanguage: string | null;
+  backLanguage: string | null;
+  createdAt: string;
+  updatedAt: string;
+  deletedAt: null;
+}
+
+// Declares a language for the front only, so one Card face offers pronunciation generation and the
+// other does not — the state the accessibility and visual checks below have to cover.
+const mockCollection: MockCollection = {
   id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
   name: "Vietnamesisch",
   icon: "flag-vn",
+  frontLanguage: "vi-VN",
+  backLanguage: null,
   createdAt: fixedNow,
   updatedAt: fixedNow,
   deletedAt: null,
@@ -972,6 +987,8 @@ test.describe("mobile dropdown touch interaction", () => {
           : `${String(index + 1).padStart(8, "0")}-0000-4000-8000-000000000000`,
       name: `Sammlung ${String(index + 1).padStart(2, "0")}`,
       icon: "flag-vn",
+      frontLanguage: null,
+      backLanguage: null,
       createdAt: fixedNow,
       updatedAt: fixedNow,
       deletedAt: null,

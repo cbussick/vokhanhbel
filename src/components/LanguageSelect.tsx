@@ -1,20 +1,9 @@
 import { useTranslation } from "react-i18next";
-import {
-  collectionLanguages,
-  collectionLanguageSchema,
-  type CollectionLanguage,
-} from "../contracts/collection";
+import { collectionLanguages, offeredCollectionLanguage } from "../contracts/collection";
 import { ListboxOption } from "../shared/ui/ListboxOption";
 import { ListboxRoot } from "../shared/ui/ListboxRoot";
 import { useListbox } from "../shared/ui/useListbox";
 import styles from "./CollectionSelect.module.css";
-
-/** The stored locale if this build offers it, so a locale from a newer build stays recognisable. */
-function offeredLanguage(language: string): CollectionLanguage | undefined {
-  const result = collectionLanguageSchema.safeParse(language);
-
-  return result.success ? result.data : undefined;
-}
 
 /**
  * The unset option is the stored null, not a locale standing in for "not a language". Offering it
@@ -41,7 +30,7 @@ export function LanguageSelect({
     ...collectionLanguages,
     // A Collection may carry a locale a newer build declared. Listing it keeps it selectable, and
     // so keeps it intact, instead of silently swapping the Learner's declaration for another.
-    ...(value !== null && !offeredLanguage(value) ? [value] : []),
+    ...(value !== null && !offeredCollectionLanguage(value) ? [value] : []),
   ];
   const listbox = useListbox({
     optionCount: options.length,
@@ -53,7 +42,7 @@ export function LanguageSelect({
   const label = (language: string | null) => {
     if (language === null) return t("collections.noLanguage");
 
-    const offered = offeredLanguage(language);
+    const offered = offeredCollectionLanguage(language);
 
     // A locale this build does not offer has no translated name, so it shows as the locale itself.
     return offered ? t(`collections.languages.${offered}`) : language;

@@ -2,9 +2,17 @@ import { act, fireEvent, screen, waitFor, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
 import { describe, expect, it, vi } from "vitest";
+import type { CreateCardInput } from "../contracts/card";
 import type { CollectionInput } from "../contracts/collection";
+import type { PronunciationInput } from "../contracts/pronunciation";
 import { renderApp } from "../test/renderApp";
-import { mockServer, testCards, testCollections, testTopics } from "../test/server";
+import {
+  mockServer,
+  testCards,
+  testCollections,
+  testGeneratedAudio,
+  testTopics,
+} from "../test/server";
 
 function dialogByHeading(name: string) {
   const dialog = screen.getByRole("heading", { name }).closest("dialog");
@@ -22,6 +30,10 @@ async function cardDialogReady() {
   );
 
   return dialog;
+}
+
+function audioSection(face: "Vorderseite" | "Rückseite") {
+  return within(screen.getByRole("group", { name: `Audio für ${face}` }));
 }
 
 function languagePicker(face: "Vorderseite" | "Rückseite") {
@@ -341,6 +353,130 @@ describe("rendered app journeys", () => {
 
     expect(dialog).toBeVisible();
     expect(screen.getByRole("heading", { name: "Karte erstellen" })).toBeVisible();
+  });
+
+  it("offers pronunciation generation on every face whose Collection declares a language it can speak", async () => {
+    const user = userEvent.setup();
+    await renderApp(`/cards/${testCollections[0]!.id}`);
+
+    await user.click(await screen.findByRole("button", { name: "Karte hinzufügen" }));
+    await cardDialogReady();
+
+    expect(
+      audioSection("Vorderseite").getByRole("button", { name: "Aussprache erzeugen" }),
+    ).toBeVisible();
+    expect(
+      audioSection("Rückseite").getByRole("button", { name: "Aussprache erzeugen" }),
+    ).toBeVisible();
+  });
+
+  it("offers no pronunciation generation for a face whose language is unset or unsupported", async () => {
+    const user = userEvent.setup();
+    mockServer.use(
+      http.get("/api/collections", () =>
+        HttpResponse.json([
+          testCollections[0]!,
+          { ...testCollections[1]!, frontLanguage: "fr-FR", backLanguage: null },
+        ]),
+      ),
+    );
+    await renderApp(`/cards/${testCollections[1]!.id}`);
+
+    await user.click(await screen.findByRole("button", { name: "Karte hinzufügen" }));
+    await cardDialogReady();
+
+    expect(
+      audioSection("Vorderseite").queryByRole("button", { name: "Aussprache erzeugen" }),
+    ).not.toBeInTheDocument();
+    expect(
+      audioSection("Rückseite").queryByRole("button", { name: "Aussprache erzeugen" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("generates a pronunciation from text the Learner may edit and attaches it to the face", async () => {
+    const user = userEvent.setup();
+    let spoken: PronunciationInput | undefined;
+    let created: Partial<CreateCardInput> = {};
+    mockServer.use(
+      http.post("/api/pronunciations", async ({ request }) => {
+        spoken = (await request.json()) as PronunciationInput;
+
+        return HttpResponse.json(testGeneratedAudio, { status: 201 });
+      }),
+      http.post("/api/cards", async ({ request }) => {
+        created = (await request.json()) as Partial<CreateCardInput>;
+
+        return HttpResponse.json(testCards[0], { status: 201 });
+      }),
+    );
+    await renderApp(`/cards/${testCollections[0]!.id}`);
+
+    await user.click(await screen.findByRole("button", { name: "Karte hinzufügen" }));
+    await cardDialogReady();
+    await user.type(screen.getByLabelText("Vorderseite Maximal 1.000 Zeichen"), "xin chào");
+    await user.type(screen.getByLabelText("Rückseite Maximal 1.000 Zeichen"), "hallo");
+
+    const front = audioSection("Vorderseite");
+    const text = front.getByLabelText("Text für die Aussprache");
+    expect(text).toHaveValue("xin chào");
+
+    await user.clear(text);
+    await user.type(text, "chào");
+    await user.click(front.getByRole("button", { name: "Aussprache erzeugen" }));
+
+    expect(
+      await front.findByRole("button", { name: "Audio Vorderseite: Abspielen" }),
+    ).toBeVisible();
+    expect(spoken).toEqual({ text: "chào", language: "vi-VN" });
+
+    await user.click(screen.getByRole("button", { name: "Speichern" }));
+
+    await waitFor(() =>
+      expect(created.front).toEqual({ text: "xin chào", audioId: testGeneratedAudio.id }),
+    );
+  });
+
+  it("leaves the Card as it was when a pronunciation cannot be generated", async () => {
+    const user = userEvent.setup();
+    let created: Partial<CreateCardInput> = {};
+    mockServer.use(
+      http.post("/api/pronunciations", () =>
+        HttpResponse.json(
+          {
+            type: "/problems/pronunciation-failed",
+            title: "Aussprache konnte nicht erzeugt werden",
+            status: 502,
+            instance: "urn:uuid:ffffffff-ffff-4fff-8fff-ffffffffffff",
+          },
+          { status: 502 },
+        ),
+      ),
+      http.post("/api/cards", async ({ request }) => {
+        created = (await request.json()) as Partial<CreateCardInput>;
+
+        return HttpResponse.json(testCards[0], { status: 201 });
+      }),
+    );
+    await renderApp(`/cards/${testCollections[0]!.id}`);
+
+    await user.click(await screen.findByRole("button", { name: "Karte hinzufügen" }));
+    await cardDialogReady();
+    await user.type(screen.getByLabelText("Vorderseite Maximal 1.000 Zeichen"), "xin chào");
+    await user.type(screen.getByLabelText("Rückseite Maximal 1.000 Zeichen"), "hallo");
+
+    const front = audioSection("Vorderseite");
+    await user.click(front.getByRole("button", { name: "Aussprache erzeugen" }));
+
+    expect(await front.findByRole("alert")).toHaveTextContent(
+      "Die Aussprache konnte nicht erzeugt werden. Versuch es gleich noch einmal.",
+    );
+    expect(
+      front.queryByRole("button", { name: "Audio Vorderseite: Abspielen" }),
+    ).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Speichern" }));
+
+    await waitFor(() => expect(created.front).toEqual({ text: "xin chào", audioId: null }));
   });
 
   it("creates a Collection with the chosen icon and no declared language", async () => {

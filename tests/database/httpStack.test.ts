@@ -233,6 +233,18 @@ describe("real API handler stack", () => {
     });
     expect(store.objects.get(stored.rows[0]!.object_key)?.bytes).toEqual(synthesizer.speech.bytes);
 
+    // Audible to the session that staged it before any Card exists, so the Learner hears what she
+    // just generated while the Card form is still open.
+    const stagedPlaybackResponse = await playAudio(
+      new Request(`${origin}/api/audio/${audio.id}`, {
+        headers: { cookie: cookie!, "sec-fetch-site": "same-origin" },
+      }),
+    );
+    expect(stagedPlaybackResponse.status).toBe(200);
+    expect(new Uint8Array(await stagedPlaybackResponse.arrayBuffer())).toEqual(
+      synthesizer.speech.bytes,
+    );
+
     const cardResponse = await createCard(
       request(
         "/api/cards",

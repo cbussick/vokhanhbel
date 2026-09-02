@@ -21,6 +21,17 @@ export const collectionLanguages = ["vi-VN", "de-DE", "en-US"] as const;
 export const collectionLanguageSchema = z.enum(collectionLanguages);
 export type CollectionLanguage = z.infer<typeof collectionLanguageSchema>;
 
+/**
+ * The stored locale, if this build offers it. A locale a newer build declared, or none at all,
+ * yields undefined — which is how a caller decides whether a face can be spoken, without the
+ * stored declaration ever being rewritten.
+ */
+export function offeredCollectionLanguage(language: string | null): CollectionLanguage | undefined {
+  const result = collectionLanguageSchema.safeParse(language);
+
+  return result.success ? result.data : undefined;
+}
+
 export const collectionSchema = z.object({
   id: uuidSchema,
   name: z.string().min(1).max(60),
