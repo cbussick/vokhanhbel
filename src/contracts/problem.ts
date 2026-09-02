@@ -19,6 +19,7 @@ export const problemTypes = {
   topicNameConflict: "/problems/topic-name-conflict",
   topicNotFound: "/problems/topic-not-found",
   loginRateLimit: "/problems/login-rate-limit",
+  pronunciationFailed: "/problems/pronunciation-failed",
   requestTooLarge: "/problems/request-too-large",
   reviewReplayConflict: "/problems/review-replay-conflict",
   reviewTooOld: "/problems/review-too-old",

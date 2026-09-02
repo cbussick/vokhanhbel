@@ -3,6 +3,7 @@ import { z } from "zod";
 import { audioMetadataSchema, type AudioMetadata } from "../../contracts/card.js";
 import { problemTypes } from "../../contracts/problem.js";
 import { getAudioObjectStore, type AudioObjectRange } from "../audio/audioObjectStore.js";
+import type { AudioProvenance } from "../audio/audioProvenance.js";
 import { inspectAudio } from "../audio/inspectAudio.js";
 import { getDatabase, getPool } from "../database/client.js";
 import { audioAssets, audioCleanupJobs, cards } from "../database/schema.js";
@@ -60,9 +61,18 @@ export async function deleteAudioObject(
   }
 }
 
+const recordedColumns = {
+  source: "recorded",
+  speechProvider: null,
+  speechVoice: null,
+  speechLanguage: null,
+  synthesizedText: null,
+} as const;
+
 export async function stageAudio(
   sessionHash: string,
   bytes: Uint8Array,
+  provenance: AudioProvenance,
   suppliedContentType?: string,
   requestId?: string,
 ): Promise<AudioMetadata> {
@@ -86,6 +96,7 @@ export async function stageAudio(
         durationMs: inspected.durationMs,
         checksum: inspected.checksum,
         stagedUntil: new Date(Date.now() + stagedLifetimeMilliseconds),
+        ...(provenance.source === "generated" ? provenance : recordedColumns),
       })
       .returning();
     const row = rows[0]!;

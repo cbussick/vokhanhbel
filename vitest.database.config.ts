@@ -16,6 +16,11 @@ export default defineConfig({
       OPENAI_API_KEY: "test-only-placeholder",
       OPENAI_MODEL: "test-model",
       RATE_LIMIT_HMAC_SECRET: "test-only-secret-at-least-thirty-two-characters",
+      // Placeholders only. Every suite substitutes the speech provider, so no run reaches Google
+      // and none needs a real service-account key.
+      GOOGLE_TTS_PROJECT_ID: "test-only-placeholder",
+      GOOGLE_TTS_CLIENT_EMAIL: "test-only-placeholder",
+      GOOGLE_TTS_PRIVATE_KEY: "test-only-placeholder",
     },
   },
 });

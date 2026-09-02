@@ -1,5 +1,5 @@
+import { maximumAudioBytes } from "../../src/contracts/card.js";
 import { problemTypes } from "../../src/contracts/problem.js";
-import { maximumAudioBytes } from "../../src/server/audio/inspectAudio.js";
 import { handleRequest } from "../../src/server/http/handler.js";
 import { AppProblem } from "../../src/server/http/problem.js";
 import {
@@ -50,6 +50,7 @@ export async function POST(request: Request): Promise<Response> {
         await stageAudio(
           sessionHash!,
           bytes,
+          { source: "recorded" },
           request.headers.get("content-type") ?? undefined,
           requestId,
         ),

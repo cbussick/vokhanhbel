@@ -1,8 +1,6 @@
+import { maximumAudioBytes, maximumAudioDurationMs } from "../../contracts/card.js";
 import { problemTypes } from "../../contracts/problem.js";
 import { AppProblem } from "../http/problem.js";
-
-export const maximumAudioBytes = 2_000_000;
-export const maximumAudioDurationMs = 7_000;
 
 export interface InspectedAudio {
   contentType: "audio/mpeg" | "audio/mp4" | "audio/webm" | "audio/ogg" | "audio/wav";
