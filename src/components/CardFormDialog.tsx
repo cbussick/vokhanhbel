@@ -295,7 +295,7 @@ export function CardFormDialog({
                   draft={frontDraft}
                   existing={card?.front.audio ?? null}
                   existingRemoved={frontAudioRemoved}
-                  pronunciation={frontLanguage ? { language: frontLanguage } : undefined}
+                  pronunciationLanguage={frontLanguage}
                   onDraftChange={setFrontDraft}
                   onExistingRemovedChange={setFrontAudioRemoved}
                 />
@@ -334,7 +334,7 @@ export function CardFormDialog({
                   draft={backDraft}
                   existing={card?.back.audio ?? null}
                   existingRemoved={backAudioRemoved}
-                  pronunciation={backLanguage ? { language: backLanguage } : undefined}
+                  pronunciationLanguage={backLanguage}
                   onDraftChange={setBackDraft}
                   onExistingRemovedChange={setBackAudioRemoved}
                 />

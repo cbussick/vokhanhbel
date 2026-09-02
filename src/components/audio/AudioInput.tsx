@@ -112,7 +112,7 @@ export function AudioInput({
   draft,
   existing,
   existingRemoved,
-  pronunciation,
+  pronunciationLanguage,
   onDraftChange,
   onExistingRemovedChange,
 }: {
@@ -130,7 +130,7 @@ export function AudioInput({
    * what hides generation from a Collection that is not about a language at all. A clip generated
    * before the declaration changed stays playable, and stays comparable, either way.
    */
-  pronunciation?: { language: CollectionLanguage } | undefined;
+  pronunciationLanguage?: CollectionLanguage | undefined;
   onDraftChange: (draft: AudioDraft | null) => void;
   onExistingRemovedChange: (removed: boolean) => void;
 }) {
@@ -432,7 +432,7 @@ export function AudioInput({
           <strong className={styles.dropCopy}>{t("audio.dropIdle")}</strong>
         </label>
         <span className={styles.limits}>{t("audio.limits")}</span>
-        {pronunciation ? (
+        {pronunciationLanguage ? (
           <>
             <div className={styles.separator}>
               <span>{t("audio.or")}</span>
@@ -440,7 +440,7 @@ export function AudioInput({
             <PronunciationGenerator
               face={face}
               faceText={faceText}
-              language={pronunciation.language}
+              language={pronunciationLanguage}
               onGenerated={(audio) => {
                 setNewDraft({ origin: "staged", metadata: audio });
                 setHasGenerated(true);
