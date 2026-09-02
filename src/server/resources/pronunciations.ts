@@ -1,6 +1,6 @@
 import type { AudioMetadata } from "../../contracts/card.js";
 import type { PronunciationInput } from "../../contracts/pronunciation.js";
-import { synthesizePronunciation, type SpeechProvider } from "../tts/speechProvider.js";
+import { synthesizePronunciation, type SpeechProvider } from "../speech/speechProvider.js";
 import { stageAudio } from "./audio.js";
 
 /**

@@ -2,7 +2,7 @@ import { pronunciationInputSchema } from "../src/contracts/pronunciation.js";
 import { handleRequest } from "../src/server/http/handler.js";
 import { cleanupExpiredAudio, enforceAudioUploadRateLimit } from "../src/server/resources/audio.js";
 import { generatePronunciation } from "../src/server/resources/pronunciations.js";
-import { getSpeechProvider } from "../src/server/tts/speechProvider.js";
+import { getSpeechProvider } from "../src/server/speech/speechProvider.js";
 
 export async function POST(request: Request): Promise<Response> {
   return handleRequest(

@@ -11,6 +11,11 @@ const serverEnvironmentSchema = z.object({
   R2_BUCKET: z.string().min(1).optional(),
   R2_ACCESS_KEY_ID: z.string().min(1).optional(),
   R2_SECRET_ACCESS_KEY: z.string().min(1).optional(),
+  /**
+   * `TTS` deliberately survives here while the code says "speech" throughout: these names are
+   * external configuration a human already entered in the deployment, and renaming them would
+   * invalidate the setup instructions for no gain.
+   */
   GOOGLE_TTS_PROJECT_ID: z.string().min(1).optional(),
   GOOGLE_TTS_CLIENT_EMAIL: z.string().min(1).optional(),
   GOOGLE_TTS_PRIVATE_KEY: z.string().min(1).optional(),

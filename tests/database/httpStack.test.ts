@@ -17,8 +17,8 @@ import { encodePassword } from "../../src/server/auth/password.js";
 import { resetServerEnvironmentForTests } from "../../src/server/config/environment.js";
 import { getPool } from "../../src/server/database/client.js";
 import { defaultCollectionId } from "../../src/server/database/schema.js";
-import { setSpeechProviderForTests } from "../../src/server/tts/speechProvider.js";
-import { RecordingSpeechProvider } from "../../src/server/tts/speechProvider.test-helper.js";
+import { setSpeechProviderForTests } from "../../src/server/speech/speechProvider.js";
+import { RecordingSpeechProvider } from "../../src/server/speech/speechProvider.test-helper.js";
 
 const origin = "http://localhost:4173";
 

@@ -153,7 +153,7 @@ GOOGLE_TTS_PRIVATE_KEY=<private_key from the key file>
 line breaks. The key is long-lived, so rotate it by hand: create a second key, replace the
 environment values, confirm generation still works, then delete the old key.
 
-One voice is pinned per supported locale in `src/server/tts/speechProvider.ts`. Changing a voice is
+One voice is pinned per supported locale in `src/server/speech/speechProvider.ts`. Changing a voice is
 a code change, not a configuration change. No suite needs the credential: every test substitutes
 the provider, so all checks pass with no Google configuration present.
 
