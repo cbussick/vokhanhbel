@@ -29,6 +29,16 @@
   stroke-width: 2;
 }
 
+/* Sized and bordered like every other text field in a form dialog; only the rejected state differs. */
+.text {
+  min-inline-size: 0;
+  min-block-size: 48px;
+}
+
+.text[aria-invalid="true"] {
+  border-color: var(--color-danger);
+}
+
 .hint,
 .warning {
   font-size: var(--font-xs);
@@ -61,9 +71,11 @@
   line-height: 1.2;
 }
 
-.generateButton:disabled {
+.generateButton:disabled,
+.generateButton[aria-disabled="true"] {
   border-color: var(--color-border);
   color: var(--color-text-secondary);
+  cursor: not-allowed;
 }
 
 .error {
@@ -73,7 +85,7 @@
 }
 
 @media (hover: hover) and (pointer: fine) {
-  .generateButton:hover:not(:disabled) {
+  .generateButton:hover:not(:disabled, [aria-disabled="true"]) {
     background: var(--color-surface-hover);
   }
 }

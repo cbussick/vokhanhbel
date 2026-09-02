@@ -134,6 +134,9 @@ export function AudioInput({
   const [remainingMs, setRemainingMs] = useState(maximumAudioDurationMs);
   const [error, setError] = useState<string>();
   const [dragging, setDragging] = useState(false);
+  // Spoken through the rail's one status region rather than a second one of its own, so a finished
+  // clip is announced without two live regions talking over each other.
+  const [generatedAnnouncement, setGeneratedAnnouncement] = useState<string>();
 
   const stopTracks = () => {
     streamRef.current?.getTracks().forEach((track) => track.stop());
@@ -161,6 +164,7 @@ export function AudioInput({
 
   const setNewDraft = (value: AudioDraft | null) => {
     releaseAudioDraft(draft);
+    setGeneratedAnnouncement(undefined);
     onDraftChange(value);
     if (value) onExistingRemovedChange(true);
   };
@@ -405,7 +409,10 @@ export function AudioInput({
             <PronunciationGenerator
               face={face}
               {...pronunciation}
-              onGenerated={(audio) => setNewDraft({ origin: "staged", metadata: audio })}
+              onGenerated={(audio) => {
+                setNewDraft({ origin: "staged", metadata: audio });
+                setGeneratedAnnouncement(t("audio.generated"));
+              }}
             />
           </>
         ) : null}
@@ -420,7 +427,7 @@ export function AudioInput({
                   ? t("audio.missing")
                   : recordingState === "unsupported"
                     ? t("audio.unsupportedRecording")
-                    : ""}
+                    : (generatedAnnouncement ?? "")}
         </p>
         {error ? (
           <p className={styles.error} role="alert">

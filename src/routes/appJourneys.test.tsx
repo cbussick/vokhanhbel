@@ -428,7 +428,57 @@ describe("rendered app journeys", () => {
       await front.findByRole("button", { name: "Audio Vorderseite: Abspielen" }),
     ).toBeVisible();
     expect(spoken).toEqual({ text: "chào", language: "vi-VN" });
+    // Announced through the rail's status region, so the clip's arrival is heard, not only seen.
+    expect(front.getByText("Aussprache erzeugt. Du kannst sie jetzt anhören.")).toBeVisible();
 
+    await user.click(screen.getByRole("button", { name: "Speichern" }));
+
+    await waitFor(() =>
+      expect(created.front).toEqual({ text: "xin chào", audioId: testGeneratedAudio.id }),
+    );
+  });
+
+  it("refuses to save a Card while the pronunciation it is waiting for is still being generated", async () => {
+    const user = userEvent.setup();
+    let created: Partial<CreateCardInput> = {};
+    let cardRequests = 0;
+    let finishGeneration: () => void = () => undefined;
+    const generation = new Promise<void>((resolve) => {
+      finishGeneration = resolve;
+    });
+    mockServer.use(
+      http.post("/api/pronunciations", async () => {
+        await generation;
+
+        return HttpResponse.json(testGeneratedAudio, { status: 201 });
+      }),
+      http.post("/api/cards", async ({ request }) => {
+        cardRequests += 1;
+        created = (await request.json()) as Partial<CreateCardInput>;
+
+        return HttpResponse.json(testCards[0], { status: 201 });
+      }),
+    );
+    await renderApp(`/cards/${testCollections[0]!.id}`);
+
+    await user.click(await screen.findByRole("button", { name: "Karte hinzufügen" }));
+    await cardDialogReady();
+    await user.type(screen.getByLabelText("Vorderseite Maximal 1.000 Zeichen"), "xin chào");
+    await user.type(screen.getByLabelText("Rückseite Maximal 1.000 Zeichen"), "hallo");
+
+    const front = audioSection("Vorderseite");
+    await user.click(front.getByRole("button", { name: "Aussprache erzeugen" }));
+    await user.click(screen.getByRole("button", { name: "Speichern" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Die Aussprache wird noch erzeugt. Gleich kannst du speichern.",
+    );
+    expect(cardRequests).toBe(0);
+
+    finishGeneration();
+    expect(
+      await front.findByRole("button", { name: "Audio Vorderseite: Abspielen" }),
+    ).toBeVisible();
     await user.click(screen.getByRole("button", { name: "Speichern" }));
 
     await waitFor(() =>

@@ -141,6 +141,8 @@ export async function playAudio(
   const audio = rows[0];
   // A clip is audible once it sits on a Card, and before that only to the session that staged it,
   // so the Learner can hear a pronunciation she just generated without saving the Card first.
+  // `stagedUntil` is deliberately not part of this: expiry is the sweep's job, exactly as it is for
+  // claiming, so a clip that outlived its stage stays audible to its owner until the sweep takes it.
   const isAudible =
     audio && (audio.claimedCardId !== null || audio.ownerSessionHash === sessionHash);
 

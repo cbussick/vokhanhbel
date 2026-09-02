@@ -245,6 +245,19 @@ describe("real API handler stack", () => {
       synthesizer.speech.bytes,
     );
 
+    // And to nobody else. Another signed-in session is still a stranger to a clip no Card carries
+    // yet, so the widening reaches exactly the session that staged it.
+    const otherLoginResponse = await createSession(request("/api/session", "POST", { password }));
+    const otherCookie = otherLoginResponse.headers.get("set-cookie")?.split(";", 1)[0];
+
+    expect(otherCookie).not.toBe(cookie);
+    const strangerResponse = await playAudio(
+      new Request(`${origin}/api/audio/${audio.id}`, {
+        headers: { cookie: otherCookie!, "sec-fetch-site": "same-origin" },
+      }),
+    );
+    expect(strangerResponse.status).toBe(404);
+
     const cardResponse = await createCard(
       request(
         "/api/cards",

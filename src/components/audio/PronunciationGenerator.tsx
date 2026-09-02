@@ -6,6 +6,7 @@ import type { CollectionLanguage } from "../../contracts/collection";
 import { problemTypes } from "../../contracts/problem";
 import { maximumPronunciationTextLength } from "../../contracts/pronunciation";
 import { ApiError } from "../../lib/apiClient";
+import { mutationKeys } from "../../lib/queryKeys";
 import { PendingActionContent } from "../PendingActionContent";
 import { generatePronunciation } from "./audioApi";
 import styles from "./PronunciationGenerator.module.css";
@@ -49,6 +50,7 @@ export function PronunciationGenerator({
   const isTooLong = spokenText.length > maximumPronunciationTextLength;
 
   const generate = useMutation({
+    mutationKey: mutationKeys.pronunciation,
     mutationFn: async () => generatePronunciation({ text: spokenText, language }),
     onSuccess: onGenerated,
     onError: (value) => {
@@ -64,6 +66,16 @@ export function PronunciationGenerator({
     },
   });
 
+  // Every reason the button will not act says so in the hint, which describes both the field and
+  // the button. A reason the Learner cannot reach is no reason at all, so the button keeps its
+  // place in the tab order and refuses in `onClick` rather than going natively disabled.
+  const hint = isTooLong
+    ? "audio.pronunciationTooLong"
+    : spokenText
+      ? "audio.pronunciationHint"
+      : "audio.pronunciationEmpty";
+  const isBlocked = !spokenText || isTooLong || generate.isPending;
+
   return (
     <div className={styles.generator}>
       <label className={styles.label} htmlFor={textId}>
@@ -74,12 +86,14 @@ export function PronunciationGenerator({
       </label>
       <input
         id={textId}
+        className={styles.text}
         aria-describedby={hintId}
+        {...(isTooLong ? { "aria-invalid": true } : {})}
         value={text}
         onChange={(event) => setEditedText(event.target.value)}
       />
       <p id={hintId} className={isTooLong ? styles.warning : styles.hint}>
-        {t(isTooLong ? "audio.pronunciationTooLong" : "audio.pronunciationHint", {
+        {t(hint, {
           language: t(`collections.languages.${language}`),
           max: maximumPronunciationTextLength,
         })}
@@ -87,15 +101,13 @@ export function PronunciationGenerator({
       <button
         type="button"
         className={styles.generateButton}
-        disabled={!spokenText || isTooLong}
         aria-busy={generate.isPending}
-        // Stays focusable while it works, so the Learner does not lose her place mid-generation.
-        // Set only while pending: a literal "false" would claim this control is enabled even when
-        // the form around it is not.
-        {...(generate.isPending ? { "aria-disabled": true } : {})}
-        {...(error ? { "aria-describedby": errorId } : {})}
+        aria-describedby={error ? `${hintId} ${errorId}` : hintId}
+        // Set only while the button will not act: a literal "false" would claim this control is
+        // available even when the form around it is not.
+        {...(isBlocked ? { "aria-disabled": true } : {})}
         onClick={() => {
-          if (generate.isPending) return;
+          if (isBlocked) return;
 
           setError(undefined);
           generate.mutate();

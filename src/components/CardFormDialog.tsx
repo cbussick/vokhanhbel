@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useIsMutating, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { apiPaths } from "../contracts/apiPaths";
@@ -13,7 +13,7 @@ import { problemTypes } from "../contracts/problem";
 import { ApiError, apiRequest } from "../lib/apiClient";
 import { useOnlineStatus } from "../lib/browserState";
 import { collectionsQuery, topicsQuery } from "../lib/queries";
-import { queryKeys } from "../lib/queryKeys";
+import { mutationKeys, queryKeys } from "../lib/queryKeys";
 import { stageAudioDraft } from "./audio/audioApi";
 import { AudioInput, releaseAudioDraft, type AudioDraft } from "./audio/AudioInput";
 import { CollectionFormDialog } from "./CollectionFormDialog";
@@ -146,6 +146,9 @@ export function CardFormDialog({
   });
 
   const isPending = save.isPending || remove.isPending;
+  // A clip the Learner asked for is still on its way. Saving now would write the face without it
+  // and close the form, leaving the clip attached to nothing, so Save waits for it instead.
+  const isGeneratingPronunciation = useIsMutating({ mutationKey: mutationKeys.pronunciation }) > 0;
 
   const close = () => {
     if (isPending) return;
@@ -169,6 +172,12 @@ export function CardFormDialog({
       return;
     }
 
+    if (isGeneratingPronunciation) {
+      setError(t("cards.pronunciationPending"));
+
+      return;
+    }
+
     save.mutate();
   };
 
@@ -179,15 +188,12 @@ export function CardFormDialog({
 
   /**
    * Whether a face can be spoken is decided here, from the Collection's declaration: a locale this
-   * build offers yields the generation control, anything else — unset, or declared by a newer
-   * build — yields nothing at all.
+   * build offers, and only that, yields the generation control. Unset, or declared by a newer
+   * build, yields nothing at all.
    */
   const selectedCollection = (collections.data ?? []).find((entry) => entry.id === collectionId);
-  const pronunciationFor = (declared: string | null, faceText: string) => {
-    const language = offeredCollectionLanguage(declared);
-
-    return language ? { language, faceText } : undefined;
-  };
+  const frontLanguage = offeredCollectionLanguage(selectedCollection?.frontLanguage ?? null);
+  const backLanguage = offeredCollectionLanguage(selectedCollection?.backLanguage ?? null);
 
   return (
     <>
@@ -288,7 +294,9 @@ export function CardFormDialog({
                   draft={frontDraft}
                   existing={card?.front.audio ?? null}
                   existingRemoved={frontAudioRemoved}
-                  pronunciation={pronunciationFor(selectedCollection?.frontLanguage ?? null, front)}
+                  pronunciation={
+                    frontLanguage ? { language: frontLanguage, faceText: front } : undefined
+                  }
                   onDraftChange={setFrontDraft}
                   onExistingRemovedChange={setFrontAudioRemoved}
                 />
@@ -326,7 +334,9 @@ export function CardFormDialog({
                   draft={backDraft}
                   existing={card?.back.audio ?? null}
                   existingRemoved={backAudioRemoved}
-                  pronunciation={pronunciationFor(selectedCollection?.backLanguage ?? null, back)}
+                  pronunciation={
+                    backLanguage ? { language: backLanguage, faceText: back } : undefined
+                  }
                   onDraftChange={setBackDraft}
                   onExistingRemovedChange={setBackAudioRemoved}
                 />
@@ -360,7 +370,7 @@ export function CardFormDialog({
                 type="submit"
                 className={styles.primary}
                 aria-busy={save.isPending}
-                aria-disabled={save.isPending}
+                aria-disabled={save.isPending || isGeneratingPronunciation}
                 disabled={
                   !collectionId ||
                   (!front.trim() && !frontDraft && (frontAudioRemoved || !card?.front.audio)) ||

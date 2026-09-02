@@ -346,6 +346,24 @@ test("creates, searches, and opens a Card accessibly", async ({ page }) => {
   await expect(page.getByText("Text", { exact: true })).toHaveCount(2);
   await expect(page.getByText("Audio", { exact: true })).toHaveCount(2);
   await expectNoSeriousAxeViolations(page);
+
+  // The pronunciation field carries the dialog's text-field treatment, and the control that will
+  // not act stays in the tab order so its reason is reachable by keyboard rather than skipped over.
+  const spokenText = page.getByRole("textbox", { name: "Text für die Aussprache" });
+  const generate = page.getByRole("button", { name: "Aussprache erzeugen" });
+  await expect(spokenText).toHaveCSS("min-block-size", "48px");
+  await expect(spokenText).toHaveCSS("border-block-start-width", "2px");
+  await expect(generate).toHaveAttribute("aria-disabled", "true");
+  await spokenText.focus();
+  await page.keyboard.press("Tab");
+  await expect(generate).toBeFocused();
+  await spokenText.fill("a".repeat(176));
+  await expect(spokenText).toHaveAttribute("aria-invalid", "true");
+  await expect(
+    page.getByText("Das ist zu lang zum Sprechen. Höchstens 175 Zeichen."),
+  ).toBeVisible();
+  await spokenText.fill("");
+
   const frontText = page.getByRole("textbox", {
     name: "Vorderseite Maximal 1.000 Zeichen",
   });
