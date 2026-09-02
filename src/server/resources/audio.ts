@@ -129,6 +129,7 @@ function parseRange(rangeHeader: string | null, totalSize: number): AudioObjectR
 
 export async function playAudio(
   audioId: string,
+  sessionHash: string,
   rangeHeader: string | null,
   requestId?: string,
 ): Promise<Response> {
@@ -138,9 +139,14 @@ export async function playAudio(
     .where(and(eq(audioAssets.id, audioId), isNull(audioAssets.deletedAt)))
     .limit(1);
   const audio = rows[0];
+  // A clip is audible once it sits on a Card, and before that only to the session that staged it,
+  // so the Learner can hear a pronunciation she just generated without saving the Card first.
+  // `stagedUntil` is deliberately not part of this: expiry is the sweep's job, exactly as it is for
+  // claiming, so a clip that outlived its stage stays audible to its owner until the sweep takes it.
+  const isAudible =
+    audio && (audio.claimedCardId !== null || audio.ownerSessionHash === sessionHash);
 
-  if (!audio?.claimedCardId)
-    throw new AppProblem(404, problemTypes.audioNotFound, "Audio nicht gefunden");
+  if (!isAudible) throw new AppProblem(404, problemTypes.audioNotFound, "Audio nicht gefunden");
   const range = parseRange(rangeHeader, audio.byteSize);
   const stored = await getAudioObjectStore().read(audio.objectKey, range);
 

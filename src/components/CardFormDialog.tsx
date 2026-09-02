@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useIsMutating, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { apiPaths } from "../contracts/apiPaths";
@@ -8,11 +8,12 @@ import {
   updateCardInputSchema,
   type Card,
 } from "../contracts/card";
+import { offeredCollectionLanguage } from "../contracts/collection";
 import { problemTypes } from "../contracts/problem";
 import { ApiError, apiRequest } from "../lib/apiClient";
 import { useOnlineStatus } from "../lib/browserState";
 import { collectionsQuery, topicsQuery } from "../lib/queries";
-import { queryKeys } from "../lib/queryKeys";
+import { mutationKeys, queryKeys } from "../lib/queryKeys";
 import { stageAudioDraft } from "./audio/audioApi";
 import { AudioInput, releaseAudioDraft, type AudioDraft } from "./audio/AudioInput";
 import { CollectionFormDialog } from "./CollectionFormDialog";
@@ -68,26 +69,32 @@ export function CardFormDialog({
 
   const save = useMutation({
     mutationFn: async () => {
-      const stagedIds: string[] = [];
+      const uploadedIds: string[] = [];
+      // A generated clip is staged already, so only a clip recorded or picked here is uploaded —
+      // and only that upload is undone below, leaving a generated clip to expire on its own.
+      const claimAudio = async (draft: AudioDraft | null) => {
+        if (!draft) return undefined;
+        if (draft.origin === "staged") return draft.metadata.id;
+        const staged = await stageAudioDraft(draft.blob);
+
+        uploadedIds.push(staged.id);
+
+        return staged.id;
+      };
 
       try {
-        const stagedFront = frontDraft ? await stageAudioDraft(frontDraft.blob) : undefined;
-
-        if (stagedFront) stagedIds.push(stagedFront.id);
-        const stagedBack = backDraft ? await stageAudioDraft(backDraft.blob) : undefined;
-
-        if (stagedBack) stagedIds.push(stagedBack.id);
+        const frontAudioId = await claimAudio(frontDraft);
+        const backAudioId = await claimAudio(backDraft);
         const value = {
           collectionId,
           topicIds,
           front: {
             text: front.trim() ? front : null,
-            audioId:
-              stagedFront?.id ?? (frontAudioRemoved ? null : (card?.front.audio?.id ?? null)),
+            audioId: frontAudioId ?? (frontAudioRemoved ? null : (card?.front.audio?.id ?? null)),
           },
           back: {
             text: back.trim() ? back : null,
-            audioId: stagedBack?.id ?? (backAudioRemoved ? null : (card?.back.audio?.id ?? null)),
+            audioId: backAudioId ?? (backAudioRemoved ? null : (card?.back.audio?.id ?? null)),
           },
         };
         const input = card
@@ -103,7 +110,7 @@ export function CardFormDialog({
         return saved;
       } catch (value) {
         await Promise.allSettled(
-          stagedIds.map((audioId) => apiRequest(apiPaths.audio(audioId), { method: "DELETE" })),
+          uploadedIds.map((audioId) => apiRequest(apiPaths.audio(audioId), { method: "DELETE" })),
         );
         throw value;
       }
@@ -139,6 +146,9 @@ export function CardFormDialog({
   });
 
   const isPending = save.isPending || remove.isPending;
+  // A clip the Learner asked for is still on its way. Saving now would write the face without it
+  // and close the form, leaving the clip attached to nothing, so Save waits for it instead.
+  const isGeneratingPronunciation = useIsMutating({ mutationKey: mutationKeys.pronunciation }) > 0;
 
   const close = () => {
     if (isPending) return;
@@ -162,6 +172,12 @@ export function CardFormDialog({
       return;
     }
 
+    if (isGeneratingPronunciation) {
+      setError(t("cards.pronunciationPending"));
+
+      return;
+    }
+
     save.mutate();
   };
 
@@ -169,6 +185,15 @@ export function CardFormDialog({
     setCollectionId(nextCollectionId);
     setTopicIds([]);
   };
+
+  /**
+   * Whether a face can be spoken is decided here, from the Collection's declaration: a locale this
+   * build offers, and only that, yields the generation control. Unset, or declared by a newer
+   * build, yields nothing at all.
+   */
+  const selectedCollection = (collections.data ?? []).find((entry) => entry.id === collectionId);
+  const frontLanguage = offeredCollectionLanguage(selectedCollection?.frontLanguage ?? null);
+  const backLanguage = offeredCollectionLanguage(selectedCollection?.backLanguage ?? null);
 
   return (
     <>
@@ -269,6 +294,9 @@ export function CardFormDialog({
                   draft={frontDraft}
                   existing={card?.front.audio ?? null}
                   existingRemoved={frontAudioRemoved}
+                  pronunciation={
+                    frontLanguage ? { language: frontLanguage, faceText: front } : undefined
+                  }
                   onDraftChange={setFrontDraft}
                   onExistingRemovedChange={setFrontAudioRemoved}
                 />
@@ -306,6 +334,9 @@ export function CardFormDialog({
                   draft={backDraft}
                   existing={card?.back.audio ?? null}
                   existingRemoved={backAudioRemoved}
+                  pronunciation={
+                    backLanguage ? { language: backLanguage, faceText: back } : undefined
+                  }
                   onDraftChange={setBackDraft}
                   onExistingRemovedChange={setBackAudioRemoved}
                 />
@@ -339,7 +370,7 @@ export function CardFormDialog({
                 type="submit"
                 className={styles.primary}
                 aria-busy={save.isPending}
-                aria-disabled={save.isPending}
+                aria-disabled={save.isPending || isGeneratingPronunciation}
                 disabled={
                   !collectionId ||
                   (!front.trim() && !frontDraft && (frontAudioRemoved || !card?.front.audio)) ||

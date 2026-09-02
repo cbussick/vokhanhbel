@@ -233,6 +233,31 @@ describe("real API handler stack", () => {
     });
     expect(store.objects.get(stored.rows[0]!.object_key)?.bytes).toEqual(synthesizer.speech.bytes);
 
+    // Audible to the session that staged it before any Card exists, so the Learner hears what she
+    // just generated while the Card form is still open.
+    const stagedPlaybackResponse = await playAudio(
+      new Request(`${origin}/api/audio/${audio.id}`, {
+        headers: { cookie: cookie!, "sec-fetch-site": "same-origin" },
+      }),
+    );
+    expect(stagedPlaybackResponse.status).toBe(200);
+    expect(new Uint8Array(await stagedPlaybackResponse.arrayBuffer())).toEqual(
+      synthesizer.speech.bytes,
+    );
+
+    // And to nobody else. Another signed-in session is still a stranger to a clip no Card carries
+    // yet, so the widening reaches exactly the session that staged it.
+    const otherLoginResponse = await createSession(request("/api/session", "POST", { password }));
+    const otherCookie = otherLoginResponse.headers.get("set-cookie")?.split(";", 1)[0];
+
+    expect(otherCookie).not.toBe(cookie);
+    const strangerResponse = await playAudio(
+      new Request(`${origin}/api/audio/${audio.id}`, {
+        headers: { cookie: otherCookie!, "sec-fetch-site": "same-origin" },
+      }),
+    );
+    expect(strangerResponse.status).toBe(404);
+
     const cardResponse = await createCard(
       request(
         "/api/cards",

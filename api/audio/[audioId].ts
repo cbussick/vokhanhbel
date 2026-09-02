@@ -25,7 +25,7 @@ export async function GET(request: Request): Promise<Response> {
     async ({ sessionHash, requestId }) => {
       await enforceAudioPlaybackRateLimit(sessionHash!);
 
-      return playAudio(getAudioId(request), request.headers.get("range"), requestId);
+      return playAudio(getAudioId(request), sessionHash!, request.headers.get("range"), requestId);
     },
   );
 }
