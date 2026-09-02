@@ -90,8 +90,8 @@ export function PronunciationGenerator({
         disabled={!spokenText || isTooLong}
         aria-busy={generate.isPending}
         // Stays focusable while it works, so the Learner does not lose her place mid-generation.
-        // Only set while pending: a literal "false" would tell a checker this control is enabled
-        // even when the whole form around it is not.
+        // Set only while pending: a literal "false" would claim this control is enabled even when
+        // the form around it is not.
         {...(generate.isPending ? { "aria-disabled": true } : {})}
         {...(error ? { "aria-describedby": errorId } : {})}
         onClick={() => {

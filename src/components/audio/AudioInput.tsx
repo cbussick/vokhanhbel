@@ -341,7 +341,7 @@ export function AudioInput({
             <AudioPlayer
               key={visibleAudio.id}
               audio={visibleAudio}
-              {...(source ? { source } : {})}
+              source={source}
               label={t(face === "front" ? "audio.frontLabel" : "audio.backLabel")}
               compact
             />
@@ -404,8 +404,7 @@ export function AudioInput({
             </div>
             <PronunciationGenerator
               face={face}
-              language={pronunciation.language}
-              faceText={pronunciation.faceText}
+              {...pronunciation}
               onGenerated={(audio) => setNewDraft({ origin: "staged", metadata: audio })}
             />
           </>
