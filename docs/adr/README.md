@@ -18,3 +18,4 @@ in a new ADR rather than by deleting the old one.
 - [Group Cards into Collections](0012-group-cards-into-collections.md)
 - [Group Cards with Topics inside a Collection](0013-group-cards-with-topics-inside-a-collection.md)
 - [Derive Grades from Exercise verdicts](0014-derive-grades-from-exercise-verdicts.md) — amends 0004
+- [Generate pronunciation audio behind a speech provider interface](0015-generate-pronunciation-audio-behind-speech-provider-interface.md)
