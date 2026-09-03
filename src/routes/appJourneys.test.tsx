@@ -551,35 +551,45 @@ describe("rendered app journeys", () => {
     expect(player).toHaveAccessibleDescription("Gesprochen: „chào“");
   });
 
-  it("says nothing about a Learner's own recording, whose content it does not know", async () => {
-    const recordedCard = {
+  it("says what a stored clip says when a Card is reopened, and nothing about the recording beside it", async () => {
+    const storedAudio = (id: string, synthesizedText: string | null) => ({
+      id,
+      durationMs: 1_000,
+      contentType: "audio/wav",
+      byteSize: 8_044,
+      synthesizedText,
+    });
+    const savedCard = {
       ...testCards[0]!,
       front: {
         text: "xin chào",
-        audio: {
-          id: "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
-          durationMs: 1_000,
-          contentType: "audio/wav",
-          byteSize: 8_044,
-          synthesizedText: null,
-        },
+        audio: storedAudio("dddddddd-dddd-4ddd-8ddd-dddddddddddd", "chào"),
       },
+      back: { text: "hallo", audio: storedAudio("eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee", null) },
     };
     mockServer.use(
-      http.get("/api/cards", () => HttpResponse.json([recordedCard])),
+      http.get("/api/cards", () => HttpResponse.json([savedCard])),
       http.get("/api/audio/:audioId", () => new HttpResponse(new Uint8Array([1]))),
     );
-    await renderApp(`/cards/${testCollections[0]!.id}/${recordedCard.id}`);
+    await renderApp(`/cards/${testCollections[0]!.id}/${savedCard.id}`);
 
     expect(await screen.findByLabelText("Vorderseite Maximal 1.000 Zeichen")).toHaveValue(
       "xin chào",
     );
-    const front = audioSection("Vorderseite");
-    const player = front.getByRole("button", { name: "Audio Vorderseite: Abspielen" });
 
-    expect(player).toBeVisible();
-    expect(front.queryByText(/Gesprochen/)).not.toBeInTheDocument();
-    expect(player).toHaveAccessibleDescription("");
+    const front = audioSection("Vorderseite");
+    const generatedPlayer = front.getByRole("button", { name: "Audio Vorderseite: Abspielen" });
+
+    expect(front.getByText("Gesprochen: „chào“")).toBeVisible();
+    expect(generatedPlayer).toHaveAccessibleDescription("Gesprochen: „chào“");
+
+    // The recording on the other face says nothing about itself, because nothing here knows it.
+    const back = audioSection("Rückseite");
+    const recordedPlayer = back.getByRole("button", { name: "Audio Rückseite: Abspielen" });
+
+    expect(recordedPlayer).toBeVisible();
+    expect(back.queryByText(/Gesprochen/)).not.toBeInTheDocument();
+    expect(recordedPlayer).toHaveAccessibleDescription("");
   });
 
   it("creates a Collection with the chosen icon and no declared language", async () => {
