@@ -43,8 +43,8 @@ _Avoid_: Upload, voice memo, human audio, own audio
 
 **Generated Clip**:
 A Clip the app synthesized on the Learner's request, through the `SpeechProvider`. It additionally
-records the Synthesized Text, provider, voice, and locale it was made from, so it can say what it
-says and be made again. Stored as `source: generated`.
+records the Synthesized Text, provider, voice, and locale it was made from, so what it says can be
+shown and the Clip can be made again. Stored as `source: generated`.
 _Avoid_: TTS audio, AI audio, synthetic recording (it is not a Recording), robot voice
 
 **Synthesized Text**:
