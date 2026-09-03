@@ -23,8 +23,8 @@ export const maximumPronunciationTextLength = Math.floor(
 );
 
 /**
- * The text is normalized exactly the way Card text is, so the text stored on a generated clip and
- * the text on the Card face it was generated for stay comparable. The language is narrowed to a
+ * The text is normalized exactly the way Card text is, so what a clip is spoken from — and later
+ * shown to have been spoken from — is stored in one settled form. The language is narrowed to a
  * locale this build can speak: an absent or unsupported one is rejected here rather than reaching
  * the voice map.
  */
