@@ -201,7 +201,7 @@
 }
 
 .spokenText {
-  margin: 0;
+  /* Spoken text can be one long unbroken run; the rail is narrow. */
   overflow-wrap: anywhere;
 }
 

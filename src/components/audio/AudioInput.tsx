@@ -293,7 +293,8 @@ export function AudioInput({
    * explanation, a whole sentence — and nothing here knows which, so nothing is claimed about it.
    * The Card form is the only place this appears: it is here that the Learner can act on it.
    */
-  const spokenTextId = visibleAudio?.synthesizedText ? `audio-${face}-spoken` : undefined;
+  const spokenText = visibleAudio?.synthesizedText;
+  const spokenTextId = spokenText ? `audio-${face}-spoken` : undefined;
   // A generated clip has no local object URL: the player reads it back from where it is staged.
   const source = draft?.origin === "local" ? draft.source : undefined;
   const isRecording = recordingState === "recording";
@@ -370,9 +371,9 @@ export function AudioInput({
             </button>
           </div>
         ) : null}
-        {spokenTextId ? (
+        {spokenText ? (
           <p id={spokenTextId} className={styles.spokenText}>
-            {t("audio.spokenText", { text: visibleAudio?.synthesizedText })}
+            {t("audio.spokenText", { text: spokenText })}
           </p>
         ) : null}
         <button
