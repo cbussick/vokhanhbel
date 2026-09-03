@@ -210,6 +210,7 @@ export function AudioInput({
           durationMs,
           contentType,
           byteSize: normalizedBlob.size,
+          synthesizedText: null,
         },
       });
       setRecordingState("idle");
@@ -286,6 +287,14 @@ export function AudioInput({
   };
 
   const visibleAudio = draft?.metadata ?? (!existingRemoved ? existing : null);
+  /**
+   * Only a generated clip records what it was made from, so only a generated clip can say what it
+   * says. A recording holds whatever the Learner wanted to hear for this face — the word, an
+   * explanation, a whole sentence — and nothing here knows which, so nothing is claimed about it.
+   * The Card form is the only place this appears: it is here that the Learner can act on it.
+   */
+  const synthesizedText = visibleAudio?.synthesizedText;
+  const synthesizedTextId = synthesizedText ? `audio-${face}-synthesized-text` : undefined;
   // A generated clip has no local object URL: the player reads it back from where it is staged.
   const source = draft?.origin === "local" ? draft.source : undefined;
   const isRecording = recordingState === "recording";
@@ -347,6 +356,7 @@ export function AudioInput({
               audio={visibleAudio}
               source={source}
               label={t(face === "front" ? "audio.frontLabel" : "audio.backLabel")}
+              describedBy={synthesizedTextId}
               compact
             />
             <button
@@ -360,6 +370,11 @@ export function AudioInput({
               {t("audio.remove")}
             </button>
           </div>
+        ) : null}
+        {synthesizedText ? (
+          <p id={synthesizedTextId} className={styles.synthesizedText}>
+            {t("audio.synthesizedText", { text: synthesizedText })}
+          </p>
         ) : null}
         <button
           type="button"

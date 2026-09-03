@@ -16,12 +16,18 @@ export function AudioPlayer({
   audio,
   source,
   label,
+  describedBy,
   compact = false,
   onAvailabilityChange,
 }: {
   audio: AudioMetadata;
   source?: string | undefined;
   label: string;
+  /**
+   * What is written about this clip elsewhere on the page. The playback control carries it, so a
+   * screen reader reads it where the Learner already is instead of only in browse mode.
+   */
+  describedBy?: string | undefined;
   compact?: boolean;
   onAvailabilityChange?: ((available: boolean) => void) | undefined;
 }) {
@@ -98,6 +104,10 @@ export function AudioPlayer({
     void play(true);
   };
 
+  // One playback control is rendered per state; what every one of them carries belongs here, so a
+  // shared attribute is added once instead of in four places.
+  const controlProps = { type: "button", "aria-describedby": describedBy } as const;
+
   return (
     <div className={`${styles.player} ${compact ? styles.compact : ""}`}>
       <audio
@@ -121,7 +131,7 @@ export function AudioPlayer({
       />
       {state === "loading" ? (
         <button
-          type="button"
+          {...controlProps}
           aria-busy="true"
           aria-disabled="true"
           aria-label={`${label}: ${t("audio.loading")}`}
@@ -129,16 +139,16 @@ export function AudioPlayer({
           <span className={styles.spinner} aria-hidden="true" />
         </button>
       ) : state === "playing" ? (
-        <button type="button" onClick={pause} aria-label={`${label}: ${t("audio.pause")}`}>
+        <button {...controlProps} onClick={pause} aria-label={`${label}: ${t("audio.pause")}`}>
           <span aria-hidden="true">Ⅱ</span>
         </button>
       ) : state === "error" ? (
-        <button type="button" onClick={retry} aria-label={`${label}: ${t("audio.retry")}`}>
+        <button {...controlProps} onClick={retry} aria-label={`${label}: ${t("audio.retry")}`}>
           ↻
         </button>
       ) : (
         <button
-          type="button"
+          {...controlProps}
           onClick={() => void play()}
           aria-label={`${label}: ${state === "ended" ? t("audio.replay") : t("audio.play")}`}
         >

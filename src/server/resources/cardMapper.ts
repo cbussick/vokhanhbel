@@ -42,6 +42,7 @@ export function mapCard(value: unknown, topicIds: string[]): Card {
             durationMs: frontAudio.durationMs,
             contentType: frontAudio.contentType,
             byteSize: frontAudio.byteSize,
+            synthesizedText: frontAudio.synthesizedText,
           }
         : null,
     },
@@ -53,6 +54,7 @@ export function mapCard(value: unknown, topicIds: string[]): Card {
             durationMs: backAudio.durationMs,
             contentType: backAudio.contentType,
             byteSize: backAudio.byteSize,
+            synthesizedText: backAudio.synthesizedText,
           }
         : null,
     },

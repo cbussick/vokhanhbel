@@ -529,6 +529,69 @@ describe("rendered app journeys", () => {
     await waitFor(() => expect(created.front).toEqual({ text: "xin chào", audioId: null }));
   });
 
+  it("says what a generated clip says, from the control that plays it", async () => {
+    const user = userEvent.setup();
+    await renderApp(`/cards/${testCollections[0]!.id}`);
+
+    await user.click(await screen.findByRole("button", { name: "Karte hinzufügen" }));
+    await cardDialogReady();
+    await user.type(screen.getByLabelText("Vorderseite Maximal 1.000 Zeichen"), "xin chào");
+    await user.type(screen.getByLabelText("Rückseite Maximal 1.000 Zeichen"), "hallo");
+
+    const front = audioSection("Vorderseite");
+    const pronunciationField = front.getByLabelText("Text für die Aussprache");
+    await user.clear(pronunciationField);
+    await user.type(pronunciationField, "chào");
+    await user.click(front.getByRole("button", { name: "Aussprache erzeugen" }));
+
+    const player = await front.findByRole("button", { name: "Audio Vorderseite: Abspielen" });
+
+    expect(front.getByText("Gesprochen: „chào“")).toBeVisible();
+    // Read from the control it belongs to, so it is reachable without leaving the form.
+    expect(player).toHaveAccessibleDescription("Gesprochen: „chào“");
+  });
+
+  it("says what a stored clip says when a Card is reopened, and nothing about the recording beside it", async () => {
+    const storedAudio = (id: string, synthesizedText: string | null) => ({
+      id,
+      durationMs: 1_000,
+      contentType: "audio/wav",
+      byteSize: 8_044,
+      synthesizedText,
+    });
+    const savedCard = {
+      ...testCards[0]!,
+      front: {
+        text: "xin chào",
+        audio: storedAudio("dddddddd-dddd-4ddd-8ddd-dddddddddddd", "chào"),
+      },
+      back: { text: "hallo", audio: storedAudio("eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee", null) },
+    };
+    mockServer.use(
+      http.get("/api/cards", () => HttpResponse.json([savedCard])),
+      http.get("/api/audio/:audioId", () => new HttpResponse(new Uint8Array([1]))),
+    );
+    await renderApp(`/cards/${testCollections[0]!.id}/${savedCard.id}`);
+
+    expect(await screen.findByLabelText("Vorderseite Maximal 1.000 Zeichen")).toHaveValue(
+      "xin chào",
+    );
+
+    const front = audioSection("Vorderseite");
+    const generatedPlayer = front.getByRole("button", { name: "Audio Vorderseite: Abspielen" });
+
+    expect(front.getByText("Gesprochen: „chào“")).toBeVisible();
+    expect(generatedPlayer).toHaveAccessibleDescription("Gesprochen: „chào“");
+
+    // The recording on the other face says nothing about itself, because nothing here knows it.
+    const back = audioSection("Rückseite");
+    const recordedPlayer = back.getByRole("button", { name: "Audio Rückseite: Abspielen" });
+
+    expect(recordedPlayer).toBeVisible();
+    expect(back.queryByText(/Gesprochen/)).not.toBeInTheDocument();
+    expect(recordedPlayer).toHaveAccessibleDescription("");
+  });
+
   it("creates a Collection with the chosen icon and no declared language", async () => {
     const user = userEvent.setup();
     let created: Partial<CollectionInput> = {};

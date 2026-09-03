@@ -107,8 +107,8 @@ export const audioAssets = pgTable(
     /**
      * Provenance. Nullable and without a default so the migration can run ahead of the deploy: a
      * row the previously deployed app wrote carries no source, and nothing is backfilled. Only a
-     * generated clip carries the four speech columns, and its synthesized text is what makes stale
-     * detection and later regeneration possible.
+     * generated clip carries the four speech columns, and its synthesized text is what lets the
+     * Card form say what that clip says, and what makes later regeneration possible.
      */
     source: text("source"),
     speechProvider: text("speech_provider"),

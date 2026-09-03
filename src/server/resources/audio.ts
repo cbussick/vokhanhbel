@@ -106,6 +106,7 @@ export async function stageAudio(
       durationMs: row.durationMs,
       contentType: row.contentType,
       byteSize: row.byteSize,
+      synthesizedText: row.synthesizedText,
     });
   } catch (error) {
     await deleteAudioObject({ id, objectKey }, "metadata-failure", requestId);
