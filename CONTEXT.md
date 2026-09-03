@@ -32,9 +32,11 @@ _Avoid_: Locale (the representation, not the concept), language code, TTS langua
 **Clip**:
 The short audio on a Card face: whatever the Learner wants to hear for it — the word, an
 explanation, a mnemonic, a whole sentence. The app never learns what a Clip contains, which is why
-no Clip is ever marked as mismatched with the face text. A face holds at most one, and every Clip is
-either a Recording or a Generated Clip.
-_Avoid_: Pronunciation (a Clip need not be one), sample, track, sound file, attachment
+no Clip is ever marked as mismatched with the face text. A face holds at most one. A Clip now says
+how it was made, as a Recording or a Generated Clip; one stored before provenance existed says
+nothing, and nothing was backfilled.
+_Avoid_: Pronunciation (names the feature that produces a Clip, never the Clip itself), sample,
+track, sound file, attachment
 
 **Recording**:
 A Clip that came from the Learner, whether recorded with the microphone or picked as a file. Nothing
