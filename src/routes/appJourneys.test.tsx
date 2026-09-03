@@ -539,9 +539,9 @@ describe("rendered app journeys", () => {
     await user.type(screen.getByLabelText("Rückseite Maximal 1.000 Zeichen"), "hallo");
 
     const front = audioSection("Vorderseite");
-    const spokenTextField = front.getByLabelText("Text für die Aussprache");
-    await user.clear(spokenTextField);
-    await user.type(spokenTextField, "chào");
+    const pronunciationField = front.getByLabelText("Text für die Aussprache");
+    await user.clear(pronunciationField);
+    await user.type(pronunciationField, "chào");
     await user.click(front.getByRole("button", { name: "Aussprache erzeugen" }));
 
     const player = await front.findByRole("button", { name: "Audio Vorderseite: Abspielen" });

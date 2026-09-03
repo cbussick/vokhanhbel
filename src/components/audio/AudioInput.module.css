@@ -200,12 +200,12 @@
   text-align: center;
 }
 
-.spokenText {
-  /* Spoken text can be one long unbroken run; the rail is narrow. */
+.synthesizedText {
+  /* Synthesized text can be one long unbroken run; the rail is narrow. */
   overflow-wrap: anywhere;
 }
 
-.spokenText,
+.synthesizedText,
 .limits,
 .status {
   color: var(--color-text-secondary);
