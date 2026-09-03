@@ -9,7 +9,6 @@ import type { CollectionLanguage } from "../../contracts/collection";
 import { AudioPlayer } from "./AudioPlayer";
 import { stopApplicationPlayback } from "./playbackCoordinator";
 import { PronunciationGenerator } from "./PronunciationGenerator";
-import { isAudioStale } from "./staleAudio";
 import styles from "./AudioInput.module.css";
 
 /**
@@ -64,14 +63,6 @@ function MicrophoneIcon() {
   );
 }
 
-function MismatchIcon() {
-  return (
-    <svg viewBox="0 0 24 24" focusable="false">
-      <path d="M12 4 2.5 20h19zM12 10v4M12 17.5v.5" />
-    </svg>
-  );
-}
-
 function StopIcon() {
   return (
     <svg viewBox="0 0 24 24" focusable="false">
@@ -108,29 +99,22 @@ export function releaseAudioDraft(draft: AudioDraft | null): void {
 
 export function AudioInput({
   face,
-  faceText,
   draft,
   existing,
   existingRemoved,
-  pronunciationLanguage,
+  pronunciation,
   onDraftChange,
   onExistingRemovedChange,
 }: {
   face: "front" | "back";
-  /**
-   * What the face says right now, before anything is saved. It decides both what a generated clip
-   * is spoken from and whether the clip on the face still matches it.
-   */
-  faceText: string;
   draft: AudioDraft | null;
   existing: AudioMetadata | null;
   existingRemoved: boolean;
   /**
    * Present only for a face whose Collection declares a language this build can speak. Absent is
-   * what hides generation from a Collection that is not about a language at all. A clip generated
-   * before the declaration changed stays playable, and stays comparable, either way.
+   * what hides generation from a Collection that is not about a language at all.
    */
-  pronunciationLanguage?: CollectionLanguage | undefined;
+  pronunciation?: { language: CollectionLanguage; faceText: string } | undefined;
   onDraftChange: (draft: AudioDraft | null) => void;
   onExistingRemovedChange: (removed: boolean) => void;
 }) {
@@ -303,7 +287,6 @@ export function AudioInput({
   };
 
   const visibleAudio = draft?.metadata ?? (!existingRemoved ? existing : null);
-  const isStale = isAudioStale(visibleAudio, faceText);
   // A generated clip has no local object URL: the player reads it back from where it is staged.
   const source = draft?.origin === "local" ? draft.source : undefined;
   const isRecording = recordingState === "recording";
@@ -379,19 +362,6 @@ export function AudioInput({
             </button>
           </div>
         ) : null}
-        {/*
-          Written out beside the clip it describes rather than announced: the Learner is typing, and
-          a live region would interrupt her at every keystroke that changes the verdict. The icon
-          only decorates; the sentence carries the whole message for a screen reader.
-        */}
-        {isStale ? (
-          <p className={styles.staleNote}>
-            <span className={styles.icon} aria-hidden="true">
-              <MismatchIcon />
-            </span>
-            {t("audio.stale")}
-          </p>
-        ) : null}
         <button
           type="button"
           className={`${styles.actionButton} ${isRecording ? styles.stopButton : styles.recordButton}`}
@@ -432,15 +402,14 @@ export function AudioInput({
           <strong className={styles.dropCopy}>{t("audio.dropIdle")}</strong>
         </label>
         <span className={styles.limits}>{t("audio.limits")}</span>
-        {pronunciationLanguage ? (
+        {pronunciation ? (
           <>
             <div className={styles.separator}>
               <span>{t("audio.or")}</span>
             </div>
             <PronunciationGenerator
               face={face}
-              faceText={faceText}
-              language={pronunciationLanguage}
+              {...pronunciation}
               onGenerated={(audio) => {
                 setNewDraft({ origin: "staged", metadata: audio });
                 setHasGenerated(true);

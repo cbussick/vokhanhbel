@@ -291,11 +291,12 @@ export function CardFormDialog({
                 </div>
                 <AudioInput
                   face="front"
-                  faceText={front}
                   draft={frontDraft}
                   existing={card?.front.audio ?? null}
                   existingRemoved={frontAudioRemoved}
-                  pronunciationLanguage={frontLanguage}
+                  pronunciation={
+                    frontLanguage ? { language: frontLanguage, faceText: front } : undefined
+                  }
                   onDraftChange={setFrontDraft}
                   onExistingRemovedChange={setFrontAudioRemoved}
                 />
@@ -330,11 +331,12 @@ export function CardFormDialog({
                 </div>
                 <AudioInput
                   face="back"
-                  faceText={back}
                   draft={backDraft}
                   existing={card?.back.audio ?? null}
                   existingRemoved={backAudioRemoved}
-                  pronunciationLanguage={backLanguage}
+                  pronunciation={
+                    backLanguage ? { language: backLanguage, faceText: back } : undefined
+                  }
                   onDraftChange={setBackDraft}
                   onExistingRemovedChange={setBackAudioRemoved}
                 />
