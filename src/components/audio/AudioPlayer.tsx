@@ -16,12 +16,18 @@ export function AudioPlayer({
   audio,
   source,
   label,
+  describedBy,
   compact = false,
   onAvailabilityChange,
 }: {
   audio: AudioMetadata;
   source?: string | undefined;
   label: string;
+  /**
+   * What is written about this clip elsewhere on the page. The playback control carries it, so a
+   * screen reader reads it where the Learner already is instead of only in browse mode.
+   */
+  describedBy?: string | undefined;
   compact?: boolean;
   onAvailabilityChange?: ((available: boolean) => void) | undefined;
 }) {
@@ -125,15 +131,26 @@ export function AudioPlayer({
           aria-busy="true"
           aria-disabled="true"
           aria-label={`${label}: ${t("audio.loading")}`}
+          aria-describedby={describedBy}
         >
           <span className={styles.spinner} aria-hidden="true" />
         </button>
       ) : state === "playing" ? (
-        <button type="button" onClick={pause} aria-label={`${label}: ${t("audio.pause")}`}>
+        <button
+          type="button"
+          onClick={pause}
+          aria-label={`${label}: ${t("audio.pause")}`}
+          aria-describedby={describedBy}
+        >
           <span aria-hidden="true">Ⅱ</span>
         </button>
       ) : state === "error" ? (
-        <button type="button" onClick={retry} aria-label={`${label}: ${t("audio.retry")}`}>
+        <button
+          type="button"
+          onClick={retry}
+          aria-label={`${label}: ${t("audio.retry")}`}
+          aria-describedby={describedBy}
+        >
           ↻
         </button>
       ) : (
@@ -141,6 +158,7 @@ export function AudioPlayer({
           type="button"
           onClick={() => void play()}
           aria-label={`${label}: ${state === "ended" ? t("audio.replay") : t("audio.play")}`}
+          aria-describedby={describedBy}
         >
           <span aria-hidden="true">{state === "ended" ? "↻" : "▶"}</span>
         </button>

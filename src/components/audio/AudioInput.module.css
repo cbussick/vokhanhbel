@@ -200,6 +200,12 @@
   text-align: center;
 }
 
+.spokenText {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.spokenText,
 .limits,
 .status {
   color: var(--color-text-secondary);
