@@ -1,9 +1,8 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { GET as playAudio } from "../../api/audio/[audioId].js";
-import { POST as uploadAudio } from "../../api/audio/index.js";
+import { POST as postAudio } from "../../api/audio/index.js";
 import { POST as createCard } from "../../api/cards/index.js";
 import { POST as createCollection } from "../../api/collections/index.js";
-import { POST as generatePronunciation } from "../../api/pronunciations.js";
 import { POST as createReview } from "../../api/reviews.js";
 import { POST as createSession } from "../../api/session.js";
 import { GET as readStats } from "../../api/stats.js";
@@ -131,7 +130,7 @@ describe("real API handler stack", () => {
       },
       body: bytes,
     });
-    const uploadResponse = await uploadAudio(uploadRequest);
+    const uploadResponse = await postAudio(uploadRequest);
 
     expect(uploadResponse.status).toBe(201);
     const audio = (await uploadResponse.json()) as { id: string; durationMs: number };
@@ -209,8 +208,8 @@ describe("real API handler stack", () => {
     const loginResponse = await createSession(request("/api/session", "POST", { password }));
     const cookie = loginResponse.headers.get("set-cookie")?.split(";", 1)[0];
 
-    const generateResponse = await generatePronunciation(
-      request("/api/pronunciations", "POST", { text: "xin chào", language: "vi-VN" }, cookie),
+    const generateResponse = await postAudio(
+      request("/api/audio?pronunciation=1", "POST", { text: "xin chào", language: "vi-VN" }, cookie),
     );
 
     expect(generateResponse.status).toBe(201);
@@ -297,8 +296,8 @@ describe("real API handler stack", () => {
       "INSERT INTO audio_upload_attempts (session_hash) SELECT $1 FROM generate_series(1, 29)",
       [attempt.rows[0]!.session_hash],
     );
-    const limitedResponse = await generatePronunciation(
-      request("/api/pronunciations", "POST", { text: "cảm ơn", language: "vi-VN" }, cookie),
+    const limitedResponse = await postAudio(
+      request("/api/audio?pronunciation=1", "POST", { text: "cảm ơn", language: "vi-VN" }, cookie),
     );
 
     expect(limitedResponse.status).toBe(429);
@@ -319,9 +318,9 @@ describe("real API handler stack", () => {
     const loginResponse = await createSession(request("/api/session", "POST", { password }));
     const cookie = loginResponse.headers.get("set-cookie")?.split(";", 1)[0];
 
-    const tooLongResponse = await generatePronunciation(
+    const tooLongResponse = await postAudio(
       request(
-        "/api/pronunciations",
+        "/api/audio?pronunciation=1",
         "POST",
         { text: "a".repeat(maximumPronunciationTextLength + 1), language: "vi-VN" },
         cookie,
@@ -333,8 +332,8 @@ describe("real API handler stack", () => {
       errors: [{ pointer: "/text" }],
     });
 
-    const unsupportedResponse = await generatePronunciation(
-      request("/api/pronunciations", "POST", { text: "bonjour", language: "fr-FR" }, cookie),
+    const unsupportedResponse = await postAudio(
+      request("/api/audio?pronunciation=1", "POST", { text: "bonjour", language: "fr-FR" }, cookie),
     );
     expect(unsupportedResponse.status).toBe(422);
     await expect(unsupportedResponse.json()).resolves.toMatchObject({
@@ -342,8 +341,8 @@ describe("real API handler stack", () => {
       errors: [{ pointer: "/language" }],
     });
 
-    const absentResponse = await generatePronunciation(
-      request("/api/pronunciations", "POST", { text: "bonjour" }, cookie),
+    const absentResponse = await postAudio(
+      request("/api/audio?pronunciation=1", "POST", { text: "bonjour" }, cookie),
     );
     expect(absentResponse.status).toBe(422);
 
@@ -352,8 +351,8 @@ describe("real API handler stack", () => {
     expect(synthesizer.requests).toEqual([]);
 
     synthesizer.failure = new Error("the synthesizer is unreachable");
-    const failedResponse = await generatePronunciation(
-      request("/api/pronunciations", "POST", { text: "xin chào", language: "vi-VN" }, cookie),
+    const failedResponse = await postAudio(
+      request("/api/audio?pronunciation=1", "POST", { text: "xin chào", language: "vi-VN" }, cookie),
     );
 
     expect(failedResponse.status).toBe(502);
@@ -366,8 +365,8 @@ describe("real API handler stack", () => {
       bytes: new Uint8Array(maximumAudioBytes + 1),
       contentType: "audio/mpeg",
     };
-    const oversizedResponse = await generatePronunciation(
-      request("/api/pronunciations", "POST", { text: "xin chào", language: "vi-VN" }, cookie),
+    const oversizedResponse = await postAudio(
+      request("/api/audio?pronunciation=1", "POST", { text: "xin chào", language: "vi-VN" }, cookie),
     );
 
     expect(oversizedResponse.status).toBe(413);
