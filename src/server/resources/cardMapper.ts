@@ -7,7 +7,14 @@ import {
 } from "../../contracts/card.js";
 import { boxSchema } from "../../domain/review.js";
 
-const audioRowSchema = audioMetadataSchema.extend({ deletedAt: z.date().nullable() }).nullable();
+/**
+ * A Card's audio as a join returns it: its metadata plus the deletion the join cannot filter. The
+ * deletion is coerced because the two readers deliver it differently — the query builder hands back
+ * a `Date`, while the review path's raw SQL builds the row as JSON and so hands back a string.
+ */
+export const audioRowSchema = audioMetadataSchema
+  .extend({ deletedAt: z.coerce.date().nullable() })
+  .nullable();
 
 const cardRowSchema = z.object({
   id: z.uuid(),

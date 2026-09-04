@@ -336,6 +336,53 @@ describe("PostgreSQL application behavior", () => {
     ).toBe(defaultCollectionId);
   });
 
+  it("carries a reviewed Card's Clips, and what a Generated Clip says, into the Review result", async () => {
+    const store = new InMemoryAudioObjectStore();
+    setAudioObjectStoreForTests(store);
+    const generated = await stageAudio(
+      "review-audio-session",
+      createWavFixture(),
+      {
+        source: "generated",
+        speechProvider: "fake-speech",
+        speechVoice: "vi-VN-Chirp3-HD-Gacrux",
+        speechLanguage: "vi-VN",
+        synthesizedText: "chào",
+      },
+      "audio/wav",
+    );
+    const recorded = await stageAudio(
+      "review-audio-session",
+      createWavFixture(),
+      { source: "recorded" },
+      "audio/wav",
+    );
+    const card = await createCard(
+      {
+        ...inDefaultCollection,
+        front: { text: "chào (hello)", audioId: generated.id },
+        back: { text: "hallo", audioId: recorded.id },
+      },
+      "review-audio-session",
+    );
+
+    const result = await recordReview({
+      id: crypto.randomUUID(),
+      cardId: card.id,
+      grade: "knew_it" as const,
+      reviewedAt: new Date().toISOString(),
+    });
+
+    // The review path builds its Card from raw SQL rather than the query builder, so it needs its
+    // own proof that a face's Clip survives the trip — and that a Generated Clip still says what it
+    // was made from, while a Recording says nothing.
+    expect(result.card.front.audio).toMatchObject({
+      id: generated.id,
+      synthesizedText: "chào",
+    });
+    expect(result.card.back.audio).toMatchObject({ id: recorded.id, synthesizedText: null });
+  });
+
   it("records exact replays once and serializes distinct concurrent Grades", async () => {
     const card = await createCard({ ...inDefaultCollection, front: "steady", back: "stetig" });
     const reviewedAt = new Date().toISOString();
