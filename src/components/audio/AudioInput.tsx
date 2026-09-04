@@ -1,23 +1,30 @@
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import type { AudioMetadata } from "../../contracts/card";
+import {
+  maximumAudioBytes,
+  maximumAudioDurationMs,
+  type AudioMetadata,
+} from "../../contracts/card";
+import type { CollectionLanguage } from "../../contracts/collection";
 import { AudioPlayer } from "./AudioPlayer";
 import { stopApplicationPlayback } from "./playbackCoordinator";
+import { PronunciationGenerator } from "./PronunciationGenerator";
 import styles from "./AudioInput.module.css";
 
-export interface AudioDraft {
-  blob: Blob;
-  source: string;
-  metadata: AudioMetadata;
-}
+/**
+ * A clip waiting to go onto a face. One produced in the browser still carries its bytes and has to
+ * be staged when the Card is saved; one the server generated is staged already, so saving only
+ * claims it. Both are claimed onto the face the same way, and both play through the same control.
+ */
+export type AudioDraft =
+  | { origin: "local"; blob: Blob; source: string; metadata: AudioMetadata }
+  | { origin: "staged"; metadata: AudioMetadata };
 
 const recorderTypes = [
   "audio/webm;codecs=opus",
   "audio/ogg;codecs=opus",
   "audio/mp4;codecs=mp4a.40.2",
 ];
-const maximumAudioBytes = 2_000_000;
-const maximumAudioDurationMs = 7_000;
 
 function normalizeContentType(type: string): AudioMetadata["contentType"] | undefined {
   const base = type.split(";", 1)[0]!.toLowerCase();
@@ -87,7 +94,7 @@ async function readDuration(source: string): Promise<number> {
 }
 
 export function releaseAudioDraft(draft: AudioDraft | null): void {
-  if (draft) URL.revokeObjectURL(draft.source);
+  if (draft?.origin === "local") URL.revokeObjectURL(draft.source);
 }
 
 export function AudioInput({
@@ -95,6 +102,7 @@ export function AudioInput({
   draft,
   existing,
   existingRemoved,
+  pronunciation,
   onDraftChange,
   onExistingRemovedChange,
 }: {
@@ -102,6 +110,11 @@ export function AudioInput({
   draft: AudioDraft | null;
   existing: AudioMetadata | null;
   existingRemoved: boolean;
+  /**
+   * Present only for a face whose Collection declares a language this build can speak. Absent is
+   * what hides generation from a Collection that is not about a language at all.
+   */
+  pronunciation?: { language: CollectionLanguage; faceText: string } | undefined;
   onDraftChange: (draft: AudioDraft | null) => void;
   onExistingRemovedChange: (removed: boolean) => void;
 }) {
@@ -121,6 +134,9 @@ export function AudioInput({
   const [remainingMs, setRemainingMs] = useState(maximumAudioDurationMs);
   const [error, setError] = useState<string>();
   const [dragging, setDragging] = useState(false);
+  // Announced through the rail's one status region rather than a second one of its own, so a
+  // finished clip is spoken without two live regions talking over each other.
+  const [hasGenerated, setHasGenerated] = useState(false);
 
   const stopTracks = () => {
     streamRef.current?.getTracks().forEach((track) => track.stop());
@@ -148,6 +164,7 @@ export function AudioInput({
 
   const setNewDraft = (value: AudioDraft | null) => {
     releaseAudioDraft(draft);
+    setHasGenerated(false);
     onDraftChange(value);
     if (value) onExistingRemovedChange(true);
   };
@@ -185,6 +202,7 @@ export function AudioInput({
         return;
       }
       setNewDraft({
+        origin: "local",
         blob: normalizedBlob,
         source,
         metadata: {
@@ -192,6 +210,7 @@ export function AudioInput({
           durationMs,
           contentType,
           byteSize: normalizedBlob.size,
+          synthesizedText: null,
         },
       });
       setRecordingState("idle");
@@ -268,7 +287,16 @@ export function AudioInput({
   };
 
   const visibleAudio = draft?.metadata ?? (!existingRemoved ? existing : null);
-  const source = draft?.source;
+  /**
+   * Only a generated clip records what it was made from, so only a generated clip can say what it
+   * says. A recording holds whatever the Learner wanted to hear for this face — the word, an
+   * explanation, a whole sentence — and nothing here knows which, so nothing is claimed about it.
+   * The Card form is the only place this appears: it is here that the Learner can act on it.
+   */
+  const synthesizedText = visibleAudio?.synthesizedText;
+  const synthesizedTextId = synthesizedText ? `audio-${face}-synthesized-text` : undefined;
+  // A generated clip has no local object URL: the player reads it back from where it is staged.
+  const source = draft?.origin === "local" ? draft.source : undefined;
   const isRecording = recordingState === "recording";
   const isRequesting = recordingState === "requesting";
   const selectLabel = t("audio.selectForFace", { face: faceLabel });
@@ -326,8 +354,9 @@ export function AudioInput({
             <AudioPlayer
               key={visibleAudio.id}
               audio={visibleAudio}
-              {...(source ? { source } : {})}
+              source={source}
               label={t(face === "front" ? "audio.frontLabel" : "audio.backLabel")}
+              describedBy={synthesizedTextId}
               compact
             />
             <button
@@ -341,6 +370,11 @@ export function AudioInput({
               {t("audio.remove")}
             </button>
           </div>
+        ) : null}
+        {synthesizedText ? (
+          <p id={synthesizedTextId} className={styles.synthesizedText}>
+            {t("audio.synthesizedText", { text: synthesizedText })}
+          </p>
         ) : null}
         <button
           type="button"
@@ -382,6 +416,21 @@ export function AudioInput({
           <strong className={styles.dropCopy}>{t("audio.dropIdle")}</strong>
         </label>
         <span className={styles.limits}>{t("audio.limits")}</span>
+        {pronunciation ? (
+          <>
+            <div className={styles.separator}>
+              <span>{t("audio.or")}</span>
+            </div>
+            <PronunciationGenerator
+              face={face}
+              {...pronunciation}
+              onGenerated={(audio) => {
+                setNewDraft({ origin: "staged", metadata: audio });
+                setHasGenerated(true);
+              }}
+            />
+          </>
+        ) : null}
         <p className={isRecording ? styles.visuallyHidden : styles.status} aria-live="polite">
           {isRecording
             ? t("audio.recordingActive")
@@ -393,7 +442,9 @@ export function AudioInput({
                   ? t("audio.missing")
                   : recordingState === "unsupported"
                     ? t("audio.unsupportedRecording")
-                    : ""}
+                    : hasGenerated
+                      ? t("audio.generated")
+                      : ""}
         </p>
         {error ? (
           <p className={styles.error} role="alert">

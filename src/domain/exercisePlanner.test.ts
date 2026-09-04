@@ -37,7 +37,13 @@ function text(value: string) {
 function audio(id: string) {
   return {
     text: null,
-    audio: { id, durationMs: 1_000, contentType: "audio/wav" as const, byteSize: 8_044 },
+    audio: {
+      id,
+      durationMs: 1_000,
+      contentType: "audio/wav" as const,
+      byteSize: 8_044,
+      synthesizedText: null,
+    },
   };
 }
 
@@ -394,7 +400,13 @@ describe("planExercises", () => {
         {
           cardId: "1",
           text: null,
-          audio: { id: "audio-1", durationMs: 1_000, contentType: "audio/wav", byteSize: 8_044 },
+          audio: {
+            id: "audio-1",
+            durationMs: 1_000,
+            contentType: "audio/wav",
+            byteSize: 8_044,
+            synthesizedText: null,
+          },
           correct: true,
         },
       ]);

@@ -15,6 +15,7 @@ import {
   createCollection,
   deleteCollection,
   listCollections,
+  updateCollection,
 } from "../../src/server/resources/collections.js";
 import { recordReview } from "../../src/server/resources/reviews.js";
 import { login } from "../../src/server/resources/sessions.js";
@@ -23,6 +24,7 @@ import { createTopic, deleteTopic, listTopics } from "../../src/server/resources
 import { consumeTutorAllowance, createTutorStream } from "../../src/server/resources/tutor.js";
 
 const inDefaultCollection = { collectionId: defaultCollectionId };
+const englishCollection = { name: "Englisch", icon: "flag-gb" } as const;
 
 afterEach(() => setAudioObjectStoreForTests(undefined));
 
@@ -44,7 +46,7 @@ describe("PostgreSQL application behavior", () => {
   });
 
   it("scopes front uniqueness to a single Collection", async () => {
-    const other = await createCollection({ name: "Englisch", icon: "flag-gb" });
+    const other = await createCollection(englishCollection);
     await createCard({ ...inDefaultCollection, front: "Take care", back: "Pass auf" });
 
     await expect(
@@ -59,8 +61,18 @@ describe("PostgreSQL application behavior", () => {
     const store = new InMemoryAudioObjectStore();
     const sessionHash = "audio-session";
     setAudioObjectStoreForTests(store);
-    const firstAudio = await stageAudio(sessionHash, createWavFixture(), "audio/wav");
-    const secondAudio = await stageAudio(sessionHash, createWavFixture(), "audio/wav");
+    const firstAudio = await stageAudio(
+      sessionHash,
+      createWavFixture(),
+      { source: "recorded" },
+      "audio/wav",
+    );
+    const secondAudio = await stageAudio(
+      sessionHash,
+      createWavFixture(),
+      { source: "recorded" },
+      "audio/wav",
+    );
     const first = await createCard(
       {
         ...inDefaultCollection,
@@ -92,7 +104,12 @@ describe("PostgreSQL application behavior", () => {
     const store = new FailingAudioObjectStore();
     const sessionHash = "audio-cleanup-session";
     setAudioObjectStoreForTests(store);
-    const audio = await stageAudio(sessionHash, createWavFixture(), "audio/wav");
+    const audio = await stageAudio(
+      sessionHash,
+      createWavFixture(),
+      { source: "recorded" },
+      "audio/wav",
+    );
     const card = await createCard(
       {
         ...inDefaultCollection,
@@ -120,7 +137,12 @@ describe("PostgreSQL application behavior", () => {
     const store = new InMemoryAudioObjectStore();
     const sessionHash = "audio-tutor-session";
     setAudioObjectStoreForTests(store);
-    const audio = await stageAudio(sessionHash, createWavFixture(), "audio/wav");
+    const audio = await stageAudio(
+      sessionHash,
+      createWavFixture(),
+      { source: "recorded" },
+      "audio/wav",
+    );
     const card = await createCard(
       {
         ...inDefaultCollection,
@@ -158,11 +180,47 @@ describe("PostgreSQL application behavior", () => {
     ).rejects.toMatchObject({ status: 404, type: "/problems/collection-not-found" });
   });
 
-  it("gives a migrated Collection the default icon and stores a chosen one", async () => {
-    expect(await listCollections()).toMatchObject([{ id: defaultCollectionId, icon: "book" }]);
-    await expect(createCollection({ name: "Englisch", icon: "flag-gb" })).resolves.toMatchObject({
+  it("gives a migrated Collection the default icon and no declared language", async () => {
+    expect(await listCollections()).toMatchObject([
+      { id: defaultCollectionId, icon: "book", frontLanguage: null, backLanguage: null },
+    ]);
+    await expect(createCollection(englishCollection)).resolves.toMatchObject({
       icon: "flag-gb",
+      frontLanguage: null,
+      backLanguage: null,
     });
+  });
+
+  it("stores the languages a Collection declares, and only changes the ones an update names", async () => {
+    const declared = await createCollection({
+      ...englishCollection,
+      frontLanguage: "vi-VN",
+      backLanguage: "de-DE",
+    });
+    expect(declared).toMatchObject({ frontLanguage: "vi-VN", backLanguage: "de-DE" });
+
+    // What a client on an older build sends. It knows nothing of either language, so it moves
+    // neither: naming no language must not be the same request as clearing both.
+    await expect(updateCollection(declared.id, englishCollection)).resolves.toMatchObject({
+      frontLanguage: "vi-VN",
+      backLanguage: "de-DE",
+    });
+
+    await expect(
+      updateCollection(declared.id, {
+        ...englishCollection,
+        frontLanguage: "en-US",
+        backLanguage: null,
+      }),
+    ).resolves.toMatchObject({ frontLanguage: "en-US", backLanguage: null });
+  });
+
+  it("refuses a Collection language that is not a full locale", async () => {
+    await expect(
+      getPool().query(
+        `INSERT INTO collections (name, normalized_name, front_language) VALUES ('Bare', 'Bare', 'vi')`,
+      ),
+    ).rejects.toThrow();
   });
 
   it("rejects Collection names that bypass stored normalization", async () => {
@@ -177,7 +235,7 @@ describe("PostgreSQL application behavior", () => {
   });
 
   it("keeps a Collection that still holds Cards, and always keeps the last one", async () => {
-    const other = await createCollection({ name: "Englisch", icon: "flag-gb" });
+    const other = await createCollection(englishCollection);
     const card = await createCard({
       collectionId: other.id,
       front: "Take care",
@@ -200,7 +258,7 @@ describe("PostgreSQL application behavior", () => {
   });
 
   it("keeps Cards when a Topic is deleted and drops Topics when a Card moves Collection", async () => {
-    const english = await createCollection({ name: "Englisch", icon: "flag-gb" });
+    const english = await createCollection(englishCollection);
     const animals = await createTopic({
       collectionId: defaultCollectionId,
       name: "Tiere",
@@ -239,7 +297,7 @@ describe("PostgreSQL application behavior", () => {
   });
 
   it("refuses a Topic from another Collection on a Card", async () => {
-    const english = await createCollection({ name: "Englisch", icon: "flag-gb" });
+    const english = await createCollection(englishCollection);
     const englishTopic = await createTopic({
       collectionId: english.id,
       name: "Food",
@@ -276,6 +334,53 @@ describe("PostgreSQL application behavior", () => {
         )
       ).rows[0]?.collection_id,
     ).toBe(defaultCollectionId);
+  });
+
+  it("carries a reviewed Card's Clips, and what a Generated Clip says, into the Review result", async () => {
+    const store = new InMemoryAudioObjectStore();
+    setAudioObjectStoreForTests(store);
+    const generated = await stageAudio(
+      "review-audio-session",
+      createWavFixture(),
+      {
+        source: "generated",
+        speechProvider: "fake-speech",
+        speechVoice: "vi-VN-Chirp3-HD-Gacrux",
+        speechLanguage: "vi-VN",
+        synthesizedText: "chào",
+      },
+      "audio/wav",
+    );
+    const recorded = await stageAudio(
+      "review-audio-session",
+      createWavFixture(),
+      { source: "recorded" },
+      "audio/wav",
+    );
+    const card = await createCard(
+      {
+        ...inDefaultCollection,
+        front: { text: "chào (hello)", audioId: generated.id },
+        back: { text: "hallo", audioId: recorded.id },
+      },
+      "review-audio-session",
+    );
+
+    const result = await recordReview({
+      id: crypto.randomUUID(),
+      cardId: card.id,
+      grade: "knew_it" as const,
+      reviewedAt: new Date().toISOString(),
+    });
+
+    // The review path builds its Card from raw SQL rather than the query builder, so it needs its
+    // own proof that a face's Clip survives the trip — and that a Generated Clip still says what it
+    // was made from, while a Recording says nothing.
+    expect(result.card.front.audio).toMatchObject({
+      id: generated.id,
+      synthesizedText: "chào",
+    });
+    expect(result.card.back.audio).toMatchObject({ id: recorded.id, synthesizedText: null });
   });
 
   it("records exact replays once and serializes distinct concurrent Grades", async () => {

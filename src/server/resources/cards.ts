@@ -64,24 +64,24 @@ function structuredInput(input: CreateCardInput | LegacyCreateCardInput): Create
 const frontAudio = alias(audioAssets, "front_audio");
 const backAudio = alias(audioAssets, "back_audio");
 
+/** What a Card's face needs of its audio, named once so both faces select the same columns. */
+function audioColumns(audio: typeof frontAudio | typeof backAudio) {
+  return {
+    id: audio.id,
+    durationMs: audio.durationMs,
+    contentType: audio.contentType,
+    byteSize: audio.byteSize,
+    synthesizedText: audio.synthesizedText,
+    deletedAt: audio.deletedAt,
+  };
+}
+
 function selectCards() {
   return getDatabase()
     .select({
       card: cards,
-      frontAudio: {
-        id: frontAudio.id,
-        durationMs: frontAudio.durationMs,
-        contentType: frontAudio.contentType,
-        byteSize: frontAudio.byteSize,
-        deletedAt: frontAudio.deletedAt,
-      },
-      backAudio: {
-        id: backAudio.id,
-        durationMs: backAudio.durationMs,
-        contentType: backAudio.contentType,
-        byteSize: backAudio.byteSize,
-        deletedAt: backAudio.deletedAt,
-      },
+      frontAudio: audioColumns(frontAudio),
+      backAudio: audioColumns(backAudio),
     })
     .from(cards)
     .leftJoin(frontAudio, eq(cards.frontAudioId, frontAudio.id))

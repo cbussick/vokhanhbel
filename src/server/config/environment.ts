@@ -11,6 +11,14 @@ const serverEnvironmentSchema = z.object({
   R2_BUCKET: z.string().min(1).optional(),
   R2_ACCESS_KEY_ID: z.string().min(1).optional(),
   R2_SECRET_ACCESS_KEY: z.string().min(1).optional(),
+  /**
+   * `TTS` deliberately survives here while the code says "speech" throughout: these names are
+   * external configuration a human already entered in the deployment, and renaming them would
+   * invalidate the setup instructions for no gain.
+   */
+  GOOGLE_TTS_PROJECT_ID: z.string().min(1).optional(),
+  GOOGLE_TTS_CLIENT_EMAIL: z.string().min(1).optional(),
+  GOOGLE_TTS_PRIVATE_KEY: z.string().min(1).optional(),
   CRON_SECRET: z.string().min(32).optional(),
 });
 
@@ -54,5 +62,31 @@ export function getR2Environment(): R2Environment {
     bucket: environment.R2_BUCKET!,
     accessKeyId: environment.R2_ACCESS_KEY_ID!,
     secretAccessKey: environment.R2_SECRET_ACCESS_KEY!,
+  };
+}
+
+/** The service-account key the Text-to-Speech provider signs its calls with. */
+export interface GoogleSpeechEnvironment {
+  projectId: string;
+  clientEmail: string;
+  privateKey: string;
+}
+
+export function getGoogleSpeechEnvironment(): GoogleSpeechEnvironment {
+  const environment = getServerEnvironment();
+  const required = [
+    environment.GOOGLE_TTS_PROJECT_ID,
+    environment.GOOGLE_TTS_CLIENT_EMAIL,
+    environment.GOOGLE_TTS_PRIVATE_KEY,
+  ];
+
+  if (required.some((value) => !value))
+    throw new Error("Google Text-to-Speech configuration is incomplete");
+
+  return {
+    projectId: environment.GOOGLE_TTS_PROJECT_ID!,
+    clientEmail: environment.GOOGLE_TTS_CLIENT_EMAIL!,
+    // A deployment stores the key on one line, so its PEM line breaks arrive escaped.
+    privateKey: environment.GOOGLE_TTS_PRIVATE_KEY!.replaceAll(String.raw`\n`, "\n"),
   };
 }

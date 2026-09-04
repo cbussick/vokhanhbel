@@ -29,6 +29,12 @@ export const collections = pgTable(
     name: text("name").notNull(),
     normalizedName: text("normalized_name").notNull(),
     icon: text("icon").notNull().default(defaultCollectionIcon),
+    /**
+     * Nullable and without a default: a Collection that declares no language for a face is the
+     * ordinary case, and every Collection that predates these columns already reads that way.
+     */
+    frontLanguage: text("front_language"),
+    backLanguage: text("back_language"),
     createdAt: timestamp("created_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
     deletedAt: timestamp("deleted_at", { withTimezone: true, mode: "date" }),
@@ -37,6 +43,19 @@ export const collections = pgTable(
     check("collections_name_length", sql`char_length(${table.name}) between 1 and 60`),
     // Deliberately a length bound, not a value list: adding an icon stays a code-only change.
     check("collections_icon_length", sql`char_length(${table.icon}) between 1 and 40`),
+    /**
+     * Same reasoning as the icon: adding a supported locale stays a code-only change. The floor is
+     * the length of the shortest full locale, `ll-CC`, so the column cannot hold a bare language
+     * code that the contract rejects.
+     */
+    check(
+      "collections_front_language_length",
+      sql`${table.frontLanguage} is null or char_length(${table.frontLanguage}) between 5 and 35`,
+    ),
+    check(
+      "collections_back_language_length",
+      sql`${table.backLanguage} is null or char_length(${table.backLanguage}) between 5 and 35`,
+    ),
     check("collections_name_normalized", sql`${table.name} = normalize_card_text(${table.name})`),
     check("collections_normalized_name_matches", sql`${table.normalizedName} = ${table.name}`),
     uniqueIndex("collections_active_name_unique")
@@ -85,6 +104,17 @@ export const audioAssets = pgTable(
     durationMs: integer("duration_ms").notNull(),
     checksum: text("checksum").notNull(),
     stagedUntil: timestamp("staged_until", { withTimezone: true, mode: "date" }).notNull(),
+    /**
+     * Provenance. Nullable and without a default so the migration can run ahead of the deploy: a
+     * row the previously deployed app wrote carries no source, and nothing is backfilled. Only a
+     * generated clip carries the four speech columns, and its synthesized text is what lets the
+     * Card form say what that clip says, and what makes later regeneration possible.
+     */
+    source: text("source"),
+    speechProvider: text("speech_provider"),
+    speechVoice: text("speech_voice"),
+    speechLanguage: text("speech_language"),
+    synthesizedText: text("synthesized_text"),
     claimedCardId: uuid("claimed_card_id"),
     claimedFace: text("claimed_face"),
     createdAt: timestamp("created_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
@@ -93,6 +123,23 @@ export const audioAssets = pgTable(
   (table) => [
     check("audio_assets_byte_size", sql`${table.byteSize} between 1 and 2000000`),
     check("audio_assets_duration", sql`${table.durationMs} between 1 and 7000`),
+    check(
+      "audio_assets_source_value",
+      sql`${table.source} is null or ${table.source} in ('recorded', 'generated')`,
+    ),
+    check(
+      "audio_assets_generation_shape",
+      sql`(${table.source} is distinct from 'generated' and ${table.speechProvider} is null and ${table.speechVoice} is null and ${table.speechLanguage} is null and ${table.synthesizedText} is null) or (${table.source} = 'generated' and ${table.speechProvider} is not null and ${table.speechVoice} is not null and ${table.speechLanguage} is not null and ${table.synthesizedText} is not null)`,
+    ),
+    check(
+      "audio_assets_synthesized_text_length",
+      sql`${table.synthesizedText} is null or char_length(${table.synthesizedText}) between 1 and 1000`,
+    ),
+    // Same floor as a Collection's declared language: a full locale, never a bare language code.
+    check(
+      "audio_assets_speech_language_length",
+      sql`${table.speechLanguage} is null or char_length(${table.speechLanguage}) between 5 and 35`,
+    ),
     check(
       "audio_assets_claim_shape",
       sql`(${table.claimedCardId} is null and ${table.claimedFace} is null) or (${table.claimedCardId} is not null and ${table.claimedFace} in ('front', 'back'))`,

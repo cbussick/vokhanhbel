@@ -18,7 +18,7 @@ import {
 import { berlinTimeZone } from "../../domain/time.js";
 import { getPool } from "../database/client.js";
 import { AppProblem } from "../http/problem.js";
-import { mapCard } from "./cardMapper.js";
+import { audioRowSchema, mapCard } from "./cardMapper.js";
 
 const reviewRowSchema = z.object({
   id: z.uuid(),
@@ -43,16 +43,8 @@ const databaseCardRowSchema = z.object({
   created_at: z.date(),
   updated_at: z.date(),
   deleted_at: z.date().nullable(),
-  front_audio_id: z.uuid().nullable(),
-  front_audio_duration_ms: z.number().int().nullable(),
-  front_audio_content_type: z.string().nullable(),
-  front_audio_byte_size: z.number().int().nullable(),
-  front_audio_deleted_at: z.date().nullable(),
-  back_audio_id: z.uuid().nullable(),
-  back_audio_duration_ms: z.number().int().nullable(),
-  back_audio_content_type: z.string().nullable(),
-  back_audio_byte_size: z.number().int().nullable(),
-  back_audio_deleted_at: z.date().nullable(),
+  front_audio: audioRowSchema,
+  back_audio: audioRowSchema,
 });
 
 const dueRowSchema = z.object({ due_at: z.date() });
@@ -76,37 +68,29 @@ function mapDatabaseCard(value: unknown, topicIds: string[]) {
         updatedAt: row.updated_at,
         deletedAt: row.deleted_at,
       },
-      frontAudio: row.front_audio_id
-        ? {
-            id: row.front_audio_id,
-            durationMs: row.front_audio_duration_ms,
-            contentType: row.front_audio_content_type,
-            byteSize: row.front_audio_byte_size,
-            deletedAt: row.front_audio_deleted_at,
-          }
-        : null,
-      backAudio: row.back_audio_id
-        ? {
-            id: row.back_audio_id,
-            durationMs: row.back_audio_duration_ms,
-            contentType: row.back_audio_content_type,
-            byteSize: row.back_audio_byte_size,
-            deletedAt: row.back_audio_deleted_at,
-          }
-        : null,
+      frontAudio: row.front_audio,
+      backAudio: row.back_audio,
     },
     topicIds,
   );
 }
 
+/**
+ * A left-joined face's audio, built by Postgres so the columns are named in one place instead of
+ * once per face in the projection, the row schema, and the mapper. A face without audio joins to
+ * all-null columns, which `json_build_object` cannot tell from a real row, so the id decides.
+ */
+const audioJson = (alias: string) => `
+    CASE WHEN ${alias}.id IS NULL THEN NULL ELSE json_build_object(
+      'id', ${alias}.id, 'durationMs', ${alias}.duration_ms,
+      'contentType', ${alias}.content_type, 'byteSize', ${alias}.byte_size,
+      'synthesizedText', ${alias}.synthesized_text, 'deletedAt', ${alias}.deleted_at
+    ) END`;
+
 const cardSelectSql = `
   SELECT c.*,
-    fa.id AS front_audio_id, fa.duration_ms AS front_audio_duration_ms,
-    fa.content_type AS front_audio_content_type, fa.byte_size AS front_audio_byte_size,
-    fa.deleted_at AS front_audio_deleted_at,
-    ba.id AS back_audio_id, ba.duration_ms AS back_audio_duration_ms,
-    ba.content_type AS back_audio_content_type, ba.byte_size AS back_audio_byte_size,
-    ba.deleted_at AS back_audio_deleted_at
+    ${audioJson("fa")} AS front_audio,
+    ${audioJson("ba")} AS back_audio
   FROM cards c
   LEFT JOIN audio_assets fa ON fa.id=c.front_audio_id
   LEFT JOIN audio_assets ba ON ba.id=c.back_audio_id

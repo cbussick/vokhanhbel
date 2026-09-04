@@ -1,0 +1,97 @@
+.generator {
+  min-inline-size: 0;
+  display: grid;
+  gap: var(--space-2);
+}
+
+.label {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--color-primary-text);
+  font-size: var(--font-sm);
+  font-weight: 800;
+}
+
+.icon {
+  flex: none;
+  inline-size: 1.25rem;
+  block-size: 1.25rem;
+}
+
+.icon svg {
+  inline-size: 100%;
+  block-size: 100%;
+  fill: none;
+  stroke: currentcolor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2;
+}
+
+/* Sized and bordered like every other text field in a form dialog; only the rejected state differs. */
+.text {
+  min-inline-size: 0;
+  min-block-size: 48px;
+}
+
+.text[aria-invalid="true"] {
+  border-color: var(--color-danger);
+}
+
+.hint,
+.warning {
+  font-size: var(--font-xs);
+}
+
+.hint {
+  color: var(--color-text-secondary);
+}
+
+.warning {
+  color: var(--color-danger);
+  font-weight: 700;
+}
+
+.generateButton {
+  min-inline-size: 0;
+  min-block-size: 48px;
+  inline-size: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding-inline: var(--space-2);
+  border: 1px solid var(--color-primary);
+  border-radius: var(--radius-medium);
+  background: var(--color-surface);
+  color: var(--color-primary-text);
+  font-family: var(--font-ui);
+  font-size: var(--font-sm);
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.generateButton:disabled,
+.generateButton[aria-disabled="true"] {
+  border-color: var(--color-border);
+  color: var(--color-text-secondary);
+  cursor: not-allowed;
+}
+
+.error {
+  color: var(--color-danger);
+  font-size: var(--font-sm);
+  font-weight: 700;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .generateButton:hover:not(:disabled, [aria-disabled="true"]) {
+    background: var(--color-surface-hover);
+  }
+}
+
+@media (width <= 22rem) {
+  .generateButton {
+    font-size: var(--font-xs);
+  }
+}

@@ -9,14 +9,53 @@ The single person whose Cards, Reviews, schedule, and Points the app represents.
 _Avoid_: User, account, profile
 
 **Card**:
-A fixed-direction pair of faces to be learned. Each face contains normalized text, one short audio recording, or both. A Card is created manually and is always reviewed from front to back.
+A fixed-direction pair of faces to be learned. Each face contains normalized text, one Clip, or both. A Card is created manually and is always reviewed from front to back.
 _Avoid_: Flashcard, word
 
 **Collection**:
 A named group of Cards. Every Card belongs to exactly one Collection, which scopes the Card list,
 front uniqueness, and a Review Session. Usually one Collection per learned language, but any grouping
-the Learner wants.
+the Learner wants. A Collection may declare a Face Language for each side of its Cards.
 _Avoid_: Deck, set, category, folder
+
+**Face Language**:
+The language a Collection declares for one side of its Cards: one for the front, one for the back.
+The Learner declares either, both, or neither, and changes them whenever she wants. A Face Language
+is a full locale (`vi-VN`, `de-DE`, `en-US`), never a bare language code, so regional variants stay
+distinguishable and map onto a spoken voice. It is chosen explicitly rather than derived from the
+UI language, which would write a German-only assumption into stored data. Null means none declared;
+nothing else stands for that, and a Collection declaring neither behaves exactly like a Collection
+from before Face Languages existed. A locale the running build does not offer is kept as declared
+rather than rewritten — whether it can be spoken is decided where it is used.
+_Avoid_: Locale (the representation, not the concept), language code, TTS language, card language
+
+**Clip**:
+The short audio on a Card face: whatever the Learner wants to hear for it — the word, an
+explanation, a mnemonic, a whole sentence. The app never learns what a Clip contains, which is why
+no Clip is ever marked as mismatched with the face text. A face holds at most one. A Clip now says
+how it was made, as a Recording or a Generated Clip; one stored before provenance existed says
+nothing, and nothing was backfilled.
+_Avoid_: Pronunciation (names the feature that produces a Clip, never the Clip itself), sample,
+track, sound file, attachment
+
+**Recording**:
+A Clip that came from the Learner, whether recorded with the microphone or picked as a file. Nothing
+is stored about what it says. Stored as `source: recorded`.
+_Avoid_: Upload, voice memo, human audio, own audio
+
+**Generated Clip**:
+A Clip the app synthesized on the Learner's request, through the `SpeechProvider`. It additionally
+records the Synthesized Text, provider, voice, and locale it was made from, so what it says can be
+shown and the Clip can be made again. Stored as `source: generated`.
+_Avoid_: TTS audio, AI audio, synthetic recording (it is not a Recording), robot voice
+
+**Synthesized Text**:
+The exact text a Generated Clip was made from, kept with the Clip and shown on the Card form. German
+UI: Gesprochen. It may deliberately differ from the face text — a face reading `chào (hello)` can be
+synthesized as `chào` — so it states a fact about the Clip and never claims that Clip and face still
+agree. A Recording has none.
+_Avoid_: Spoken text (that is what the Learner asks for, before there is a Clip), transcript,
+caption, subtitle, stale (no Clip is ever stale)
 
 **Topic**:
 A named grouping of Cards inside one Collection. A Card may belong to many Topics in its Collection,
@@ -39,7 +78,7 @@ _Avoid_: Pending, ready
 A single append-only log entry recording one grading event for a card, including the grade, points awarded, and box before/after.
 _Avoid_: Attempt, grading event
 
-Retained Review snapshots preserve Card text and earned Points. They do not retain playable audio after a recording is replaced, removed, or its Card is deleted.
+Retained Review snapshots preserve Card text and earned Points. They do not retain playable audio after a Clip is replaced, removed, or its Card is deleted.
 
 **Review Submission**:
 A client request to record a Grade as a Review. It may be pending, retried, or rejected; only an accepted Review Submission creates a Review.

@@ -34,6 +34,10 @@
       "destination": "/api/topics?topicId=:topicId"
     },
     {
+      "source": "/api/pronunciations",
+      "destination": "/api/audio?pronunciation=1"
+    },
+    {
       "source": "/((?!api/|src/|assets/|node_modules/|@).*)",
       "destination": "/index.html"
     }

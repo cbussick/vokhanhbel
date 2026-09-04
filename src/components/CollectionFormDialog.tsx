@@ -16,8 +16,42 @@ import { useOnlineStatus } from "../lib/browserState";
 import { queryKeys } from "../lib/queryKeys";
 import { CollectionIcon } from "./CollectionIcon";
 import { Dialog } from "./Dialog";
+import { LanguageSelect } from "./LanguageSelect";
 import { PendingActionContent } from "./PendingActionContent";
 import styles from "./Dialog.module.css";
+
+function LanguageField({
+  face,
+  value,
+  disabled,
+  onChange,
+}: {
+  face: "front" | "back";
+  value: string | null;
+  disabled: boolean;
+  onChange: (language: string | null) => void;
+}) {
+  const { t } = useTranslation();
+  const id = `collection-${face}-language`;
+
+  return (
+    <>
+      <label htmlFor={id} className={styles.fieldHeading}>
+        {t(`collections.${face}Language`)}
+      </label>
+      <span id={`${id}-hint`} className={styles.hint}>
+        {t("collections.languageHint")}
+      </span>
+      <LanguageSelect
+        id={id}
+        describedBy={`${id}-hint`}
+        value={value}
+        onChange={onChange}
+        disabled={disabled}
+      />
+    </>
+  );
+}
 
 export function CollectionFormDialog({
   collection,
@@ -39,6 +73,8 @@ export function CollectionFormDialog({
 
   const [name, setName] = useState(collection?.name ?? "");
   const [icon, setIcon] = useState<CollectionIconKey>(collection?.icon ?? defaultCollectionIcon);
+  const [frontLanguage, setFrontLanguage] = useState(collection?.frontLanguage ?? null);
+  const [backLanguage, setBackLanguage] = useState(collection?.backLanguage ?? null);
   const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
   const [error, setError] = useState<string>();
 
@@ -54,7 +90,15 @@ export function CollectionFormDialog({
 
   const save = useMutation({
     mutationFn: async () => {
-      const input = collectionInputSchema.parse({ name, icon });
+      // Only a language the Learner actually changed goes on the wire. Leaving an untouched one
+      // out keeps a locale this build cannot offer exactly as declared, and a Collection with no
+      // language sends the same request it did before Collections had languages at all.
+      const input = collectionInputSchema.parse({
+        name,
+        icon,
+        ...(frontLanguage !== (collection?.frontLanguage ?? null) && { frontLanguage }),
+        ...(backLanguage !== (collection?.backLanguage ?? null) && { backLanguage }),
+      });
 
       return collectionSchema.parse(
         collection
@@ -199,6 +243,18 @@ export function CollectionFormDialog({
               </div>
             ))}
           </fieldset>
+          <LanguageField
+            face="front"
+            value={frontLanguage}
+            disabled={isPending}
+            onChange={setFrontLanguage}
+          />
+          <LanguageField
+            face="back"
+            value={backLanguage}
+            disabled={isPending}
+            onChange={setBackLanguage}
+          />
           {error && (
             <p role="alert" className={styles.error}>
               {error}

@@ -1,0 +1,9 @@
+ALTER TABLE "audio_assets" ADD COLUMN "source" text;--> statement-breakpoint
+ALTER TABLE "audio_assets" ADD COLUMN "speech_provider" text;--> statement-breakpoint
+ALTER TABLE "audio_assets" ADD COLUMN "speech_voice" text;--> statement-breakpoint
+ALTER TABLE "audio_assets" ADD COLUMN "speech_language" text;--> statement-breakpoint
+ALTER TABLE "audio_assets" ADD COLUMN "synthesized_text" text;--> statement-breakpoint
+ALTER TABLE "audio_assets" ADD CONSTRAINT "audio_assets_source_value" CHECK ("audio_assets"."source" is null or "audio_assets"."source" in ('recorded', 'generated'));--> statement-breakpoint
+ALTER TABLE "audio_assets" ADD CONSTRAINT "audio_assets_generation_shape" CHECK (("audio_assets"."source" is distinct from 'generated' and "audio_assets"."speech_provider" is null and "audio_assets"."speech_voice" is null and "audio_assets"."speech_language" is null and "audio_assets"."synthesized_text" is null) or ("audio_assets"."source" = 'generated' and "audio_assets"."speech_provider" is not null and "audio_assets"."speech_voice" is not null and "audio_assets"."speech_language" is not null and "audio_assets"."synthesized_text" is not null));--> statement-breakpoint
+ALTER TABLE "audio_assets" ADD CONSTRAINT "audio_assets_synthesized_text_length" CHECK ("audio_assets"."synthesized_text" is null or char_length("audio_assets"."synthesized_text") between 1 and 1000);--> statement-breakpoint
+ALTER TABLE "audio_assets" ADD CONSTRAINT "audio_assets_speech_language_length" CHECK ("audio_assets"."speech_language" is null or char_length("audio_assets"."speech_language") between 5 and 35);

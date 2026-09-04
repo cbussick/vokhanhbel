@@ -9,6 +9,7 @@ const firstAudio = {
   durationMs: 2_000,
   contentType: "audio/wav" as const,
   byteSize: 1_000,
+  synthesizedText: null,
 };
 const secondAudio = { ...firstAudio, id: "22222222-2222-4222-8222-222222222222" };
 

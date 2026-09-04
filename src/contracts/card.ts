@@ -4,11 +4,22 @@ import { createNormalizedTextSchema, utcTimestampSchema, uuidSchema } from "./co
 
 export const maximumCardTextLength = 1_000;
 
+/** What any clip on a Card face has to fit in, however it was produced. */
+export const maximumAudioDurationMs = 7_000;
+export const maximumAudioBytes = 2_000_000;
+
 export const audioMetadataSchema = z.object({
   id: uuidSchema,
-  durationMs: z.number().int().positive().max(7_000),
+  durationMs: z.number().int().positive().max(maximumAudioDurationMs),
   contentType: z.enum(["audio/mpeg", "audio/mp4", "audio/webm", "audio/ogg", "audio/wav"]),
-  byteSize: z.number().int().positive().max(2_000_000),
+  byteSize: z.number().int().positive().max(maximumAudioBytes),
+  /**
+   * The exact text a speech provider was given, and null for a clip the Learner recorded herself,
+   * whose contents nothing here knows. It travels with the clip so the Card form can say what the
+   * clip says, whether it arrived from the server or was just generated. The default keeps a Card
+   * snapshot a Review stored before this field existed readable.
+   */
+  synthesizedText: z.string().nullable().default(null),
 });
 export type AudioMetadata = z.infer<typeof audioMetadataSchema>;
 

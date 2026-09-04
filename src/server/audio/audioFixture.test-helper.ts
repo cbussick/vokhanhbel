@@ -24,3 +24,16 @@ export function createWavFixture(durationMs = 1_000): Uint8Array {
 
   return bytes;
 }
+
+/**
+ * Stands in for a synthesized clip: one MPEG-1 Layer III frame header at 128 kbit/s followed by
+ * silence, which is what the inspector reads the duration from.
+ */
+export function createMp3Fixture(durationMs = 1_000): Uint8Array {
+  const bitsPerSecond = 128_000;
+  const bytes = new Uint8Array(Math.round((bitsPerSecond * durationMs) / 8 / 1_000));
+
+  bytes.set([0xff, 0xfb, 0x90, 0x00]);
+
+  return bytes;
+}

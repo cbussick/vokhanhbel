@@ -7,6 +7,8 @@ export const testCollections = [
     id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
     name: "Vietnamesisch",
     icon: "flag-vn",
+    frontLanguage: "vi-VN",
+    backLanguage: "de-DE",
     createdAt: now,
     updatedAt: now,
     deletedAt: null,
@@ -15,6 +17,8 @@ export const testCollections = [
     id: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
     name: "Englisch",
     icon: "flag-gb",
+    frontLanguage: null,
+    backLanguage: null,
     createdAt: now,
     updatedAt: now,
     deletedAt: null,
@@ -60,6 +64,19 @@ export const testCards = [
   },
 ];
 
+/**
+ * What the pronunciation endpoint answers with: staged audio, in the shape an upload returns. The
+ * synthesized text is the text the journeys below speak; the handler replaces it with whatever was
+ * actually requested, exactly as the server stores what it was given.
+ */
+export const testGeneratedAudio = {
+  id: "ffffffff-ffff-4fff-8fff-ffffffffffff",
+  durationMs: 1_200,
+  contentType: "audio/mpeg",
+  byteSize: 9_600,
+  synthesizedText: "xin chào",
+};
+
 export const mockServer = setupServer(
   http.get("/api/session", () => HttpResponse.json({ authenticated: true })),
   http.get("/api/cards", () => HttpResponse.json(testCards)),
@@ -75,6 +92,11 @@ export const mockServer = setupServer(
       dailyRecap: null,
     }),
   ),
+  http.post("/api/pronunciations", async ({ request }) => {
+    const { text } = (await request.json()) as { text: string };
+
+    return HttpResponse.json({ ...testGeneratedAudio, synthesizedText: text }, { status: 201 });
+  }),
   http.post("/api/reviews", async ({ request }) => {
     const input = (await request.json()) as {
       id: string;

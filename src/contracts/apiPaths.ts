@@ -11,4 +11,5 @@ export const apiPaths = {
   tutorReplies: "/api/tutor-replies",
   audio: (audioId: string) => `/api/audio/${audioId}`,
   stageAudio: "/api/audio",
+  pronunciations: "/api/pronunciations",
 } as const;
