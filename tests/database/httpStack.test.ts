@@ -209,7 +209,12 @@ describe("real API handler stack", () => {
     const cookie = loginResponse.headers.get("set-cookie")?.split(";", 1)[0];
 
     const generateResponse = await postAudio(
-      request("/api/audio?pronunciation=1", "POST", { text: "xin chào", language: "vi-VN" }, cookie),
+      request(
+        "/api/audio?pronunciation=1",
+        "POST",
+        { text: "xin chào", language: "vi-VN" },
+        cookie,
+      ),
     );
 
     expect(generateResponse.status).toBe(201);
@@ -352,7 +357,12 @@ describe("real API handler stack", () => {
 
     synthesizer.failure = new Error("the synthesizer is unreachable");
     const failedResponse = await postAudio(
-      request("/api/audio?pronunciation=1", "POST", { text: "xin chào", language: "vi-VN" }, cookie),
+      request(
+        "/api/audio?pronunciation=1",
+        "POST",
+        { text: "xin chào", language: "vi-VN" },
+        cookie,
+      ),
     );
 
     expect(failedResponse.status).toBe(502);
@@ -366,7 +376,12 @@ describe("real API handler stack", () => {
       contentType: "audio/mpeg",
     };
     const oversizedResponse = await postAudio(
-      request("/api/audio?pronunciation=1", "POST", { text: "xin chào", language: "vi-VN" }, cookie),
+      request(
+        "/api/audio?pronunciation=1",
+        "POST",
+        { text: "xin chào", language: "vi-VN" },
+        cookie,
+      ),
     );
 
     expect(oversizedResponse.status).toBe(413);
