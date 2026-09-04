@@ -41,14 +41,14 @@ const pronunciationVoices = {
 } as const satisfies Record<CollectionLanguage, string>;
 
 /** Encoded speech together with the provenance the generated audio asset records verbatim. */
-export interface Pronunciation extends SynthesizedSpeech {
+export interface GeneratedClip extends SynthesizedSpeech {
   provenance: GeneratedAudioProvenance;
 }
 
 export async function synthesizePronunciation(
   provider: SpeechProvider,
   input: PronunciationInput,
-): Promise<Pronunciation> {
+): Promise<GeneratedClip> {
   const { text, language } = input;
   const voice = pronunciationVoices[language];
 
