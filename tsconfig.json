@@ -8,6 +8,10 @@
     "moduleResolution": "NodeNext",
     "strict": true,
     "skipLibCheck": true,
+    // Vercel's function compiler does not find `@types/node` by walking up from each function, even
+    // though the project build resolves it moments earlier on the same machine. Pinning the type
+    // root relative to this file tells it where the types already are.
+    "typeRoots": ["./node_modules/@types"],
     "types": ["node"]
   },
   "files": [],
