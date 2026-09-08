@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "linear-vokhanhbel": {
+      "type": "http",
+      "url": "https://mcp.linear.app/mcp"
+    }
+  }
+}
