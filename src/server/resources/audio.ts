@@ -106,6 +106,7 @@ export async function stageAudio(
       durationMs: row.durationMs,
       contentType: row.contentType,
       byteSize: row.byteSize,
+      source: row.source,
       synthesizedText: row.synthesizedText,
     });
   } catch (error) {

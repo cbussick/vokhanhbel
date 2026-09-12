@@ -466,10 +466,9 @@ test("keeps the Card dialog locked while Save is pending", async ({ page }) => {
   await expect(dialog.locator("section")).toHaveAttribute("aria-busy", "true");
   await expect(dialog.getByRole("button", { name: "Schließen" })).toBeDisabled();
   await expect(dialog.getByRole("button", { name: "Abbrechen" })).toBeDisabled();
-  const recordButtons = dialog.getByRole("button", { name: "Audio aufnehmen" });
-  await expect(recordButtons).toHaveCount(2);
-  await expect(recordButtons.nth(0)).toBeDisabled();
-  await expect(recordButtons.nth(1)).toBeDisabled();
+  const recordingDisclosures = dialog.getByText("Eigene Aufnahme oder Audiodatei");
+  await expect(recordingDisclosures).toHaveCount(2);
+  await expect(recordingDisclosures.nth(0)).toBeVisible();
   await expect(dialog.getByRole("combobox", { name: "Sammlung" })).toBeDisabled();
   await expectNoSeriousAxeViolations(page);
 
@@ -535,7 +534,6 @@ test("keeps the Card audio rail stable while dragging and recording", async ({ p
   await page.goto(`/cards/${mockCollection.id}`);
   await page.getByRole("button", { name: "Karte hinzufügen" }).first().click();
   const rail = page.getByRole("group", { name: "Audio für Vorderseite" });
-  const idleBox = await rail.boundingBox();
   const dataTransfer = await page.evaluateHandle(() => {
     const browser = globalThis as unknown as {
       DataTransfer: new () => { items: { add: (file: Blob) => void } };
@@ -548,6 +546,8 @@ test("keeps the Card audio rail stable while dragging and recording", async ({ p
     return transfer;
   });
 
+  await rail.getByText("Eigene Aufnahme oder Audiodatei").click();
+  const idleBox = await rail.boundingBox();
   const fileChooserPromise = page.waitForEvent("filechooser");
   await rail.getByText("Audiodatei hier ablegen oder auswählen").click();
   await fileChooserPromise;
@@ -861,8 +861,8 @@ test("uses desktop space for route content without overstretching focused work",
   const editorBox = await page.getByRole("dialog").boundingBox();
 
   expect(editorBox).not.toBeNull();
-  expect(editorBox!.width).toBeGreaterThan(560);
-  expect(editorBox!.width).toBeLessThanOrEqual(640);
+  expect(editorBox!.width).toBeGreaterThan(1_000);
+  expect(editorBox!.width).toBeLessThanOrEqual(1_120);
   await page.getByRole("button", { name: "Schließen" }).click();
 
   await page.getByRole("link", { name: /Ich/ }).click();

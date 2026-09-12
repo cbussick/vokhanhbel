@@ -54,6 +54,14 @@ function UploadIcon() {
   );
 }
 
+function ChevronDownIcon() {
+  return (
+    <svg viewBox="0 0 24 24" focusable="false">
+      <path d="m6 9 6 6 6-6" />
+    </svg>
+  );
+}
+
 function MicrophoneIcon() {
   return (
     <svg viewBox="0 0 24 24" focusable="false">
@@ -137,6 +145,9 @@ export function AudioInput({
   // Announced through the rail's one status region rather than a second one of its own, so a
   // finished clip is spoken without two live regions talking over each other.
   const [hasGenerated, setHasGenerated] = useState(false);
+  const [recordingOptionsOpen, setRecordingOptionsOpen] = useState(
+    draft?.origin === "local" || existing?.source === "recorded",
+  );
 
   const stopTracks = () => {
     streamRef.current?.getTracks().forEach((track) => track.stop());
@@ -210,6 +221,7 @@ export function AudioInput({
           durationMs,
           contentType,
           byteSize: normalizedBlob.size,
+          source: "recorded",
           synthesizedText: null,
         },
       });
@@ -287,6 +299,8 @@ export function AudioInput({
   };
 
   const visibleAudio = draft?.metadata ?? (!existingRemoved ? existing : null);
+  const hasVisibleRecording = visibleAudio?.source === "recorded";
+
   /**
    * Only a generated clip records what it was made from, so only a generated clip can say what it
    * says. A recording holds whatever the Learner wanted to hear for this face — the word, an
@@ -309,6 +323,7 @@ export function AudioInput({
         if (!hasDraggedFiles(event)) return;
         event.preventDefault();
         dragDepthRef.current += 1;
+        setRecordingOptionsOpen(true);
         setDragging(true);
       }}
       onDragOver={(event) => {
@@ -376,81 +391,100 @@ export function AudioInput({
             {t("audio.synthesizedText", { text: synthesizedText })}
           </p>
         ) : null}
-        <button
-          type="button"
-          className={`${styles.actionButton} ${isRecording ? styles.stopButton : styles.recordButton}`}
-          aria-label={
-            isRecording ? t("audio.stop") : t(visibleAudio ? "audio.recordAgain" : "audio.record")
-          }
-          disabled={isRequesting}
-          onClick={isRecording ? stopRecording : () => void startRecording()}
-        >
-          <span className={styles.icon} aria-hidden="true">
-            {isRecording ? <StopIcon /> : <MicrophoneIcon />}
-          </span>
-          <span>
-            {isRecording
-              ? t("audio.stopShort")
-              : isRequesting
-                ? t("audio.requestingShort")
-                : t(visibleAudio ? "audio.recordAgain" : "audio.recordShort")}
-          </span>
-        </button>
-        <div className={styles.separator}>
-          <span>{t("audio.or")}</span>
-        </div>
-        <input
-          ref={inputRef}
-          id={`audio-${face}`}
-          type="file"
-          className={`${styles.visuallyHidden} ${styles.fileInput}`}
-          aria-label={selectLabel}
-          disabled={isRecording || isRequesting}
-          accept="audio/mpeg,audio/mp4,audio/webm,audio/ogg,audio/wav,.mp3,.m4a,.mp4,.webm,.ogg,.wav"
-          onChange={(event) => void chooseFile(event.target.files?.[0])}
-        />
-        <label className={styles.dropZone} htmlFor={`audio-${face}`}>
-          <span className={`${styles.icon} ${styles.dropIcon}`} aria-hidden="true">
-            <UploadIcon />
-          </span>
-          <strong className={styles.dropCopy}>{t("audio.dropIdle")}</strong>
-        </label>
-        <span className={styles.limits}>{t("audio.limits")}</span>
         {pronunciation ? (
-          <>
+          <PronunciationGenerator
+            face={face}
+            {...pronunciation}
+            onGenerated={(audio) => {
+              setNewDraft({ origin: "staged", metadata: audio });
+              setHasGenerated(true);
+            }}
+          />
+        ) : null}
+        {hasGenerated ? (
+          <p className={styles.status} aria-live="polite">
+            {t("audio.generated")}
+          </p>
+        ) : null}
+        <details
+          className={styles.recordingOptions}
+          open={
+            recordingOptionsOpen ||
+            hasVisibleRecording ||
+            Boolean(error) ||
+            recordingState !== "idle"
+          }
+          onToggle={(event) => setRecordingOptionsOpen(event.currentTarget.open)}
+        >
+          <summary>
+            <span className={`${styles.icon} ${styles.disclosureIcon}`} aria-hidden="true">
+              <ChevronDownIcon />
+            </span>
+            {t("audio.recordingOptions")}
+          </summary>
+          <div className={styles.recordingOptionsBody}>
+            <button
+              type="button"
+              className={`${styles.actionButton} ${isRecording ? styles.stopButton : styles.recordButton}`}
+              aria-label={
+                isRecording
+                  ? t("audio.stop")
+                  : t(visibleAudio ? "audio.recordAgain" : "audio.record")
+              }
+              disabled={isRequesting}
+              onClick={isRecording ? stopRecording : () => void startRecording()}
+            >
+              <span className={styles.icon} aria-hidden="true">
+                {isRecording ? <StopIcon /> : <MicrophoneIcon />}
+              </span>
+              <span>
+                {isRecording
+                  ? t("audio.stopShort")
+                  : isRequesting
+                    ? t("audio.requestingShort")
+                    : t(visibleAudio ? "audio.recordAgain" : "audio.recordShort")}
+              </span>
+            </button>
             <div className={styles.separator}>
               <span>{t("audio.or")}</span>
             </div>
-            <PronunciationGenerator
-              face={face}
-              {...pronunciation}
-              onGenerated={(audio) => {
-                setNewDraft({ origin: "staged", metadata: audio });
-                setHasGenerated(true);
-              }}
+            <input
+              ref={inputRef}
+              id={`audio-${face}`}
+              type="file"
+              className={`${styles.visuallyHidden} ${styles.fileInput}`}
+              aria-label={selectLabel}
+              disabled={isRecording || isRequesting}
+              accept="audio/mpeg,audio/mp4,audio/webm,audio/ogg,audio/wav,.mp3,.m4a,.mp4,.webm,.ogg,.wav"
+              onChange={(event) => void chooseFile(event.target.files?.[0])}
             />
-          </>
-        ) : null}
-        <p className={isRecording ? styles.visuallyHidden : styles.status} aria-live="polite">
-          {isRecording
-            ? t("audio.recordingActive")
-            : recordingState === "requesting"
-              ? t("audio.requesting")
-              : recordingState === "denied"
-                ? t("audio.denied")
-                : recordingState === "missing"
-                  ? t("audio.missing")
-                  : recordingState === "unsupported"
-                    ? t("audio.unsupportedRecording")
-                    : hasGenerated
-                      ? t("audio.generated")
-                      : ""}
-        </p>
-        {error ? (
-          <p className={styles.error} role="alert">
-            {error}
-          </p>
-        ) : null}
+            <label className={styles.dropZone} htmlFor={`audio-${face}`}>
+              <span className={`${styles.icon} ${styles.dropIcon}`} aria-hidden="true">
+                <UploadIcon />
+              </span>
+              <strong className={styles.dropCopy}>{t("audio.dropIdle")}</strong>
+            </label>
+            <span className={styles.limits}>{t("audio.limits")}</span>
+            <p className={isRecording ? styles.visuallyHidden : styles.status} aria-live="polite">
+              {isRecording
+                ? t("audio.recordingActive")
+                : recordingState === "requesting"
+                  ? t("audio.requesting")
+                  : recordingState === "denied"
+                    ? t("audio.denied")
+                    : recordingState === "missing"
+                      ? t("audio.missing")
+                      : recordingState === "unsupported"
+                        ? t("audio.unsupportedRecording")
+                        : ""}
+            </p>
+            {error ? (
+              <p className={styles.error} role="alert">
+                {error}
+              </p>
+            ) : null}
+          </div>
+        </details>
       </div>
     </fieldset>
   );

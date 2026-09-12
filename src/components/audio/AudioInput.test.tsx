@@ -79,7 +79,7 @@ describe("AudioInput microphone gate", () => {
     expect(screen.getByLabelText(/Audiodatei auswählen/)).toBeEnabled();
   });
 
-  it("keeps the drop instruction stable and orders recording before file selection", () => {
+  it("collapses Recording controls until opened or a file is dragged in", () => {
     render(
       <AudioInput
         face="front"
@@ -96,7 +96,10 @@ describe("AudioInput microphone gate", () => {
     const fileInput = screen.getByLabelText(/Audiodatei auswählen/);
     const dropCopy = screen.getByText("Audiodatei hier ablegen oder auswählen");
 
-    expect(dropCopy).toBeVisible();
+    expect(
+      screen.getByText("Eigene Aufnahme oder Audiodatei").closest("details"),
+    ).not.toHaveAttribute("open");
+    expect(dropCopy).not.toBeVisible();
     expect(screen.queryByText("Datei wählen")).not.toBeInTheDocument();
     expect(dropCopy.closest("label")).not.toBeNull();
     expect(recordButton.compareDocumentPosition(fileInput) & Node.DOCUMENT_POSITION_FOLLOWING).toBe(
