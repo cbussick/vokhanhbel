@@ -1,3 +1,4 @@
+import { useLayoutEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { collectionLanguages, offeredCollectionLanguage } from "../contracts/collection";
 import { ListboxOption } from "../shared/ui/ListboxOption";
@@ -16,16 +17,20 @@ export function LanguageSelect({
   value,
   onChange,
   disabled = false,
-  reserveListboxSpace = false,
+  escapeClipping = false,
 }: {
   id: string;
   describedBy?: string;
   value: string | null;
   onChange: (language: string | null) => void;
   disabled?: boolean;
-  reserveListboxSpace?: boolean;
+  escapeClipping?: boolean;
 }) {
   const { t } = useTranslation();
+  const supportsPopover = typeof CSS !== "undefined" && CSS.supports?.("selector(:popover-open)");
+  const floatsListbox = escapeClipping && supportsPopover;
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const listboxRef = useRef<HTMLUListElement>(null);
 
   const options: (string | null)[] = [
     null,
@@ -60,13 +65,42 @@ export function LanguageSelect({
     listbox.close();
   };
 
+  useLayoutEffect(() => {
+    const menu = listboxRef.current;
+    const trigger = triggerRef.current;
+    if (!listbox.isOpen || !floatsListbox || !menu || !trigger || !menu.showPopover) return;
+
+    const position = () => {
+      const triggerBox = trigger.getBoundingClientRect();
+      const menuHeight = menu.getBoundingClientRect().height;
+      const gap = 4;
+      const top =
+        window.innerHeight - triggerBox.bottom >= menuHeight + gap
+          ? triggerBox.bottom + gap
+          : Math.max(gap, triggerBox.top - menuHeight - gap);
+
+      menu.style.setProperty("--listbox-top", `${top}px`);
+      menu.style.setProperty("--listbox-left", `${triggerBox.left}px`);
+      menu.style.setProperty("--listbox-width", `${triggerBox.width}px`);
+    };
+
+    menu.showPopover();
+    position();
+    const dialog = trigger.closest("dialog");
+    window.addEventListener("resize", position);
+    dialog?.addEventListener("scroll", position, { capture: true, passive: true });
+
+    return () => {
+      window.removeEventListener("resize", position);
+      dialog?.removeEventListener("scroll", position, { capture: true });
+      if (menu.matches(":popover-open")) menu.hidePopover();
+    };
+  }, [floatsListbox, listbox.isOpen]);
+
   return (
-    <ListboxRoot
-      rootRef={listbox.rootRef}
-      className={`${styles.root} ${reserveListboxSpace ? styles.reserveListboxSpace : ""}`}
-      onFocusLeave={listbox.close}
-    >
+    <ListboxRoot rootRef={listbox.rootRef} className={styles.root} onFocusLeave={listbox.close}>
       <button
+        ref={triggerRef}
         id={id}
         type="button"
         role="combobox"
@@ -86,7 +120,14 @@ export function LanguageSelect({
         <span className={styles.chevron} aria-hidden="true" />
       </button>
       {listbox.isOpen && (
-        <ul id={listbox.listboxId} role="listbox" className={styles.listbox} aria-labelledby={id}>
+        <ul
+          ref={listboxRef}
+          id={listbox.listboxId}
+          role="listbox"
+          className={`${styles.listbox} ${escapeClipping ? styles.floatingListbox : ""}`}
+          aria-labelledby={id}
+          popover={floatsListbox ? "manual" : undefined}
+        >
           {options.map((language, index) => (
             <ListboxOption
               optionRef={listbox.optionRef(index)}

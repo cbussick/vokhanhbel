@@ -3,11 +3,6 @@
   inline-size: 100%;
 }
 
-.reserveListboxSpace:has(.trigger[aria-expanded="true"]) {
-  /* Keep the final field's menu inside a scrolling dialog instead of letting it meet the edge. */
-  margin-block-end: calc(14rem + var(--space-2));
-}
-
 .trigger {
   inline-size: 100%;
   min-block-size: 48px;
@@ -56,6 +51,18 @@
   border-radius: var(--radius-medium);
   background: var(--color-surface);
   box-shadow: var(--shadow-medium);
+}
+
+.floatingListbox:popover-open {
+  position: fixed;
+  inset: var(--listbox-top) auto auto var(--listbox-left);
+  inline-size: var(--listbox-width);
+}
+
+@supports not selector(:popover-open) {
+  .root:has(.floatingListbox):has(.trigger[aria-expanded="true"]) {
+    margin-block-end: calc(14rem + var(--space-2));
+  }
 }
 
 .option {
