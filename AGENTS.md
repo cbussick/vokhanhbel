@@ -2,7 +2,7 @@
 
 This file is a map of contents (MoC). Read the relevant linked documents before starting work, and follow their instructions throughout the task.
 
-- [Development workflow](docs/development-workflow.md): before starting any code change
+- [Development workflow](docs/development-workflow.md): before implementing, creating worktrees or branches, committing, pushing, or opening pull requests
 - [Issue tracker](docs/agents/issue-tracker.md): when reading, publishing, or updating issues and specs in Linear
 - [Triage role mapping](docs/agents/triage-labels.md): when translating Matt Pocock's triage roles into Linear status, assignment, and labels
 - [Domain docs](docs/agents/domain.md): before exploring the codebase, and when recording a decision
