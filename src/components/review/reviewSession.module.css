@@ -5,6 +5,14 @@
   grid-template-rows: auto 1fr;
 }
 
+@media (width < 48rem) {
+  .session {
+    block-size: 100%;
+    min-block-size: 0;
+    grid-template-rows: auto minmax(0, 1fr);
+  }
+}
+
 .sessionHeader {
   display: grid;
   grid-template-columns: 44px minmax(0, 1fr);
@@ -734,6 +742,36 @@
     translate: calc(var(--confetti-drift) * 6rem) 115vh;
     rotate: calc(var(--confetti-spin) * 1080deg);
     opacity: 0;
+  }
+}
+
+@media (width < 48rem) and (height < 45rem) {
+  .sessionHeader {
+    padding-block: max(var(--space-1), env(safe-area-inset-top)) var(--space-1);
+  }
+
+  .sessionBody {
+    gap: var(--space-2);
+    padding-block: var(--space-1) calc(var(--space-2) + env(safe-area-inset-bottom));
+  }
+
+  .promptFace,
+  .reviewCard {
+    min-block-size: 8rem;
+  }
+
+  .promptFace,
+  .face {
+    padding: var(--space-3);
+  }
+
+  .options .exerciseInstruction,
+  .grades .exerciseInstruction {
+    margin-block-end: var(--space-2);
+  }
+
+  .resolutionFooter {
+    gap: var(--space-1);
   }
 }
 
