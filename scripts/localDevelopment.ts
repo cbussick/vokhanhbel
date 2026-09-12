@@ -55,13 +55,26 @@ function startDatabase(project: string): string {
   return databaseUrlFromPublishedPort(publishedPort);
 }
 
-function developmentEnvironment(databaseUrl: string): NodeJS.ProcessEnv {
+export function developmentEnvironment(
+  databaseUrl: string,
+  baseEnvironment: NodeJS.ProcessEnv = process.env,
+): NodeJS.ProcessEnv {
   // Override both names because drizzle.config.ts intentionally prefers the unpooled URL.
   return {
-    ...process.env,
+    ...baseEnvironment,
     DATABASE_URL: databaseUrl,
     DATABASE_URL_UNPOOLED: databaseUrl,
   };
+}
+
+export function vercelDevelopmentEnvironment(
+  migrationEnvironment: NodeJS.ProcessEnv,
+): NodeJS.ProcessEnv {
+  const runtimeEnvironment = { ...migrationEnvironment };
+  // Vercel Local's frontend proxy crashes when its runtime inherits the migration-only variable.
+  delete runtimeEnvironment.DATABASE_URL_UNPOOLED;
+
+  return runtimeEnvironment;
 }
 
 function runNode(script: string, args: string[], environment: NodeJS.ProcessEnv): Promise<number> {
@@ -117,7 +130,11 @@ async function runApplication(project: string, databaseUrl: string): Promise<num
 
   const vercel = resolve(repositoryRoot, "node_modules/vercel/dist/index.js");
 
-  return runNode(vercel, ["dev", "--local", "--listen", `127.0.0.1:${port}`], environment);
+  return runNode(
+    vercel,
+    ["dev", "--local", "--listen", `127.0.0.1:${port}`],
+    vercelDevelopmentEnvironment(environment),
+  );
 }
 
 async function main(): Promise<void> {

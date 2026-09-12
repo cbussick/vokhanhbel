@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { composeProjectName, databaseUrlFromPublishedPort } from "./localDevelopment.js";
+import {
+  composeProjectName,
+  databaseUrlFromPublishedPort,
+  developmentEnvironment,
+  vercelDevelopmentEnvironment,
+} from "./localDevelopment.js";
 
 describe("local development identity", () => {
   it("is stable for the same checkout and isolated between worktrees", () => {
@@ -14,6 +19,26 @@ describe("local development identity", () => {
     expect(composeProjectName("/repo/.worktrees/A Ticket With Spaces & Symbols")).toMatch(
       /^vokhanhbel-dev-a-ticket-with-spaces-sym-[a-f0-9]{10}$/,
     );
+  });
+});
+
+describe("development command environments", () => {
+  const databaseUrl = "postgresql://postgres:postgres@127.0.0.1:49172/vokhanhbel";
+
+  it("overrides copied database targets for migrations", () => {
+    expect(
+      developmentEnvironment(databaseUrl, {
+        DATABASE_URL: "postgresql://production.example.com/app",
+        DATABASE_URL_UNPOOLED: "postgresql://production.example.com/app",
+      }),
+    ).toMatchObject({ DATABASE_URL: databaseUrl, DATABASE_URL_UNPOOLED: databaseUrl });
+  });
+
+  it("does not pass the migration-only URL to Vercel Local", () => {
+    const environment = vercelDevelopmentEnvironment(developmentEnvironment(databaseUrl, {}));
+
+    expect(environment.DATABASE_URL).toBe(databaseUrl);
+    expect(environment.DATABASE_URL_UNPOOLED).toBeUndefined();
   });
 });
 
