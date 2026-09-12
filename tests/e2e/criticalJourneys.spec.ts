@@ -924,6 +924,30 @@ test("keeps audio controls compact in the collection overview", async ({ page })
   expect(audioCardBox!.height).toBeLessThanOrEqual(textCardBox!.height + 4);
 });
 
+test("lets the back Face Language menu escape the Collection dialog scroller", async ({ page }) => {
+  await page.setViewportSize({ width: 655, height: 676 });
+  await installMockApi(page);
+  await page.goto("/cards");
+
+  await page.getByRole("button", { name: "Sammlung hinzufügen" }).click();
+  const dialog = page.getByRole("dialog", { name: "Sammlung erstellen" });
+  const language = dialog.getByRole("combobox", { name: "Sprache der Rückseite" });
+  await language.scrollIntoViewIfNeeded();
+  const closedDialogBox = await dialog.boundingBox();
+  await language.click();
+
+  const listbox = dialog.getByRole("listbox");
+  const openDialogBox = await dialog.boundingBox();
+  const listboxBox = await listbox.boundingBox();
+
+  expect(closedDialogBox).not.toBeNull();
+  expect(openDialogBox).not.toBeNull();
+  expect(listboxBox).not.toBeNull();
+  expect(openDialogBox!.height).toBe(closedDialogBox!.height);
+  expect(listboxBox!.y).toBeGreaterThanOrEqual(0);
+  expect(listboxBox!.y + listboxBox!.height).toBeLessThanOrEqual(676);
+});
+
 test("presents form dialogs as full-screen tasks on mobile", async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 700 });
   const state = await installMockApi(page);

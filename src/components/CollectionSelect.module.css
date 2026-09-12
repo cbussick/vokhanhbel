@@ -53,6 +53,18 @@
   box-shadow: var(--shadow-medium);
 }
 
+.floatingListbox:popover-open {
+  position: fixed;
+  inset: var(--listbox-top) auto auto var(--listbox-left);
+  inline-size: var(--listbox-width);
+}
+
+@supports not selector(:popover-open) {
+  .root:has(.floatingListbox):has(.trigger[aria-expanded="true"]) {
+    margin-block-end: calc(14rem + var(--space-2));
+  }
+}
+
 .option {
   min-block-size: 44px;
   display: flex;
