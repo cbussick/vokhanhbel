@@ -3,6 +3,11 @@
   inline-size: 100%;
 }
 
+.reserveListboxSpace:has(.trigger[aria-expanded="true"]) {
+  /* Keep the final field's menu inside a scrolling dialog instead of letting it meet the edge. */
+  margin-block-end: calc(14rem + var(--space-2));
+}
+
 .trigger {
   inline-size: 100%;
   min-block-size: 48px;

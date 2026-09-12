@@ -48,6 +48,7 @@ function LanguageField({
         value={value}
         onChange={onChange}
         disabled={disabled}
+        reserveListboxSpace={face === "back"}
       />
     </>
   );

@@ -16,12 +16,14 @@ export function LanguageSelect({
   value,
   onChange,
   disabled = false,
+  reserveListboxSpace = false,
 }: {
   id: string;
   describedBy?: string;
   value: string | null;
   onChange: (language: string | null) => void;
   disabled?: boolean;
+  reserveListboxSpace?: boolean;
 }) {
   const { t } = useTranslation();
 
@@ -59,7 +61,11 @@ export function LanguageSelect({
   };
 
   return (
-    <ListboxRoot rootRef={listbox.rootRef} className={styles.root} onFocusLeave={listbox.close}>
+    <ListboxRoot
+      rootRef={listbox.rootRef}
+      className={`${styles.root} ${reserveListboxSpace ? styles.reserveListboxSpace : ""}`}
+      onFocusLeave={listbox.close}
+    >
       <button
         id={id}
         type="button"

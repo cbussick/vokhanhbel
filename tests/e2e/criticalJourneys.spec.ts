@@ -924,6 +924,30 @@ test("keeps audio controls compact in the collection overview", async ({ page })
   expect(audioCardBox!.height).toBeLessThanOrEqual(textCardBox!.height + 4);
 });
 
+test("reserves room below the back Face Language menu in the Collection dialog", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 655, height: 676 });
+  await installMockApi(page);
+  await page.goto("/cards");
+
+  await page.getByRole("button", { name: "Sammlung hinzufügen" }).click();
+  const dialog = page.getByRole("dialog", { name: "Sammlung erstellen" });
+  const language = dialog.getByRole("combobox", { name: "Sprache der Rückseite" });
+  await language.scrollIntoViewIfNeeded();
+  await language.click();
+
+  const listbox = dialog.getByRole("listbox");
+  const actions = dialog.getByRole("button", { name: "Abbrechen" });
+  await actions.scrollIntoViewIfNeeded();
+  const listboxBox = await listbox.boundingBox();
+  const actionsBox = await actions.boundingBox();
+
+  expect(listboxBox).not.toBeNull();
+  expect(actionsBox).not.toBeNull();
+  expect(listboxBox!.y + listboxBox!.height).toBeLessThanOrEqual(actionsBox!.y);
+});
+
 test("presents form dialogs as full-screen tasks on mobile", async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 700 });
   const state = await installMockApi(page);
