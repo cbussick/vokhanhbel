@@ -13,6 +13,8 @@ export const audioMetadataSchema = z.object({
   durationMs: z.number().int().positive().max(maximumAudioDurationMs),
   contentType: z.enum(["audio/mpeg", "audio/mp4", "audio/webm", "audio/ogg", "audio/wav"]),
   byteSize: z.number().int().positive().max(maximumAudioBytes),
+  /** How this Clip was made. Absent means its pre-provenance origin is unknown. */
+  source: z.enum(["recorded", "generated"]).nullable().optional(),
   /**
    * The exact text a speech provider was given, and null for a clip the Learner recorded herself,
    * whose contents nothing here knows. It travels with the clip so the Card form can say what the

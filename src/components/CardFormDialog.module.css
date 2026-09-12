@@ -1,0 +1,89 @@
+.dialog {
+  --dialog-block-size: min(54rem, calc(100dvh - var(--space-6)));
+}
+
+.form {
+  min-block-size: 100%;
+}
+
+.faceSwitcher {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-1);
+  margin-block-start: var(--space-4);
+  padding: var(--space-1);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-medium);
+  background: var(--color-divider);
+}
+
+.faceSwitcher button {
+  min-block-size: 44px;
+  border: 0;
+  border-radius: calc(var(--radius-medium) - var(--space-1));
+  background: transparent;
+  color: var(--color-text-secondary);
+  font-weight: 800;
+  transition:
+    background-color var(--duration-fast) var(--ease-standard),
+    color var(--duration-fast) var(--ease-standard);
+}
+
+.faceSwitcher button[aria-pressed="true"] {
+  background: var(--color-surface);
+  color: var(--color-primary-text);
+}
+
+.faces {
+  min-inline-size: 0;
+}
+
+.facePanel {
+  animation: face-in var(--duration-fast) var(--ease-enter);
+}
+
+.facePanel[data-active="false"] {
+  display: none;
+}
+
+@keyframes face-in {
+  from {
+    opacity: 0;
+    transform: translateX(var(--space-2));
+  }
+}
+
+@media (width >= 64rem) {
+  .dialog {
+    max-inline-size: 70rem;
+  }
+
+  .faceSwitcher {
+    display: none;
+  }
+
+  .faces {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
+    gap: var(--space-4);
+  }
+
+  .facePanel,
+  .facePanel[data-active="false"] {
+    display: grid;
+    animation: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .facePanel {
+    animation-name: face-fade;
+  }
+
+  @keyframes face-fade {
+    from {
+      opacity: 0;
+    }
+  }
+}

@@ -71,6 +71,7 @@ function audioColumns(audio: typeof frontAudio | typeof backAudio) {
     durationMs: audio.durationMs,
     contentType: audio.contentType,
     byteSize: audio.byteSize,
+    source: audio.source,
     synthesizedText: audio.synthesizedText,
     deletedAt: audio.deletedAt,
   };

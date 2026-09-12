@@ -25,6 +25,7 @@ export function Dialog({
   titleId,
   title,
   busy = false,
+  bodyFocusableWhenBusy = false,
   className,
   isConfirming = false,
   onDismissConfirmation,
@@ -40,6 +41,8 @@ export function Dialog({
   title: string;
   /** Freezes the dialog while a request the Learner cannot interrupt is in flight. */
   busy?: boolean;
+  /** Gives a temporarily control-free scrolling body keyboard access while it is busy. */
+  bodyFocusableWhenBusy?: boolean;
   /** Extra class for the dialog element, for a consumer that needs its own size. */
   className?: string | undefined;
   /**
@@ -115,7 +118,12 @@ export function Dialog({
             </button>
           )}
         </header>
-        <div className={classNames(styles.body, Boolean(footer) && styles.bodyAboveFooter)}>
+        <div
+          className={classNames(styles.body, Boolean(footer) && styles.bodyAboveFooter)}
+          role={busy && bodyFocusableWhenBusy ? "region" : undefined}
+          aria-label={busy && bodyFocusableWhenBusy ? t("common.dialogContent") : undefined}
+          tabIndex={busy && bodyFocusableWhenBusy ? 0 : undefined}
+        >
           {children}
         </div>
         {footer && <div className={styles.footer}>{footer}</div>}

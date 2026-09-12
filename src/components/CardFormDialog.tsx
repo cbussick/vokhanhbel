@@ -22,6 +22,7 @@ import { Dialog } from "./Dialog";
 import { PendingActionContent } from "./PendingActionContent";
 import { TopicFormDialog } from "./TopicFormDialog";
 import { TopicSelect } from "./TopicSelect";
+import cardFormStyles from "./CardFormDialog.module.css";
 import styles from "./Dialog.module.css";
 
 function TextIcon() {
@@ -65,6 +66,7 @@ export function CardFormDialog({
   const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
   const [creatingCollection, setCreatingCollection] = useState(false);
   const [creatingTopic, setCreatingTopic] = useState(false);
+  const [activeFace, setActiveFace] = useState<"front" | "back">("front");
   const [error, setError] = useState<string>();
 
   const save = useMutation({
@@ -203,9 +205,53 @@ export function CardFormDialog({
         titleId="card-dialog-title"
         title={t(card ? "cards.edit" : "cards.create")}
         busy={isPending}
+        bodyFocusableWhenBusy
+        className={cardFormStyles.dialog}
         isConfirming={isConfirmingDelete}
         onDismissConfirmation={() => setIsConfirmingDelete(false)}
         onClose={close}
+        footer={
+          !isConfirmingDelete ? (
+            <div className={styles.actions}>
+              {card && (
+                <button
+                  type="button"
+                  className={styles.deleteLink}
+                  disabled={isPending}
+                  onClick={() => setIsConfirmingDelete(true)}
+                >
+                  {t("cards.delete")}
+                </button>
+              )}
+              <button
+                type="button"
+                className={styles.secondary}
+                disabled={isPending}
+                onClick={close}
+              >
+                {t("common.cancel")}
+              </button>
+              <button
+                type="submit"
+                form="card-form"
+                className={styles.primary}
+                aria-busy={save.isPending}
+                aria-disabled={save.isPending || isGeneratingPronunciation}
+                disabled={
+                  !collectionId ||
+                  (!front.trim() && !frontDraft && (frontAudioRemoved || !card?.front.audio)) ||
+                  (!back.trim() && !backDraft && (backAudioRemoved || !card?.back.audio))
+                }
+              >
+                <PendingActionContent
+                  pending={save.isPending}
+                  label={t("common.save")}
+                  pendingLabel={t("common.saving")}
+                />
+              </button>
+            </div>
+          ) : undefined
+        }
       >
         {isConfirmingDelete ? (
           <div className={styles.confirm}>
@@ -237,7 +283,7 @@ export function CardFormDialog({
             </div>
           </div>
         ) : (
-          <form onSubmit={submit} noValidate>
+          <form id="card-form" className={cardFormStyles.form} onSubmit={submit} noValidate>
             <label htmlFor="card-collection" className={styles.fieldHeading}>
               {t("cards.collection")}
             </label>
@@ -261,129 +307,124 @@ export function CardFormDialog({
               onCreate={() => setCreatingTopic(true)}
               disabled={isPending}
             />
-            <fieldset className={styles.faceEditor} disabled={isPending}>
-              <legend id="front-face-label" className={styles.fieldHeading}>
+            <div
+              className={cardFormStyles.faceSwitcher}
+              role="group"
+              aria-label={t("cards.chooseFace")}
+            >
+              <button
+                type="button"
+                aria-pressed={activeFace === "front"}
+                disabled={isPending}
+                onClick={() => setActiveFace("front")}
+              >
                 {t("cards.front")}
-              </legend>
-              <span id="front-media-hint" className={styles.hint}>
-                {t("cards.faceMediaHint")}
-              </span>
-              <div className={styles.faceControl}>
-                <div className={styles.textControl}>
-                  <div className={styles.mediaLabel}>
-                    <span className={styles.mediaIcon} aria-hidden="true">
-                      <TextIcon />
-                    </span>
-                    {t("cards.text")}
-                  </div>
-                  <label id="front-text-label" htmlFor="card-front">
-                    {t("cards.textLabel")}
-                  </label>
-                  <textarea
-                    ref={frontRef}
-                    id="card-front"
-                    aria-labelledby="front-face-label front-text-label"
-                    aria-describedby="front-media-hint"
-                    maxLength={1_000}
-                    value={front}
-                    onChange={(event) => setFront(event.target.value)}
-                  />
-                </div>
-                <AudioInput
-                  face="front"
-                  draft={frontDraft}
-                  existing={card?.front.audio ?? null}
-                  existingRemoved={frontAudioRemoved}
-                  pronunciation={
-                    frontLanguage ? { language: frontLanguage, faceText: front } : undefined
-                  }
-                  onDraftChange={setFrontDraft}
-                  onExistingRemovedChange={setFrontAudioRemoved}
-                />
-              </div>
-            </fieldset>
-            <fieldset className={styles.faceEditor} disabled={isPending}>
-              <legend id="back-face-label" className={styles.fieldHeading}>
+              </button>
+              <button
+                type="button"
+                aria-pressed={activeFace === "back"}
+                disabled={isPending}
+                onClick={() => setActiveFace("back")}
+              >
                 {t("cards.back")}
-              </legend>
-              <span id="back-media-hint" className={styles.hint}>
-                {t("cards.faceMediaHint")}
-              </span>
-              <div className={styles.faceControl}>
-                <div className={styles.textControl}>
-                  <div className={styles.mediaLabel}>
-                    <span className={styles.mediaIcon} aria-hidden="true">
-                      <TextIcon />
-                    </span>
-                    {t("cards.text")}
+              </button>
+            </div>
+            <div className={cardFormStyles.faces}>
+              <fieldset
+                className={`${styles.faceEditor} ${cardFormStyles.facePanel}`}
+                data-active={activeFace === "front"}
+                disabled={isPending}
+              >
+                <legend id="front-face-label" className={styles.fieldHeading}>
+                  {t("cards.front")}
+                </legend>
+                <span id="front-media-hint" className={styles.hint}>
+                  {t("cards.faceMediaHint")}
+                </span>
+                <div className={styles.faceControl}>
+                  <div className={styles.textControl}>
+                    <div className={styles.mediaLabel}>
+                      <span className={styles.mediaIcon} aria-hidden="true">
+                        <TextIcon />
+                      </span>
+                      {t("cards.text")}
+                    </div>
+                    <label id="front-text-label" htmlFor="card-front">
+                      {t("cards.textLabel")}
+                    </label>
+                    <textarea
+                      ref={frontRef}
+                      id="card-front"
+                      aria-labelledby="front-face-label front-text-label"
+                      aria-describedby="front-media-hint"
+                      maxLength={1_000}
+                      value={front}
+                      onChange={(event) => setFront(event.target.value)}
+                    />
                   </div>
-                  <label id="back-text-label" htmlFor="card-back">
-                    {t("cards.textLabel")}
-                  </label>
-                  <textarea
-                    id="card-back"
-                    aria-labelledby="back-face-label back-text-label"
-                    aria-describedby="back-media-hint"
-                    maxLength={1_000}
-                    value={back}
-                    onChange={(event) => setBack(event.target.value)}
+                  <AudioInput
+                    face="front"
+                    draft={frontDraft}
+                    existing={card?.front.audio ?? null}
+                    existingRemoved={frontAudioRemoved}
+                    pronunciation={
+                      frontLanguage ? { language: frontLanguage, faceText: front } : undefined
+                    }
+                    onDraftChange={setFrontDraft}
+                    onExistingRemovedChange={setFrontAudioRemoved}
                   />
                 </div>
-                <AudioInput
-                  face="back"
-                  draft={backDraft}
-                  existing={card?.back.audio ?? null}
-                  existingRemoved={backAudioRemoved}
-                  pronunciation={
-                    backLanguage ? { language: backLanguage, faceText: back } : undefined
-                  }
-                  onDraftChange={setBackDraft}
-                  onExistingRemovedChange={setBackAudioRemoved}
-                />
-              </div>
-            </fieldset>
+              </fieldset>
+              <fieldset
+                className={`${styles.faceEditor} ${cardFormStyles.facePanel}`}
+                data-active={activeFace === "back"}
+                disabled={isPending}
+              >
+                <legend id="back-face-label" className={styles.fieldHeading}>
+                  {t("cards.back")}
+                </legend>
+                <span id="back-media-hint" className={styles.hint}>
+                  {t("cards.faceMediaHint")}
+                </span>
+                <div className={styles.faceControl}>
+                  <div className={styles.textControl}>
+                    <div className={styles.mediaLabel}>
+                      <span className={styles.mediaIcon} aria-hidden="true">
+                        <TextIcon />
+                      </span>
+                      {t("cards.text")}
+                    </div>
+                    <label id="back-text-label" htmlFor="card-back">
+                      {t("cards.textLabel")}
+                    </label>
+                    <textarea
+                      id="card-back"
+                      aria-labelledby="back-face-label back-text-label"
+                      aria-describedby="back-media-hint"
+                      maxLength={1_000}
+                      value={back}
+                      onChange={(event) => setBack(event.target.value)}
+                    />
+                  </div>
+                  <AudioInput
+                    face="back"
+                    draft={backDraft}
+                    existing={card?.back.audio ?? null}
+                    existingRemoved={backAudioRemoved}
+                    pronunciation={
+                      backLanguage ? { language: backLanguage, faceText: back } : undefined
+                    }
+                    onDraftChange={setBackDraft}
+                    onExistingRemovedChange={setBackAudioRemoved}
+                  />
+                </div>
+              </fieldset>
+            </div>
             {error && (
               <p role="alert" className={styles.error}>
                 {error}
               </p>
             )}
-            <div className={styles.actions}>
-              {card && (
-                <button
-                  type="button"
-                  className={styles.deleteLink}
-                  disabled={isPending}
-                  onClick={() => setIsConfirmingDelete(true)}
-                >
-                  {t("cards.delete")}
-                </button>
-              )}
-              <button
-                type="button"
-                className={styles.secondary}
-                disabled={isPending}
-                onClick={close}
-              >
-                {t("common.cancel")}
-              </button>
-              <button
-                type="submit"
-                className={styles.primary}
-                aria-busy={save.isPending}
-                aria-disabled={save.isPending || isGeneratingPronunciation}
-                disabled={
-                  !collectionId ||
-                  (!front.trim() && !frontDraft && (frontAudioRemoved || !card?.front.audio)) ||
-                  (!back.trim() && !backDraft && (backAudioRemoved || !card?.back.audio))
-                }
-              >
-                <PendingActionContent
-                  pending={save.isPending}
-                  label={t("common.save")}
-                  pendingLabel={t("common.saving")}
-                />
-              </button>
-            </div>
           </form>
         )}
       </Dialog>

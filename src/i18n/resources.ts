@@ -25,6 +25,7 @@ export const de = {
       deleting: "Wird gelöscht …",
       retry: "Erneut versuchen",
       finish: "Fertig",
+      dialogContent: "Dialoginhalt",
     },
     audio: {
       front: "Vorderseite",
@@ -51,6 +52,7 @@ export const de = {
       record: "Audio aufnehmen",
       recordShort: "Aufnehmen",
       recordAgain: "Neu aufnehmen",
+      recordingOptions: "Eigene Aufnahme oder Audiodatei",
       recording: "Aufnahme · {{seconds}} s",
       recordingActive: "Aufnahme läuft",
       requestingShort: "Mikrofon …",
@@ -96,6 +98,7 @@ export const de = {
       topics: "Themen",
       front: "Vorderseite",
       back: "Rückseite",
+      chooseFace: "Kartenseite auswählen",
       faceMediaHint: "Text, Audio oder beides",
       text: "Text",
       textLabel: "Maximal 1.000 Zeichen",
