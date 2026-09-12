@@ -15,35 +15,29 @@ existing file. Enter the shared password twice when prompted by `npm run passwor
 hidden and never written to shell history. Copy the resulting `APP_PASSWORD_HASH=...` assignment
 into `.env.local`. Never store the plaintext password.
 
-Complete `.env.local` with these four values:
+Complete `.env.local` with these values:
 
 ```dotenv
 APP_PASSWORD_HASH=<output from npm run password:hash>
-DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:5433/vokhanhbel
 OPENAI_API_KEY=<OPENAI API KEY>
 RATE_LIMIT_HMAC_SECRET=<output from openssl rand -hex 32>
 ```
+
+`DATABASE_URL` is not needed for ordinary local development. If a copied `.env.local` contains
+one, the isolated local commands override it rather than trusting it.
 
 Audio development also needs a private Cloudflare R2 Standard bucket in the EU jurisdiction. Add
 the R2 values documented below. Generating pronunciation audio additionally needs the Google
 service-account values documented below; without them the rest of the application still runs, and
 only generation fails.
 
-Start PostgreSQL and apply the schema:
+`npm run dev:full` starts PostgreSQL and applies the schema; no separate database setup is needed.
+The database test suite remains separate: `npm run test:db` manages `vokhanhbel_test` through the
+fixed test port and never touches a worktree's development database.
 
-```sh
-docker compose up -d postgres
-npm run db:migrate
-```
-
-`DATABASE_URL` above is the development database. The database test suite never touches it:
-`npm run test:db` creates a separate `vokhanhbel_test` database in the same container, migrates it,
-and drops it again when the run ends. It needs no setup of its own — if nothing answers on the
-database port it starts the Compose service first, and it leaves an already running server alone.
-
-Inspect the local database with Drizzle Studio. It starts Docker Postgres if needed, waits until
-it is healthy, then loads `DATABASE_URL` from `.env.local` the same way local generate and migrate
-do. It does not target production:
+Inspect the current worktree's database with Drizzle Studio. It starts the same isolated PostgreSQL
+service if needed and supplies its discovered connection directly. It does not trust a production
+or copied `DATABASE_URL`:
 
 ```sh
 npm run db:studio
@@ -55,9 +49,25 @@ Start the complete local application (frontend + backend)
 npm run dev:full
 ```
 
-Open `http://localhost:3000`. `npm run dev:full` starts the complete application through Vercel's
-local mode without linking a Vercel project; `npm run dev` starts only Vite. The database scripts
-load `.env.local` automatically.
+The command prints the allocated loopback application URL and the Compose project, database port,
+and volume identity. `npm run dev:full` starts the complete application through Vercel's local mode
+without linking a Vercel project; `npm run dev` starts only Vite.
+
+Every checkout and worktree has a stable Compose project and persistent volume derived from its
+canonical path. Docker allocates loopback-only database ports, and the application also chooses an
+available loopback port, so multiple complete worktrees can run concurrently without coordination.
+Use these commands from the checkout whose database you want to manage:
+
+```sh
+npm run db:local:inspect # show this worktree's project and containers
+npm run db:local:up      # start only its database
+npm run db:local:stop    # stop its containers, preserving data
+npm run db:local:clean   # stop containers and deliberately delete its volume/data
+```
+
+`Ctrl+C` stops the application server but leaves PostgreSQL running for quick restarts. Use
+`db:local:stop` when finished. The ordinary `docker-compose.yml` and port 5433 remain reserved for
+the separate database-test lifecycle; do not use them to operate a worktree development database.
 
 For preview or production, store the hash value as `APP_PASSWORD_HASH` in Vercel. Never put the
 plaintext password in an environment file or pass it as a command-line argument.
