@@ -1475,6 +1475,10 @@ for (const viewport of [
     await page.mouse.down();
     await page.mouse.move(viewport.width - 4, viewport.height - 12, { steps: 8 });
     expect(
+      await page.evaluate<string>("getComputedStyle(document.documentElement).cursor"),
+      "the grabbing cursor must remain visible wherever the pointer travels during a Card drag",
+    ).toBe("grabbing");
+    expect(
       await page.evaluate<number>("document.documentElement.scrollWidth"),
       "dragging a Swipe Card must not overflow the page horizontally",
     ).toBeLessThanOrEqual(await page.evaluate<number>("document.documentElement.clientWidth"));
