@@ -8,6 +8,7 @@ import { CardFormDialog } from "../components/CardFormDialog";
 import { CollectionFormDialog } from "../components/CollectionFormDialog";
 import { CollectionIcon } from "../components/CollectionIcon";
 import { DelayedSkeleton } from "../components/DelayedSkeleton";
+import { EmptyState } from "../components/EmptyState";
 import { IconButton } from "../components/IconButton";
 import { TopicFormDialog } from "../components/TopicFormDialog";
 import { TopicIcon } from "../components/TopicIcon";
@@ -178,13 +179,15 @@ function CollectionCardsRoute() {
           </p>
         )}
         {!collectionHasCards ? (
-          <div className={styles.emptyState}>
-            <EmptyCardsIcon />
-            <p>{t("cards.empty")}</p>
-            <IconButton icon={<AddIcon />} onClick={() => setCreating(true)} disabled={!online}>
-              {t("cards.add")}
-            </IconButton>
-          </div>
+          <EmptyState
+            text={t("cards.empty")}
+            icon={<EmptyCardsIcon />}
+            action={
+              <IconButton icon={<AddIcon />} onClick={() => setCreating(true)} disabled={!online}>
+                {t("cards.add")}
+              </IconButton>
+            }
+          />
         ) : visible.length === 0 ? (
           <div className={styles.center}>
             <p>

@@ -1,0 +1,28 @@
+.root {
+  display: grid;
+  justify-items: center;
+  gap: var(--space-6);
+  padding: var(--space-2) 0 var(--space-12);
+  text-align: center;
+}
+
+.icon {
+  inline-size: 6rem;
+  block-size: 6rem;
+}
+
+.icon > svg {
+  inline-size: 100%;
+  block-size: 100%;
+}
+
+.text {
+  max-inline-size: 28rem;
+  color: var(--color-text-secondary);
+  font-weight: 600;
+}
+
+.action {
+  display: flex;
+  justify-content: center;
+}
