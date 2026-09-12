@@ -7,8 +7,12 @@ export function LoadingScreen() {
 
   return (
     <main className={styles.screen}>
-      <TutopherAvatar />
-      <p>{t("loading")}</p>
+      <div className={styles.avatar}>
+        <TutopherAvatar />
+      </div>
+      <p className={styles.status} role="status">
+        {t("loading")}
+      </p>
     </main>
   );
 }
