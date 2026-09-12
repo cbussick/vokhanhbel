@@ -770,7 +770,11 @@ describe("rendered app journeys", () => {
 
     await renderApp(`/cards/${testCollections[0]!.id}`);
 
-    await screen.findByText("Noch keine Karten. Füge deine erste Karte hinzu.");
+    const message = await screen.findByText("Noch keine Karten. Füge deine erste Karte hinzu.");
+    const emptyStateIcon = message.parentElement?.querySelector("svg");
+
+    expect(emptyStateIcon).toBeVisible();
+    expect(emptyStateIcon).toHaveAttribute("aria-hidden", "true");
     expect(screen.getAllByRole("button", { name: "Karte hinzufügen" })).toHaveLength(1);
   });
 
