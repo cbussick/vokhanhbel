@@ -33,7 +33,7 @@ export function TopicSelect({
     // Many Topics can be on at once, so no single one decides where opening lands: it lands first.
     selectedIndex: -1,
     onActivate: (index) => toggle(index),
-    // Toggling leaves the list open, so Tab has no pending choice to commit.
+    // Topic membership changes immediately; Tab only dismisses the open list.
     commitOnTab: false,
     typeAhead: { count: topics.length, labelAt: (index) => topics[index]!.name },
     disabled,
@@ -56,7 +56,7 @@ export function TopicSelect({
         ? value.filter((topicId) => topicId !== topic.id)
         : [...value, topic.id],
     );
-    listbox.setActiveIndex(index);
+    listbox.close();
   };
 
   return (

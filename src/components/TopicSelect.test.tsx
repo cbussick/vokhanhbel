@@ -29,8 +29,12 @@ describe("TopicSelect", () => {
     await user.click(combobox);
     await user.click(screen.getByRole("option", { name: "Tiere" }));
 
-    expect(screen.getByRole("option", { name: "Tiere" })).toHaveAttribute("aria-selected", "true");
+    expect(screen.queryByRole("listbox")).not.toBeInTheDocument();
+    expect(combobox).toHaveAttribute("aria-expanded", "false");
     expect(screen.getByLabelText("Tiere entfernen")).toBeVisible();
+
+    await user.click(combobox);
+    expect(screen.getByRole("option", { name: "Tiere" })).toHaveAttribute("aria-selected", "true");
   });
 
   it("offers Thema erstellen when there are no Topics", async () => {

@@ -986,8 +986,10 @@ test.describe("mobile dropdown touch interaction", () => {
 
     await expect(listbox.getByRole("option", { selected: true })).toHaveCount(0);
     const topicOption = await fullyVisibleListboxOption(listbox);
+    const topicName = await topicOption.textContent();
     await tapWithTouch(page, topicOption);
-    await expect(topicOption).toHaveAttribute("aria-selected", "true");
+    await expect(listbox).not.toBeVisible();
+    await expect(page.getByRole("button", { name: `${topicName} entfernen` })).toBeVisible();
   });
 
   test("does not select a Collection while the Learner touch-scrolls its options", async ({
