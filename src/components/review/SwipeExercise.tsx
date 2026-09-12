@@ -212,6 +212,7 @@ export function SwipeExercise({
           <div
             ref={cardRef}
             className={`${styles.swipeCard} ${interactive ? styles.swipeCardDraggable : ""}`}
+            data-swipe-dragging={dragging ? "true" : undefined}
             style={
               dragging
                 ? {
