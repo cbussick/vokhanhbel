@@ -8,3 +8,33 @@
   padding: var(--space-4);
   color: var(--color-text-secondary);
 }
+
+.avatar {
+  animation: loading-float var(--duration-celebration) var(--ease-standard) infinite alternate;
+}
+
+.status {
+  animation: loading-pulse var(--duration-celebration) var(--ease-standard) infinite alternate;
+}
+
+@keyframes loading-float {
+  to {
+    transform: translateY(-8%);
+  }
+}
+
+@keyframes loading-pulse {
+  to {
+    opacity: 0.55;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .avatar {
+    animation: loading-pulse var(--duration-celebration) var(--ease-standard) infinite alternate;
+  }
+
+  .status {
+    animation: none;
+  }
+}
