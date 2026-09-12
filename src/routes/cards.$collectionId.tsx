@@ -33,6 +33,18 @@ function EditIcon() {
   );
 }
 
+function EmptyCardsIcon() {
+  return (
+    <svg viewBox="0 0 96 96" focusable="false" aria-hidden="true">
+      <path className={styles.emptyIconBack} d="M24 22h42a8 8 0 0 1 8 8v42H32a8 8 0 0 1-8-8Z" />
+      <rect className={styles.emptyIconFront} x="18" y="16" width="56" height="56" rx="8" />
+      <path className={styles.emptyIconLine} d="M30 32h32M30 44h22" />
+      <circle className={styles.emptyIconBadge} cx="70" cy="70" r="15" />
+      <path className={styles.emptyIconAdd} d="M70 63v14M63 70h14" />
+    </svg>
+  );
+}
+
 function CollectionCardsRoute() {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -166,7 +178,8 @@ function CollectionCardsRoute() {
           </p>
         )}
         {!collectionHasCards ? (
-          <div className={styles.center}>
+          <div className={styles.emptyState}>
+            <EmptyCardsIcon />
             <p>{t("cards.empty")}</p>
             <IconButton icon={<AddIcon />} onClick={() => setCreating(true)} disabled={!online}>
               {t("cards.add")}

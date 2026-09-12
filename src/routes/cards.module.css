@@ -124,7 +124,8 @@
 }
 
 .actions button,
-.center button {
+.center button,
+.emptyState button {
   min-block-size: 56px;
   border: 0;
   border-radius: var(--radius-medium);
@@ -289,6 +290,55 @@
   padding-inline: var(--space-4);
 }
 
+.emptyState {
+  display: grid;
+  justify-items: center;
+  gap: var(--space-6);
+  padding: var(--space-2) 0 var(--space-12);
+  text-align: center;
+}
+
+.emptyState > svg {
+  inline-size: 6rem;
+  block-size: 6rem;
+}
+
+.emptyState p {
+  max-inline-size: 28rem;
+  color: var(--color-text-secondary);
+  font-weight: 600;
+}
+
+.emptyState button {
+  padding-inline: var(--space-6);
+}
+
+.emptyIconBack {
+  fill: var(--color-divider);
+  stroke: var(--color-border);
+  stroke-width: 2;
+}
+
+.emptyIconFront {
+  fill: var(--color-surface);
+  stroke: var(--color-primary-text);
+  stroke-width: 3;
+}
+
+.emptyIconLine,
+.emptyIconAdd {
+  fill: none;
+  stroke: var(--color-primary-text);
+  stroke-linecap: round;
+  stroke-width: 3;
+}
+
+.emptyIconBadge {
+  fill: var(--color-primary);
+  stroke: var(--color-bg);
+  stroke-width: 4;
+}
+
 .warning {
   margin-block-end: var(--space-4);
   padding: var(--space-3);
@@ -314,7 +364,8 @@
 
 @media (hover: hover) and (pointer: fine) {
   .actions button:hover:not(:disabled),
-  .center button:hover:not(:disabled) {
+  .center button:hover:not(:disabled),
+  .emptyState button:hover:not(:disabled) {
     background: var(--color-primary-hover);
   }
 
