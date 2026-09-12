@@ -40,6 +40,13 @@
       color var(--duration-fast) var(--ease-standard);
   }
 
+  /* Pointer capture lets a Swipe Card keep receiving movement after the pointer has left the Card.
+     Keep the drag affordance on the whole document so the cursor cannot fall back or disappear. */
+  html:has([data-swipe-dragging="true"]),
+  html:has([data-swipe-dragging="true"]) * {
+    cursor: grabbing;
+  }
+
   img,
   svg {
     display: block;
