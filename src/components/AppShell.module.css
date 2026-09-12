@@ -117,6 +117,21 @@
   padding: 0;
 }
 
+@media (width < 48rem) {
+  .focused {
+    block-size: 100vh;
+    block-size: 100dvh;
+    min-block-size: 0;
+    overflow: hidden;
+    grid-template-rows: auto minmax(0, 1fr);
+  }
+
+  .focused .main {
+    min-block-size: 0;
+    overflow: hidden;
+  }
+}
+
 .focused .main > h1 {
   position: absolute;
   inline-size: 1px;

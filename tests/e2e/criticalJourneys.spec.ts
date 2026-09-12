@@ -1208,6 +1208,61 @@ for (const viewport of [
   });
 }
 
+test("keeps a resolved mobile Exercise and its controls inside the viewport", async ({
+  page,
+  browserName,
+}) => {
+  await page.setViewportSize({ width: 390, height: 700 });
+  const state = await installMockApi(page);
+  const longAnswer = 'Gipfel (Im Kontext von "Mình sẽ đi một đỉnh thôi" heißt es "Region")';
+
+  state.cards = [
+    createCard("đỉnh", longAnswer),
+    createCard("miền", 'Nordvietnam (miền = "Region")'),
+    createCard("phong cảnh", "Wir möchten viel Natur sehen/entdecken."),
+    createCard("phong cảnh", "Natur / Szene / Landschaft / Anblick"),
+  ];
+  await page.goto("/review");
+  await page.getByRole("button", { name: "Review starten" }).click();
+  await page.getByRole("button", { name: longAnswer }).click();
+
+  const continueButton = page.getByRole("button", { name: "Weiter" });
+  await expect(continueButton).toBeVisible();
+
+  const layout = await page.evaluate<{
+    documentScrollHeight: number;
+    documentClientHeight: number;
+    buttonBottom: number;
+    viewportHeight: number;
+  }>(`(() => {
+    const button = [...document.querySelectorAll("button")].find(
+      candidate => candidate.textContent?.trim() === "Weiter"
+    );
+    if (!button) throw new Error("Continue button not found");
+
+    return {
+      documentScrollHeight: document.documentElement.scrollHeight,
+      documentClientHeight: document.documentElement.clientHeight,
+      buttonBottom: button.getBoundingClientRect().bottom,
+      viewportHeight: window.visualViewport?.height ?? window.innerHeight,
+    };
+  })()`);
+
+  expect(
+    layout.documentScrollHeight,
+    "the Review Session must not scroll vertically",
+  ).toBeLessThanOrEqual(layout.documentClientHeight);
+  expect(
+    layout.buttonBottom,
+    "the resolved Exercise controls must remain above the viewport edge",
+  ).toBeLessThanOrEqual(layout.viewportHeight);
+  if (browserName === "chromium") {
+    await expect(page).toHaveScreenshot("review-multiple-choice-short-mobile.png", {
+      animations: "disabled",
+    });
+  }
+});
+
 for (const viewport of [
   { name: "mobile", width: 390, height: 844 },
   { name: "tablet", width: 768, height: 900 },
