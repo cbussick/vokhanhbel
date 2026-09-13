@@ -924,10 +924,11 @@ test("shrinks the Card editor to a compact deletion confirmation", async ({ page
   await expect.poll(async () => (await dialog.boundingBox())?.width ?? 0).toBeGreaterThan(1_000);
 });
 
-test("keeps audio controls compact in the collection overview", async ({ page }) => {
+test("gives audio controls vertical breathing room in the collection overview", async ({
+  page,
+}) => {
   const state = await installMockApi(page);
   state.cards = [
-    createCard("die Birne", "the pear"),
     createCard(
       { text: "die Pflaume", audio: audio("88888888-8888-4888-8888-888888888895") },
       { text: "the plum", audio: audio("88888888-8888-4888-8888-888888888896") },
@@ -936,13 +937,25 @@ test("keeps audio controls compact in the collection overview", async ({ page })
   await page.setViewportSize({ width: 768, height: 900 });
   await page.goto(`/cards/${mockCollection.id}`);
 
-  const cardItems = page.getByRole("listitem");
-  const textCardBox = await cardItems.nth(0).boundingBox();
-  const audioCardBox = await cardItems.nth(1).boundingBox();
+  const card = page.getByRole("listitem");
+  const cardBox = await card.boundingBox();
+  const frontControlBox = await card
+    .getByRole("button", { name: "Audio Vorderseite: Abspielen" })
+    .boundingBox();
+  const backControlBox = await card
+    .getByRole("button", { name: "Audio Rückseite: Abspielen" })
+    .boundingBox();
 
-  expect(textCardBox).not.toBeNull();
-  expect(audioCardBox).not.toBeNull();
-  expect(audioCardBox!.height).toBeLessThanOrEqual(textCardBox!.height + 4);
+  expect(cardBox).not.toBeNull();
+  expect(frontControlBox).not.toBeNull();
+  expect(backControlBox).not.toBeNull();
+  expect(frontControlBox!.y - cardBox!.y).toBeGreaterThanOrEqual(8);
+  expect(backControlBox!.y - (frontControlBox!.y + frontControlBox!.height)).toBeGreaterThanOrEqual(
+    16,
+  );
+  expect(
+    cardBox!.y + cardBox!.height - (backControlBox!.y + backControlBox!.height),
+  ).toBeGreaterThanOrEqual(8);
 });
 
 test("lets the back Face Language menu escape the Collection dialog scroller", async ({ page }) => {

@@ -249,6 +249,7 @@
   grid-column: 2;
   display: grid;
   align-items: center;
+  padding-block: var(--space-2);
   padding-inline-end: var(--space-4);
 }
 
