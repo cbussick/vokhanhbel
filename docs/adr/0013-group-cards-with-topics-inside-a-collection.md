@@ -9,7 +9,7 @@ Collection itself N:M would force a new uniqueness rule. Tags-as-filters-only wo
 thing the Learner reviews.
 
 Deleting a Topic never deletes Cards. Moving a Card to another Collection drops its Topics. Deleting
-a Collection still requires it empty of Cards; its Topics go with it. Topic names are unique per
+a Collection soft-deletes its Cards and Topics after confirmation. Topic names are unique per
 Collection. Empty Topics are allowed. On the Cards screen, Topics filter the Collection list (chips, including
 Alle). On the Review home, Topics appear nested under their Collection, never as siblings of other
 Collections.

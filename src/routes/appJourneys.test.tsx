@@ -717,6 +717,7 @@ describe("rendered app journeys", () => {
     await user.click(await screen.findByRole("button", { name: "Sammlung löschen" }));
 
     expect(await screen.findByText(/Sammlung „Englisch“ löschen/)).toBeVisible();
+    expect(screen.getByText("Die Karte in dieser Sammlung wird ebenfalls gelöscht.")).toBeVisible();
     expect(screen.queryByRole("button", { name: "Schließen" })).not.toBeInTheDocument();
 
     // jsdom does not turn Escape into a dialog cancel, so raise the event the browser would.

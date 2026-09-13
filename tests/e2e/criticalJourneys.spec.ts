@@ -126,6 +126,14 @@ async function installMockApi(page: Page, authenticated = true) {
     }
     if (pathname === "/api/collections" && request.method() === "GET")
       return json(route, state.collections);
+    if (pathname === `/api/collections/${mockCollection.id}` && request.method() === "DELETE") {
+      state.collections = state.collections.filter(
+        (collection) => collection.id !== mockCollection.id,
+      );
+      state.cards = state.cards.filter((card) => card.collectionId !== mockCollection.id);
+
+      return route.fulfill({ status: 204 });
+    }
     if (pathname === "/api/topics" && request.method() === "GET") return json(route, state.topics);
     if (pathname === "/api/cards" && request.method() === "GET") return json(route, state.cards);
     if (pathname === "/api/cards" && request.method() === "POST") {
@@ -922,6 +930,23 @@ test("shrinks the Card editor to a compact deletion confirmation", async ({ page
 
   await dialog.getByRole("button", { name: "Abbrechen" }).click();
   await expect.poll(async () => (await dialog.boundingBox())?.width ?? 0).toBeGreaterThan(1_000);
+});
+
+test("deletes a Collection together with its Cards after confirmation", async ({ page }) => {
+  await installMockApi(page);
+  await page.goto(`/cards/${mockCollection.id}`);
+
+  await page.getByRole("button", { name: "Sammlung bearbeiten" }).click();
+  await page.getByRole("button", { name: "Sammlung löschen" }).click();
+
+  const dialog = page.getByRole("dialog");
+  await expect(
+    dialog.getByText("Die Karte in dieser Sammlung wird ebenfalls gelöscht."),
+  ).toBeVisible();
+  await dialog.getByRole("button", { name: "Sammlung löschen" }).click();
+
+  await expect(page).toHaveURL(/\/cards$/);
+  await expect(page.getByText("Vietnamesisch")).toHaveCount(0);
 });
 
 test("gives audio controls vertical breathing room in the collection overview", async ({
