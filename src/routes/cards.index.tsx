@@ -74,20 +74,46 @@ function CollectionsRoute() {
           />
         ) : (
           <>
-            <ul className={styles.list}>
-              {collectionList.map((collection) => (
-                <li key={collection.id}>
-                  <Link to="/cards/$collectionId" params={{ collectionId: collection.id }}>
-                    <CollectionIcon icon={collection.icon} />
-                    <span className={styles.rowText}>
-                      <strong>{collection.name}</strong>
-                      <span className={styles.rowDetail}>
-                        {t("collections.cardCount", { count: cardCounts.get(collection.id) ?? 0 })}
+            <ul className={`${styles.list} ${styles.collectionList}`}>
+              {collectionList.map((collection) => {
+                const languageName = (language: string | null) =>
+                  language
+                    ? t(`collections.languages.${language}`, { defaultValue: language })
+                    : t("collections.noLanguage");
+
+                return (
+                  <li key={collection.id}>
+                    <Link
+                      to="/cards/$collectionId"
+                      params={{ collectionId: collection.id }}
+                      className={styles.collectionCard}
+                    >
+                      <span className={styles.collectionArtwork} aria-hidden="true">
+                        <CollectionIcon icon={collection.icon} size="large" />
                       </span>
-                    </span>
-                  </Link>
-                </li>
-              ))}
+                      <span className={styles.collectionDetails}>
+                        <span className={styles.collectionCount}>
+                          {t("collections.cardCount", {
+                            count: cardCounts.get(collection.id) ?? 0,
+                          })}
+                        </span>
+                        <strong>{collection.name}</strong>
+                        <span className={styles.collectionLanguages}>
+                          <span>
+                            {t("cards.front")} · {languageName(collection.frontLanguage)}
+                          </span>
+                          <span>
+                            {t("cards.back")} · {languageName(collection.backLanguage)}
+                          </span>
+                        </span>
+                      </span>
+                      <span className={styles.collectionArrow} aria-hidden="true">
+                        →
+                      </span>
+                    </Link>
+                  </li>
+                );
+              })}
             </ul>
             <div className={styles.actions}>
               <button type="button" onClick={() => setCreating(true)} disabled={!online}>

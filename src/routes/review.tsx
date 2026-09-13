@@ -13,7 +13,11 @@ import { TopicIcon } from "../components/TopicIcon";
 import type { Card } from "../contracts/card";
 import { useDueTime } from "../lib/browserState";
 import { cardsQuery, collectionsQuery, topicsQuery } from "../lib/queries";
-import { ReviewSessionProvider, useReviewSession } from "../state/ReviewSessionContext";
+import {
+  ReviewSessionProvider,
+  type ReviewScope,
+  useReviewSession,
+} from "../state/ReviewSessionContext";
 import styles from "./review.module.css";
 
 export const Route = createFileRoute("/review")({ component: ReviewRouteProvider });
@@ -94,11 +98,11 @@ function ReviewRoute() {
     document.title = `${t("review.title")} | ${t("appName")}`;
   }, [t]);
 
-  const begin = (selected: Card[]) => {
+  const begin = (selected: Card[], scope: ReviewScope = { kind: "all" }) => {
     // The distractor pool is every Card the Learner has, not just the ones due today: VOK-15 draws
     // wrong options from a Card's Thema and then the rest of its Sammlung, which is wider than the
     // due queue.
-    reviewSession.startReviewSession(selected, cards.data ?? []);
+    reviewSession.startReviewSession(selected, cards.data ?? [], scope);
     window.setTimeout(() => void navigate({ to: "/review/session" }), 0);
   };
 
@@ -170,7 +174,13 @@ function ReviewRoute() {
                         name={collection.name}
                         cards={own}
                         now={now}
-                        onStart={() => begin(selectQueue(own, now))}
+                        onStart={() =>
+                          begin(selectQueue(own, now), {
+                            kind: "collection",
+                            collection: { name: collection.name, icon: collection.icon },
+                            topics: [],
+                          })
+                        }
                       />
                       {ownTopics.length > 0 && (
                         <ul className={styles.topicRows}>
@@ -184,7 +194,13 @@ function ReviewRoute() {
                                   name={topic.name}
                                   cards={inTopic}
                                   now={now}
-                                  onStart={() => begin(selectQueue(inTopic, now))}
+                                  onStart={() =>
+                                    begin(selectQueue(inTopic, now), {
+                                      kind: "collection",
+                                      collection: { name: collection.name, icon: collection.icon },
+                                      topics: [{ name: topic.name, icon: topic.icon }],
+                                    })
+                                  }
                                 />
                               </li>
                             );

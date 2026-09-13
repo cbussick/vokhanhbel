@@ -1,8 +1,10 @@
 import { createContext, type ReactNode, useContext, useReducer, useState } from "react";
 import { apiPaths } from "../contracts/apiPaths";
 import type { AudioMetadata, Card } from "../contracts/card";
+import type { CollectionIconKey } from "../contracts/collection";
 import { problemTypes } from "../contracts/problem";
 import type { ReviewSubmissionInput } from "../contracts/review";
+import type { TopicIconKey } from "../contracts/topic";
 import { leadingGroupedExerciseKind, planExercises } from "../domain/exercisePlanner";
 import type { GroupedExerciseKind, PlannedExercise } from "../domain/exercisePlanner";
 import type { Grade } from "../domain/review";
@@ -17,6 +19,14 @@ import {
 } from "./review/reviewSessionReducer";
 import type { ReviewSubmission } from "./review/reviewSubmission";
 import { useReviewSubmissions } from "./ReviewSubmissionContext";
+
+export type ReviewScope =
+  | { kind: "all" }
+  | {
+      kind: "collection";
+      collection: { name: string; icon: CollectionIconKey };
+      topics: { name: string; icon: TopicIconKey }[];
+    };
 
 interface IdleView {
   kind: "idle";
@@ -115,6 +125,7 @@ export interface SwipeExerciseView {
 
 export interface SummaryView {
   kind: "summary";
+  scope: ReviewScope;
   cumulativeReviewSubmissions: number;
   cumulativeOptimisticPoints: number;
   firstRound: boolean;
@@ -146,7 +157,7 @@ export interface TutorExerciseContext {
 
 interface ReviewSessionContextValue {
   view: ReviewSessionView;
-  startReviewSession: (dueCards: Card[], pool: Card[]) => void;
+  startReviewSession: (dueCards: Card[], pool: Card[], scope?: ReviewScope) => void;
   revealAnswer: () => void;
   gradeCard: (grade: Grade) => void;
   chooseOption: (optionId: string) => void;
@@ -191,11 +202,13 @@ function getExerciseAttemptKey(state: ReviewSessionState): string | undefined {
 function toReviewSessionView(
   state: ReviewSessionState,
   tutorConversation: { attemptKey: string; messages: TutorConversationMessage[] },
+  scope: ReviewScope,
 ): ReviewSessionView {
   if (state.status === "idle") return { kind: "idle" };
   if (state.status === "summary") {
     return {
       kind: "summary",
+      scope,
       cumulativeReviewSubmissions: state.reviewSession.totalReviewSubmissions,
       cumulativeOptimisticPoints: state.reviewSession.optimisticPoints,
       firstRound: state.reviewSession.roundNumber === 1,
@@ -339,6 +352,7 @@ function toReviewSessionView(
 
 export function ReviewSessionProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(reviewSessionReducer, idleReviewSessionState);
+  const [scope, setScope] = useState<ReviewScope>({ kind: "all" });
   const [tutorConversation, setTutorConversation] = useState<{
     attemptKey: string;
     messages: TutorConversationMessage[];
@@ -354,10 +368,16 @@ export function ReviewSessionProvider({ children }: { children: ReactNode }) {
     });
   };
 
-  const startReviewSession = (dueCards: Card[], pool: Card[]) => {
+  const startReviewSession = (
+    dueCards: Card[],
+    pool: Card[],
+    requestedScope: ReviewScope = { kind: "all" },
+  ) => {
     const initialQueue = dueCards.slice(0, reviewSessionSize);
 
     if (initialQueue.length === 0) return;
+
+    setScope(requestedScope);
 
     const previousGroupedKind = getLastGroupedExerciseKind();
     const exercises = planExercises(initialQueue, pool, Math.random, previousGroupedKind);
@@ -570,7 +590,10 @@ export function ReviewSessionProvider({ children }: { children: ReactNode }) {
   const advanceExercise = () => dispatch({ type: "exerciseAdvanced" });
   const repeatForgotten = () => dispatch({ type: "forgottenRepeated" });
   const skipCard = () => dispatch({ type: "cardSkipped" });
-  const leaveReviewSession = () => dispatch({ type: "reviewSessionLeft" });
+  const leaveReviewSession = () => {
+    setScope({ kind: "all" });
+    dispatch({ type: "reviewSessionLeft" });
+  };
   const updateTutorConversation = (
     update: (messages: TutorConversationMessage[]) => TutorConversationMessage[],
   ) => {
@@ -585,7 +608,7 @@ export function ReviewSessionProvider({ children }: { children: ReactNode }) {
   };
 
   const value: ReviewSessionContextValue = {
-    view: toReviewSessionView(state, tutorConversation),
+    view: toReviewSessionView(state, tutorConversation, scope),
     startReviewSession,
     revealAnswer,
     gradeCard,
