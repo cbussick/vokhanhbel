@@ -343,7 +343,7 @@
   }
 
   .collectionArtwork {
-    padding: var(--space-3);
+    padding: var(--space-2);
   }
 
   .collectionArtwork > span {
