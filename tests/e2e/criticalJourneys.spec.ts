@@ -891,6 +891,7 @@ test("adapts the app shell between tablet and desktop widths", async ({ page }) 
   const desktopMainBox = await page.locator("main").boundingBox();
 
   await expect(appName).toBeVisible();
+  await expect(appName.locator("..")).toHaveCSS("hyphens", "none");
   expect(desktopReviewBox).not.toBeNull();
   expect(desktopCardsBox).not.toBeNull();
   expect(desktopMainBox).not.toBeNull();
