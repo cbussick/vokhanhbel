@@ -949,13 +949,13 @@ test("gives audio controls vertical breathing room in the collection overview", 
   expect(cardBox).not.toBeNull();
   expect(frontControlBox).not.toBeNull();
   expect(backControlBox).not.toBeNull();
-  expect(frontControlBox!.y - cardBox!.y).toBeGreaterThanOrEqual(8);
+  expect(frontControlBox!.y - cardBox!.y).toBeGreaterThanOrEqual(12);
   expect(backControlBox!.y - (frontControlBox!.y + frontControlBox!.height)).toBeGreaterThanOrEqual(
-    16,
+    24,
   );
   expect(
     cardBox!.y + cardBox!.height - (backControlBox!.y + backControlBox!.height),
-  ).toBeGreaterThanOrEqual(8);
+  ).toBeGreaterThanOrEqual(12);
 });
 
 test("lets the back Face Language menu escape the Collection dialog scroller", async ({ page }) => {
