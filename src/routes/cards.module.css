@@ -343,17 +343,14 @@
   }
 
   .collectionArtwork {
-    padding: var(--space-3);
+    padding: var(--space-2);
   }
 
   .collectionArtwork > span {
+    --collection-icon-glyph-size: 2.5rem;
+
     inline-size: 4rem;
     block-size: 4rem;
-  }
-
-  .collectionArtwork > span svg {
-    max-inline-size: 2.5rem;
-    max-block-size: 2.5rem;
   }
 
   .collectionDetails {
