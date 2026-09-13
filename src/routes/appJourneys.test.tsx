@@ -770,8 +770,34 @@ describe("rendered app journeys", () => {
 
     await renderApp(`/cards/${testCollections[0]!.id}`);
 
-    await screen.findByText("Noch keine Karten. Füge deine erste Karte hinzu.");
+    const message = await screen.findByText("Noch keine Karten. Füge deine erste Karte hinzu.");
+    const emptyStateIcon = message.parentElement?.querySelector("svg");
+
+    expect(emptyStateIcon).toBeVisible();
+    expect(emptyStateIcon?.parentElement).toHaveAttribute("aria-hidden", "true");
     expect(screen.getAllByRole("button", { name: "Karte hinzufügen" })).toHaveLength(1);
+  });
+
+  it("shows the shared empty state when there are no Cards to review", async () => {
+    mockServer.use(http.get("/api/cards", () => HttpResponse.json([])));
+
+    await renderApp("/review");
+
+    const message = await screen.findByText("Du hast noch keine Karten.");
+
+    expect(message.parentElement?.querySelector("svg")).toBeVisible();
+    expect(screen.getByRole("button", { name: "Karte hinzufügen" })).toBeVisible();
+  });
+
+  it("shows the shared empty state when there are no Collections", async () => {
+    mockServer.use(http.get("/api/collections", () => HttpResponse.json([])));
+
+    await renderApp("/cards");
+
+    const message = await screen.findByText("Noch keine Sammlung. Lege deine erste Sammlung an.");
+
+    expect(message.parentElement?.querySelector("svg")).toBeVisible();
+    expect(screen.getByRole("button", { name: "Sammlung hinzufügen" })).toBeVisible();
   });
 
   it("completes a reveal-and-Grade Review journey", async () => {

@@ -5,6 +5,9 @@ import { useTranslation } from "react-i18next";
 import { AppShell } from "../components/AppShell";
 import { CollectionIcon } from "../components/CollectionIcon";
 import { DelayedSkeleton } from "../components/DelayedSkeleton";
+import { EmptyCardsIcon } from "../components/EmptyCardsIcon";
+import { EmptyState } from "../components/EmptyState";
+import { IconButton } from "../components/IconButton";
 import { RequireSession } from "../components/RequireSession";
 import { TopicIcon } from "../components/TopicIcon";
 import type { Card } from "../contracts/card";
@@ -14,6 +17,14 @@ import { ReviewSessionProvider, useReviewSession } from "../state/ReviewSessionC
 import styles from "./review.module.css";
 
 export const Route = createFileRoute("/review")({ component: ReviewRouteProvider });
+
+function AddIcon() {
+  return (
+    <svg viewBox="0 0 24 24" focusable="false">
+      <path d="M12 5v14M5 12h14" />
+    </svg>
+  );
+}
 
 function byDueDate(left: Card, right: Card): number {
   return new Date(left.dueAt).getTime() - new Date(right.dueAt).getTime();
@@ -115,12 +126,15 @@ function ReviewRoute() {
     content = (
       <div className={styles.landing}>
         {active.length === 0 ? (
-          <>
-            <p>{t("review.empty")}</p>
-            <button type="button" onClick={() => void navigate({ to: "/cards" })}>
-              {t("cards.add")}
-            </button>
-          </>
+          <EmptyState
+            text={t("review.empty")}
+            icon={<EmptyCardsIcon />}
+            action={
+              <IconButton icon={<AddIcon />} onClick={() => void navigate({ to: "/cards" })}>
+                {t("cards.add")}
+              </IconButton>
+            }
+          />
         ) : (
           <>
             {dueCount > 0 ? (
