@@ -11,9 +11,10 @@ front uniqueness, Review queues, and deletion unambiguous, and the household can
 Collections as it wants. Overlapping subsets _inside_ a Collection are Topics
 ([ADR-0013](0013-group-cards-with-topics-inside-a-collection.md)).
 
-Front uniqueness moved from global to per-Collection. Deleting a Collection is a soft delete, refused
-while it still holds active Cards and refused for the last remaining Collection, so no Card can lose
-its Collection.
+Front uniqueness moved from global to per-Collection. Deleting a Collection is a soft delete and is
+refused while it still holds active Cards, so no Card can lose its Collection. The last remaining
+Collection may be deleted once empty; the Learner can create a new Collection from the resulting
+empty state.
 
 Points and statistics stay global, as [ADR-0008](0008-derive-points-from-review-log.md) requires.
 They are derived from the whole Review log and are not split per Collection.

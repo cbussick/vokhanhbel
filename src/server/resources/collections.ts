@@ -1,4 +1,4 @@
-import { and, asc, count, eq, isNull, ne } from "drizzle-orm";
+import { and, asc, count, eq, isNull } from "drizzle-orm";
 import type { CollectionInput } from "../../contracts/collection.js";
 import { problemTypes } from "../../contracts/problem.js";
 import { getDatabase } from "../database/client.js";
@@ -82,14 +82,6 @@ export async function deleteCollection(collectionId: string): Promise<void> {
 
   if ((held?.value ?? 0) > 0)
     throw new AppProblem(409, problemTypes.collectionNotEmpty, "Verschiebe zuerst die Karten");
-
-  const [remaining] = await database
-    .select({ value: count() })
-    .from(collections)
-    .where(and(ne(collections.id, collectionId), isNull(collections.deletedAt)));
-
-  if ((remaining?.value ?? 0) === 0)
-    throw new AppProblem(409, problemTypes.lastCollection, "Die letzte Sammlung bleibt bestehen");
 
   const rows = await database
     .update(collections)

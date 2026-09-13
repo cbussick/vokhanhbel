@@ -141,7 +141,6 @@ export const de = {
       empty: "Noch keine Sammlung. Lege deine erste Sammlung an.",
       notFound: "Diese Sammlung gibt es nicht mehr.",
       notEmpty: "Verschiebe zuerst die Karten in eine andere Sammlung.",
-      lastCollection: "Die letzte Sammlung kannst du nicht löschen.",
       nameConflict: "Diese Sammlung gibt es schon.",
       saveFailed: "Die Sammlung konnte nicht gespeichert werden.",
       deleteFailed: "Die Sammlung konnte nicht gelöscht werden.",

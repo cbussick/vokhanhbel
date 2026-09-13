@@ -234,7 +234,7 @@ describe("PostgreSQL application behavior", () => {
     ).rejects.toThrow();
   });
 
-  it("keeps a Collection that still holds Cards, and always keeps the last one", async () => {
+  it("keeps a Collection that still holds Cards and deletes the last empty Collection", async () => {
     const other = await createCollection(englishCollection);
     const card = await createCard({
       collectionId: other.id,
@@ -251,10 +251,8 @@ describe("PostgreSQL application behavior", () => {
     await deleteCollection(other.id);
     expect(await listCollections()).toHaveLength(1);
 
-    await expect(deleteCollection(defaultCollectionId)).rejects.toMatchObject({
-      status: 409,
-      type: "/problems/last-collection",
-    });
+    await expect(deleteCollection(defaultCollectionId)).resolves.toBeUndefined();
+    expect(await listCollections()).toEqual([]);
   });
 
   it("keeps Cards when a Topic is deleted and drops Topics when a Card moves Collection", async () => {

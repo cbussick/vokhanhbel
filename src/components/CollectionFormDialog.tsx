@@ -84,7 +84,6 @@ export function CollectionFormDialog({
     if (value.problem.type === problemTypes.collectionNameConflict)
       return t("collections.nameConflict");
     if (value.problem.type === problemTypes.collectionNotEmpty) return t("collections.notEmpty");
-    if (value.problem.type === problemTypes.lastCollection) return t("collections.lastCollection");
 
     return fallback;
   };
