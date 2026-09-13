@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next";
 import { statsQuery } from "../lib/queries";
 import { useReviewSubmissions } from "../state/ReviewSubmissionContext";
 import { ConnectivityBanner } from "./ConnectivityBanner";
+import { TutopherAvatar } from "./TutopherAvatar";
 import styles from "./AppShell.module.css";
 
 interface AppShellProps {
@@ -123,7 +124,10 @@ export function AppShell({
           <>
             {desktopLayout && (
               <aside className={styles.desktopSidebar}>
-                <div className={styles.brand}>{t("appName")}</div>
+                <div className={styles.brand}>
+                  <TutopherAvatar size="small" />
+                  <span>{t("appName")}</span>
+                </div>
                 <PrimaryNavigation className={styles.desktopNav} />
                 <PointsBadge points={points} />
               </aside>
