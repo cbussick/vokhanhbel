@@ -183,29 +183,79 @@ function ReviewRoute() {
                         }
                       />
                       {ownTopics.length > 0 && (
-                        <ul className={styles.topicRows}>
-                          {ownTopics.map((topic) => {
-                            const inTopic = own.filter((card) => card.topicIds.includes(topic.id));
+                        <>
+                          <ul className={styles.topicRows}>
+                            {ownTopics.slice(0, 2).map((topic) => {
+                              const inTopic = own.filter((card) =>
+                                card.topicIds.includes(topic.id),
+                              );
 
-                            return (
-                              <li key={topic.id}>
-                                <GroupRow
-                                  icon={<TopicIcon icon={topic.icon} />}
-                                  name={topic.name}
-                                  cards={inTopic}
-                                  now={now}
-                                  onStart={() =>
-                                    begin(selectQueue(inTopic, now), {
-                                      kind: "collection",
-                                      collection: { name: collection.name, icon: collection.icon },
-                                      topics: [{ name: topic.name, icon: topic.icon }],
-                                    })
-                                  }
-                                />
-                              </li>
-                            );
-                          })}
-                        </ul>
+                              return (
+                                <li key={topic.id}>
+                                  <GroupRow
+                                    icon={<TopicIcon icon={topic.icon} />}
+                                    name={topic.name}
+                                    cards={inTopic}
+                                    now={now}
+                                    onStart={() =>
+                                      begin(selectQueue(inTopic, now), {
+                                        kind: "collection",
+                                        collection: {
+                                          name: collection.name,
+                                          icon: collection.icon,
+                                        },
+                                        topics: [{ name: topic.name, icon: topic.icon }],
+                                      })
+                                    }
+                                  />
+                                </li>
+                              );
+                            })}
+                          </ul>
+                          {ownTopics.length > 2 && (
+                            <details className={styles.topicDisclosure}>
+                              <summary>
+                                <span className={styles.showMoreLabel}>
+                                  <span className={styles.showMoreClosed}>
+                                    {t("review.showMoreTopics", { count: ownTopics.length - 2 })}
+                                  </span>
+                                  <span className={styles.showMoreOpen}>
+                                    {t("review.showFewerTopics")}
+                                  </span>
+                                </span>
+                                <span className={styles.disclosureChevron} aria-hidden="true" />
+                              </summary>
+                              <ul className={styles.topicRows}>
+                                {ownTopics.slice(2).map((topic) => {
+                                  const inTopic = own.filter((card) =>
+                                    card.topicIds.includes(topic.id),
+                                  );
+
+                                  return (
+                                    <li key={topic.id}>
+                                      <GroupRow
+                                        icon={<TopicIcon icon={topic.icon} />}
+                                        name={topic.name}
+                                        cards={inTopic}
+                                        now={now}
+                                        onStart={() =>
+                                          begin(selectQueue(inTopic, now), {
+                                            kind: "collection",
+                                            collection: {
+                                              name: collection.name,
+                                              icon: collection.icon,
+                                            },
+                                            topics: [{ name: topic.name, icon: topic.icon }],
+                                          })
+                                        }
+                                      />
+                                    </li>
+                                  );
+                                })}
+                              </ul>
+                            </details>
+                          )}
+                        </>
                       )}
                     </li>
                   );

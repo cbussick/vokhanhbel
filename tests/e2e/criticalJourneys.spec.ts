@@ -720,6 +720,34 @@ test("completes Review, Tutor, repeat-ready summary, and Me", async ({ page }) =
   expect(preloadErrors).toEqual([]);
 });
 
+test("collapses Review Topics after the first two", async ({ page }) => {
+  const state = await installMockApi(page);
+  state.topics = Array.from({ length: 12 }, (_, index) => ({
+    id: `${String(index + 1).padStart(8, "0")}-0000-4000-8000-000000000000`,
+    collectionId: mockCollection.id,
+    name: `Thema ${String(index + 1).padStart(2, "0")}`,
+    icon: "shapes" as const,
+    createdAt: fixedNow,
+    updatedAt: fixedNow,
+    deletedAt: null,
+  }));
+
+  await page.goto("/review");
+
+  await expect(page.getByRole("button", { name: /^Thema 01/ })).toBeVisible();
+  await expect(page.getByRole("button", { name: /^Thema 02/ })).toBeVisible();
+  await expect(page.getByRole("button", { name: /^Thema 03/ })).toBeHidden();
+
+  const disclosure = page.getByText("10 weitere Themen anzeigen", { exact: true });
+  await disclosure.click();
+  await expect(page.getByRole("button", { name: /^Thema 03/ })).toBeVisible();
+  await expect(page.getByRole("button", { name: /^Thema 12/ })).toBeVisible();
+  await expect(page.getByText("Weniger Themen anzeigen", { exact: true })).toBeVisible();
+
+  await page.getByText("Weniger Themen anzeigen", { exact: true }).click();
+  await expect(page.getByRole("button", { name: /^Thema 03/ })).toBeHidden();
+});
+
 test("does not make a short Card front scrollable", async ({ page }) => {
   const state = await installMockApi(page);
   state.cards[0] = createCard("Apfel", "the apple");
