@@ -15,9 +15,10 @@ export function EmptyCardsIcon() {
 export function EmptyCollectionsIcon() {
   return (
     <svg viewBox="0 0 96 96" focusable="false">
-      <path className={styles.back} d="M20 24h22l7 8h27a7 7 0 0 1 7 7v34H20Z" />
-      <path className={styles.front} d="M13 38a7 7 0 0 1 7-7h56a7 7 0 0 1 7 7v35H13Z" />
-      <path className={styles.line} d="M29 48h38M29 59h25" />
+      <rect className={styles.back} x="28" y="14" width="52" height="50" rx="7" />
+      <rect className={styles.back} x="21" y="21" width="52" height="50" rx="7" />
+      <rect className={styles.front} x="14" y="28" width="58" height="48" rx="8" />
+      <path className={styles.line} d="M28 44h30M28 56h21" />
       <circle className={styles.badge} cx="70" cy="70" r="15" />
       <path className={styles.add} d="M70 63v14M63 70h14" />
     </svg>
