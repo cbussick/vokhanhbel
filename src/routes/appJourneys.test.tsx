@@ -2484,7 +2484,7 @@ describe("rendered app journeys", () => {
       "Nachrichten werden zur Beantwortung an OpenAI gesendet.",
     );
     const transcript = dataFlow.parentElement;
-    const emptyStateAvatar = dialog.querySelector('svg[viewBox="0 0 64 64"]');
+    const emptyStateAvatar = dialog.querySelector("[data-tutopher-avatar]");
 
     expect(transcript).not.toContainElement(warning);
     expect(transcript).toContainElement(dataFlow);
