@@ -71,6 +71,7 @@ export function Dialog({
         styles.dialog,
         !isConfirming && styles.mobileFullscreenDialog,
         className,
+        isConfirming && styles.confirmingDialog,
       )}
       onCancel={(event) => {
         // A nested dialog's cancel reaches this handler too; only the Learner's own Escape counts.

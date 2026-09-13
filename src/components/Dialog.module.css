@@ -20,6 +20,14 @@
   transition-behavior: allow-discrete;
 }
 
+/* A consumer's editor dimensions must not carry over to its compact destructive confirmation. */
+.dialog.confirmingDialog {
+  --dialog-block-size: fit-content;
+
+  inline-size: 100%;
+  max-inline-size: 30rem;
+}
+
 .dialog[open] {
   opacity: 1;
   translate: 0;
@@ -436,7 +444,8 @@
 }
 
 @media (width >= 64rem) {
-  .dialog {
+  .dialog,
+  .dialog.confirmingDialog {
     max-inline-size: 38rem;
   }
 }
