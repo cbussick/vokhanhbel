@@ -26,10 +26,11 @@ RATE_LIMIT_HMAC_SECRET=<output from openssl rand -hex 32>
 `DATABASE_URL` is not needed for ordinary local development. If a copied `.env.local` contains
 one, the isolated local commands override it rather than trusting it.
 
-Audio development also needs a private Cloudflare R2 Standard bucket in the EU jurisdiction. Add
-the R2 values documented below. Generating pronunciation audio additionally needs the Google
-service-account values documented below; without them the rest of the application still runs, and
-only generation fails.
+Local audio is stored under the checkout's ignored `.scratch/audio/` directory; ordinary development
+does not use R2. `npm run db:local:clean` removes these files together with the local database volume.
+Generating a Clip still needs the Google service-account values documented below;
+without them the rest of the application runs, and only generation fails. Preview and production
+continue to require the private R2 configuration documented below.
 
 `npm run dev:full` starts PostgreSQL and applies the schema; no separate database setup is needed.
 The database test suite remains separate: `npm run test:db` manages `vokhanhbel_test` through the

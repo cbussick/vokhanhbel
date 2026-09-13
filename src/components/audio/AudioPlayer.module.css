@@ -1,20 +1,25 @@
 .player {
   display: grid;
-  grid-template-columns: 44px minmax(5rem, 1fr) auto;
+  grid-template-columns: 48px minmax(5rem, 1fr) auto;
   align-items: center;
-  gap: var(--space-2);
+  gap: var(--space-3);
   inline-size: min(100%, 24rem);
+  padding: var(--space-3);
+  border: 0;
+  border-radius: var(--space-3);
+  background: var(--color-surface-hover);
 }
 
 .player button {
-  min-inline-size: 44px;
-  min-block-size: 44px;
+  display: grid;
+  min-inline-size: 48px;
+  min-block-size: 48px;
+  place-items: center;
   padding: 0;
-  border: 1px solid var(--color-border);
+  border: 0;
   border-radius: var(--radius-full);
-  background: white;
-  color: var(--color-text);
-  font-weight: 800;
+  background: var(--color-primary);
+  color: var(--color-primary-text);
 }
 
 .player button:focus-visible {
@@ -22,21 +27,48 @@
   outline-offset: 2px;
 }
 
+.player button svg {
+  inline-size: 1.25rem;
+  block-size: 1.25rem;
+  fill: none;
+  stroke: currentcolor;
+}
+
+.player button .filledIcon {
+  fill: currentcolor;
+  stroke: none;
+}
+
 .spinner {
   display: block;
   inline-size: 1rem;
   block-size: 1rem;
-  margin: auto;
-  border: 2px solid var(--color-border);
+  border: 2px solid color-mix(in srgb, currentcolor 28%, transparent);
   border-block-start-color: currentcolor;
   border-radius: var(--radius-full);
   animation: player-loading 800ms linear infinite;
 }
 
-.player progress {
+.waveform {
+  min-inline-size: 0;
   inline-size: 100%;
-  block-size: 0.5rem;
-  accent-color: var(--color-primary-text);
+  block-size: 2rem;
+}
+
+.waveform path {
+  stroke: white;
+  stroke-width: 3;
+  stroke-linecap: round;
+}
+
+.progress,
+.visuallyHidden {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }
 
 .time {
@@ -55,19 +87,15 @@
   display: none;
 }
 
-.visuallyHidden {
-  position: absolute;
-  inline-size: 1px;
-  block-size: 1px;
-  overflow: hidden;
-  clip-path: inset(50%);
-  white-space: nowrap;
-}
-
 .compact {
   grid-template-columns: 44px minmax(2rem, 1fr) auto;
-  gap: var(--space-1);
-  inline-size: 100%;
+  gap: var(--space-2);
+  padding: var(--space-2);
+}
+
+.compact button {
+  min-inline-size: 44px;
+  min-block-size: 44px;
 }
 
 @keyframes player-loading {
@@ -77,10 +105,6 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .player progress {
-    transition: none;
-  }
-
   .spinner {
     border-style: dotted;
     animation: none;
@@ -89,6 +113,6 @@
 
 @media (hover: hover) and (pointer: fine) {
   .player button:hover:not(:disabled, [aria-disabled="true"]) {
-    background: var(--color-surface-hover);
+    background: var(--color-primary-hover);
   }
 }

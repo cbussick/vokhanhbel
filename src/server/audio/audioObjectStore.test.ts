@@ -1,7 +1,11 @@
+import { mkdtemp, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   FailingAudioObjectStore,
   InMemoryAudioObjectStore,
+  LocalAudioObjectStore,
   R2AudioObjectStore,
 } from "./audioObjectStore.js";
 
@@ -21,6 +25,28 @@ describe("audio object store contract", () => {
     await store.delete("audio/example");
     await store.delete("audio/example");
     await expect(store.read("audio/example")).resolves.toBeNull();
+  });
+
+  it("persists local development objects with the same range contract", async () => {
+    const directory = await mkdtemp(join(tmpdir(), "vokhanhbel-audio-"));
+    const store = new LocalAudioObjectStore(directory);
+
+    try {
+      await store.put("audio/example", new Uint8Array([10, 20, 30, 40]), "audio/wav");
+      await expect(store.read("audio/example", { start: 1, end: 2 })).resolves.toEqual({
+        bytes: new Uint8Array([20, 30]),
+        totalSize: 4,
+        contentRange: "bytes 1-2/4",
+      });
+      await store.delete("audio/example");
+      await store.delete("audio/example");
+      await expect(store.read("audio/example")).resolves.toBeNull();
+      await expect(store.put("../escape", new Uint8Array([1]), "audio/wav")).rejects.toThrow(
+        "escapes local store",
+      );
+    } finally {
+      await rm(directory, { recursive: true, force: true });
+    }
   });
 
   it("validates private-store range metadata before trusting it", async () => {

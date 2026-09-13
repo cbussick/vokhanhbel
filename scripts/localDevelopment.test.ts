@@ -3,6 +3,7 @@ import {
   composeProjectName,
   databaseUrlFromPublishedPort,
   developmentEnvironment,
+  localAudioDirectory,
   vercelDevelopmentEnvironment,
 } from "./localDevelopment.js";
 
@@ -31,7 +32,11 @@ describe("development command environments", () => {
         DATABASE_URL: "postgresql://production.example.com/app",
         DATABASE_URL_UNPOOLED: "postgresql://production.example.com/app",
       }),
-    ).toMatchObject({ DATABASE_URL: databaseUrl, DATABASE_URL_UNPOOLED: databaseUrl });
+    ).toMatchObject({
+      DATABASE_URL: databaseUrl,
+      DATABASE_URL_UNPOOLED: databaseUrl,
+      AUDIO_OBJECT_DIRECTORY: localAudioDirectory(process.cwd()),
+    });
   });
 
   it("does not pass the migration-only URL to Vercel Local", () => {

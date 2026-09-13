@@ -44,6 +44,7 @@
     "@tanstack/react-router": "^1.170.18",
     "drizzle-orm": "^0.45.2",
     "i18next": "^26.3.6",
+    "lucide-react": "^1.45.0",
     "openai": "^6.46.0",
     "pg": "^8.22.0",
     "react": "^19.2.7",
