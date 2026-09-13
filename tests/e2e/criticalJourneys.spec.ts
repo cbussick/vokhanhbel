@@ -799,6 +799,23 @@ test("does not outline the main landmark after modifier-only keyboard input", as
   await expect(page.locator("main")).toBeFocused();
 });
 
+test("fills a Collection card's icon frame at the smallest viewport", async ({ page }) => {
+  await installMockApi(page);
+  await page.setViewportSize({ width: 320, height: 700 });
+  await page.goto("/cards");
+
+  const icon = page.getByRole("link", { name: /Vietnamesisch/ }).locator("svg");
+  const iconBox = await icon.boundingBox();
+  const frameContentBox = await icon.locator("..").evaluate((element) => ({
+    width: element.clientWidth,
+    height: element.clientHeight,
+  }));
+
+  expect(iconBox).not.toBeNull();
+  expect(iconBox!.width).toBe(frameContentBox.width);
+  expect(iconBox!.height).toBe(frameContentBox.height);
+});
+
 test("adapts the app shell between tablet and desktop widths", async ({ page }) => {
   await installMockApi(page);
 

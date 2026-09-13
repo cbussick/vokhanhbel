@@ -1,4 +1,6 @@
 .frame {
+  --collection-icon-glyph-size: 1.5rem;
+
   flex: none;
   inline-size: 2.5rem;
   block-size: 2.5rem;
@@ -12,30 +14,24 @@
 }
 
 .compact {
+  --collection-icon-glyph-size: 1rem;
+
   inline-size: 1.75rem;
   block-size: 1.75rem;
   border-radius: var(--radius-small);
 }
 
-.compact .glyph {
-  inline-size: 1rem;
-  block-size: 1rem;
-}
-
 .large {
+  --collection-icon-glyph-size: 3.5rem;
+
   inline-size: 5.5rem;
   block-size: 5.5rem;
   border-radius: var(--radius-large);
 }
 
-.large .glyph {
-  inline-size: 3.5rem;
-  block-size: 3.5rem;
-}
-
 .glyph {
-  inline-size: 1.5rem;
-  block-size: 1.5rem;
+  inline-size: var(--collection-icon-glyph-size);
+  block-size: var(--collection-icon-glyph-size);
   fill: none;
   stroke: currentcolor;
   stroke-linecap: round;
