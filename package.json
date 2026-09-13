@@ -19,6 +19,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:db": "vitest run --config vitest.database.config.ts",
+    "test:local-development": "vitest run --config vitest.local-development.config.ts",
     "test:e2e": "playwright test",
     "lint": "oxlint && stylelint \"src/**/*.css\"",
     "format": "oxfmt",
