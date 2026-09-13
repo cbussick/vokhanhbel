@@ -227,7 +227,7 @@
   display: flex;
   align-items: center;
   padding: var(--space-2) var(--space-4);
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
   white-space: pre-line;
 }
 
@@ -261,7 +261,7 @@
 
 .list strong,
 .list .rowDetail {
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
   white-space: pre-line;
 }
 

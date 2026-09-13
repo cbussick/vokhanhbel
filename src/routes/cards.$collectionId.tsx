@@ -204,7 +204,10 @@ function CollectionCardsRoute() {
                     params={{ collectionId, cardId: card.id }}
                     className={styles.cardLink}
                   >
-                    <span className={`${styles.faceText} ${styles.frontFace}`}>
+                    <span
+                      className={`${styles.faceText} ${styles.frontFace}`}
+                      lang={collection.frontLanguage ?? undefined}
+                    >
                       <strong>
                         {card.front.text ??
                           (card.front.audio
@@ -214,7 +217,10 @@ function CollectionCardsRoute() {
                             : "")}
                       </strong>
                     </span>
-                    <span className={`${styles.faceText} ${styles.backFace}`}>
+                    <span
+                      className={`${styles.faceText} ${styles.backFace}`}
+                      lang={collection.backLanguage ?? undefined}
+                    >
                       {card.back.text ??
                         (card.back.audio
                           ? t("audio.duration", {

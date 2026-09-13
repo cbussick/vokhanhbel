@@ -8,7 +8,7 @@ import { SessionSummary } from "../components/review/SessionSummary";
 import { SwipeExercise } from "../components/review/SwipeExercise";
 import type { Grade } from "../domain/review";
 import { prefersReducedMotion, useOnlineStatus } from "../lib/browserState";
-import { statsQuery } from "../lib/queries";
+import { collectionsQuery, statsQuery } from "../lib/queries";
 import { useReviewSession } from "../state/ReviewSessionContext";
 
 export const Route = createFileRoute("/review/session")({ component: ReviewSessionRoute });
@@ -31,6 +31,7 @@ function ReviewSessionRoute() {
   const online = useOnlineStatus();
   // Read the Streak from the same query "Ich" reads, so the two never diverge (see ADR-0008).
   const stats = useQuery(statsQuery);
+  const collections = useQuery(collectionsQuery);
   const [tutorOpen, setTutorOpen] = useState(false);
   const [tutorSubjectCardId, setTutorSubjectCardId] = useState<string | undefined>(undefined);
   const [revealComplete, setRevealComplete] = useState(false);
@@ -103,6 +104,11 @@ function ReviewSessionRoute() {
 
   const view = reviewSession.view;
   const issueKey = view.issue ? issueKeysByIssue[view.issue] : undefined;
+  const collectionId =
+    view.kind === "matching" ? view.cards[0]?.collectionId : view.currentCard.collectionId;
+  const collection = collections.data?.find((candidate) => candidate.id === collectionId);
+  const frontLanguage = collection?.frontLanguage ?? null;
+  const backLanguage = collection?.backLanguage ?? null;
 
   if (view.kind === "matching") {
     return (
@@ -112,6 +118,8 @@ function ReviewSessionRoute() {
         online={online}
         tutorOpen={tutorOpen}
         tutorCard={view.cards.find((candidate) => candidate.id === tutorSubjectCardId)}
+        frontLanguage={frontLanguage}
+        backLanguage={backLanguage}
         onClose={close}
         onAdvance={advance}
         onOpenTutor={(cardId) => {
@@ -136,6 +144,8 @@ function ReviewSessionRoute() {
         issueKey={issueKey}
         tutorOpen={tutorOpen}
         tutorDisabled={tutorDisabled}
+        frontLanguage={frontLanguage}
+        backLanguage={backLanguage}
         onClose={close}
         onChoose={reviewSession.chooseSwipeOption}
         onAdvance={advance}
@@ -154,6 +164,8 @@ function ReviewSessionRoute() {
         unavailableOptionIds={unavailableOptionIds}
         tutorOpen={tutorOpen}
         tutorDisabled={tutorDisabled}
+        frontLanguage={frontLanguage}
+        backLanguage={backLanguage}
         onClose={close}
         onAdvance={advance}
         onSkip={skip}
@@ -174,6 +186,8 @@ function ReviewSessionRoute() {
       backAudioAvailable={backAudioAvailable}
       tutorOpen={tutorOpen}
       tutorDisabled={tutorDisabled}
+      frontLanguage={frontLanguage}
+      backLanguage={backLanguage}
       onClose={close}
       onReveal={reveal}
       onGrade={grade}

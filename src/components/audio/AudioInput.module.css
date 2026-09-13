@@ -238,7 +238,7 @@
 
 .synthesizedText {
   /* Synthesized text can be one long unbroken run; the rail is narrow. */
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
 }
 
 .synthesizedText,

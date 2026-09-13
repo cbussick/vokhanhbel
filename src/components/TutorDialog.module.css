@@ -74,7 +74,7 @@
 .messages article {
   max-inline-size: 88%;
   white-space: pre-line;
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
 }
 
 .user {

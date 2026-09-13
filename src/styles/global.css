@@ -3,6 +3,7 @@
 @layer reset {
   html {
     box-sizing: border-box;
+    hyphens: auto;
   }
 
   *,
