@@ -1368,6 +1368,8 @@ describe("rendered app journeys", () => {
     await user.click(await screen.findByRole("button", { name: "Review starten" }));
 
     expect(await screen.findByText("eins")).toBeVisible();
+    expect(screen.getByText("eins")).toHaveAttribute("lang", "vi-VN");
+    expect(screen.getByText("one")).toHaveAttribute("lang", "de-DE");
     // One Swipe Card, then "zwei" and "drei" as Exercises of their own.
     expect(screen.getByText("1 / 3")).toBeVisible();
 

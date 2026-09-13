@@ -113,7 +113,7 @@
 }
 
 .collections strong {
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
 }
 
 .collections .rowDetail {

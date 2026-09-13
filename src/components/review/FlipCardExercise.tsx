@@ -21,6 +21,8 @@ export function FlipCardExercise({
   backAudioAvailable,
   tutorOpen,
   tutorDisabled,
+  frontLanguage,
+  backLanguage,
   onClose,
   onReveal,
   onGrade,
@@ -37,6 +39,8 @@ export function FlipCardExercise({
   backAudioAvailable: boolean;
   tutorOpen: boolean;
   tutorDisabled: boolean;
+  frontLanguage: string | null;
+  backLanguage: string | null;
   onClose: () => void;
   onReveal: () => void;
   onGrade: (grade: Grade) => void;
@@ -115,6 +119,7 @@ export function FlipCardExercise({
           <CardFace
             face={card.front}
             label="front"
+            language={frontLanguage}
             onAudioAvailabilityChange={onFrontAudioAvailabilityChange}
           />
         </section>
@@ -127,6 +132,7 @@ export function FlipCardExercise({
           <CardFace
             face={card.back}
             label="back"
+            language={backLanguage}
             onAudioAvailabilityChange={onBackAudioAvailabilityChange}
           />
         </section>

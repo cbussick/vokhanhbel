@@ -13,6 +13,7 @@ import styles from "./reviewSession.module.css";
 export function MultipleChoiceOptions({
   options,
   resolved,
+  language,
   disabled,
   audioUnavailable,
   onOptionAvailabilityChange,
@@ -20,6 +21,7 @@ export function MultipleChoiceOptions({
 }: {
   options: MultipleChoiceOptionView[];
   resolved: boolean;
+  language: string | null;
   disabled: boolean;
   audioUnavailable: boolean;
   onOptionAvailabilityChange: (optionId: string, available: boolean) => void;
@@ -66,7 +68,7 @@ export function MultipleChoiceOptions({
               disabled={resolved || option.dead}
               onClick={() => onChoose(option.id)}
             >
-              {option.text}
+              <span lang={language ?? undefined}>{option.text}</span>
               <OptionOutcome verdict={option} />
             </button>
           ),

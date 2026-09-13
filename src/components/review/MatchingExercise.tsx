@@ -28,12 +28,14 @@ function MatchingEntryButton({
   selected,
   mismatched,
   disabled,
+  language,
   onClick,
 }: {
   entry: MatchingEntryView;
   selected: boolean;
   mismatched: boolean;
   disabled: boolean;
+  language: string | null;
   onClick: () => void;
 }) {
   const { t } = useTranslation();
@@ -53,7 +55,7 @@ function MatchingEntryButton({
       disabled={disabled}
       onClick={onClick}
     >
-      {entry.text}
+      <span lang={language ?? undefined}>{entry.text}</span>
       {entry.matched && (
         <span className={styles.visuallyHidden}> · {t("review.matchingMatched")}</span>
       )}
@@ -80,6 +82,8 @@ export function MatchingExercise({
   online,
   tutorOpen,
   tutorCard,
+  frontLanguage,
+  backLanguage,
   onClose,
   onAdvance,
   onOpenTutor,
@@ -90,6 +94,8 @@ export function MatchingExercise({
   online: boolean;
   tutorOpen: boolean;
   tutorCard: Card | undefined;
+  frontLanguage: string | null;
+  backLanguage: string | null;
   onClose: () => void;
   onAdvance: () => void;
   onOpenTutor: (cardId: string) => void;
@@ -145,6 +151,7 @@ export function MatchingExercise({
           selected={isSelected(entry.cardId, side)}
           mismatched={isMismatched(entry.cardId, side)}
           disabled={entry.matched && (!view.resolved || !online)}
+          language={side === "front" ? frontLanguage : backLanguage}
           onClick={() => tap(entry, side)}
         />
       ))}

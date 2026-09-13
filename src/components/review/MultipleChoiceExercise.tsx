@@ -22,6 +22,8 @@ export function MultipleChoiceExercise({
   unavailableOptionIds,
   tutorOpen,
   tutorDisabled,
+  frontLanguage,
+  backLanguage,
   onClose,
   onAdvance,
   onSkip,
@@ -36,6 +38,8 @@ export function MultipleChoiceExercise({
   unavailableOptionIds: ReadonlySet<string>;
   tutorOpen: boolean;
   tutorDisabled: boolean;
+  frontLanguage: string | null;
+  backLanguage: string | null;
   onClose: () => void;
   onAdvance: () => void;
   onSkip: () => void;
@@ -84,12 +88,14 @@ export function MultipleChoiceExercise({
         <CardFace
           face={card.front}
           label="front"
+          language={frontLanguage}
           onAudioAvailabilityChange={onFrontAudioAvailabilityChange}
         />
       </div>
       <MultipleChoiceOptions
         options={view.options}
         resolved={view.resolved}
+        language={backLanguage}
         disabled={frontRequiredUnavailable || issueBlocksInput(view.issue)}
         audioUnavailable={optionsAudioUnavailable}
         onOptionAvailabilityChange={onOptionAvailabilityChange}

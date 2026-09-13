@@ -41,6 +41,8 @@ export function SwipeExercise({
   issueKey,
   tutorOpen,
   tutorDisabled,
+  frontLanguage,
+  backLanguage,
   onClose,
   onChoose,
   onAdvance,
@@ -51,6 +53,8 @@ export function SwipeExercise({
   issueKey: string | undefined;
   tutorOpen: boolean;
   tutorDisabled: boolean;
+  frontLanguage: string | null;
+  backLanguage: string | null;
   onClose: () => void;
   onChoose: (optionCardId: string) => void;
   onAdvance: () => void;
@@ -164,7 +168,7 @@ export function SwipeExercise({
         className={`${styles.swipeBucket} ${armedSide === side ? styles.swipeBucketArmed : ""} ${optionModifierClassName(verdict)}`}
         onClick={() => commit(option.cardId)}
       >
-        {option.text}
+        <span lang={backLanguage ?? undefined}>{option.text}</span>
         <OptionOutcome verdict={verdict} />
       </button>
     );
@@ -226,7 +230,7 @@ export function SwipeExercise({
             onPointerUp={handlePointerUp}
             onPointerCancel={handlePointerUp}
           >
-            <CardFace face={view.currentCard.front} label="front" />
+            <CardFace face={view.currentCard.front} label="front" language={frontLanguage} />
           </div>
         </div>
         {renderBucket(1, "right")}
