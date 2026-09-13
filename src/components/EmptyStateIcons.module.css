@@ -1,0 +1,26 @@
+.back {
+  fill: var(--color-divider);
+  stroke: var(--color-border);
+  stroke-width: 2;
+}
+
+.front {
+  fill: var(--color-surface);
+  stroke: var(--color-primary-text);
+  stroke-linejoin: round;
+  stroke-width: 3;
+}
+
+.line,
+.add {
+  fill: none;
+  stroke: var(--color-primary-text);
+  stroke-linecap: round;
+  stroke-width: 3;
+}
+
+.badge {
+  fill: var(--color-primary);
+  stroke: var(--color-bg);
+  stroke-width: 4;
+}

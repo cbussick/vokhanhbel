@@ -774,8 +774,30 @@ describe("rendered app journeys", () => {
     const emptyStateIcon = message.parentElement?.querySelector("svg");
 
     expect(emptyStateIcon).toBeVisible();
-    expect(emptyStateIcon).toHaveAttribute("aria-hidden", "true");
+    expect(emptyStateIcon?.parentElement).toHaveAttribute("aria-hidden", "true");
     expect(screen.getAllByRole("button", { name: "Karte hinzufügen" })).toHaveLength(1);
+  });
+
+  it("shows the shared empty state when there are no Cards to review", async () => {
+    mockServer.use(http.get("/api/cards", () => HttpResponse.json([])));
+
+    await renderApp("/review");
+
+    const message = await screen.findByText("Du hast noch keine Karten.");
+
+    expect(message.parentElement?.querySelector("svg")).toBeVisible();
+    expect(screen.getByRole("button", { name: "Karte hinzufügen" })).toBeVisible();
+  });
+
+  it("shows the shared empty state when there are no Collections", async () => {
+    mockServer.use(http.get("/api/collections", () => HttpResponse.json([])));
+
+    await renderApp("/cards");
+
+    const message = await screen.findByText("Noch keine Sammlung. Lege deine erste Sammlung an.");
+
+    expect(message.parentElement?.querySelector("svg")).toBeVisible();
+    expect(screen.getByRole("button", { name: "Sammlung hinzufügen" })).toBeVisible();
   });
 
   it("completes a reveal-and-Grade Review journey", async () => {

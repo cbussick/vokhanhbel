@@ -8,6 +8,7 @@ import { CardFormDialog } from "../components/CardFormDialog";
 import { CollectionFormDialog } from "../components/CollectionFormDialog";
 import { CollectionIcon } from "../components/CollectionIcon";
 import { DelayedSkeleton } from "../components/DelayedSkeleton";
+import { EmptyCardsIcon } from "../components/EmptyCardsIcon";
 import { EmptyState } from "../components/EmptyState";
 import { IconButton } from "../components/IconButton";
 import { TopicFormDialog } from "../components/TopicFormDialog";
@@ -30,18 +31,6 @@ function EditIcon() {
   return (
     <svg viewBox="0 0 24 24" focusable="false">
       <path d="m14.5 5.5 4 4M4 20l3.7-.8L19 7.9a2.1 2.1 0 0 0-3-3L4.8 16.2Z" />
-    </svg>
-  );
-}
-
-function EmptyCardsIcon() {
-  return (
-    <svg viewBox="0 0 96 96" focusable="false" aria-hidden="true">
-      <path className={styles.emptyIconBack} d="M24 22h42a8 8 0 0 1 8 8v42H32a8 8 0 0 1-8-8Z" />
-      <rect className={styles.emptyIconFront} x="18" y="16" width="56" height="56" rx="8" />
-      <path className={styles.emptyIconLine} d="M30 32h32M30 44h22" />
-      <circle className={styles.emptyIconBadge} cx="70" cy="70" r="15" />
-      <path className={styles.emptyIconAdd} d="M70 63v14M63 70h14" />
     </svg>
   );
 }

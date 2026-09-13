@@ -6,12 +6,23 @@ import { AppShell } from "../components/AppShell";
 import { CollectionFormDialog } from "../components/CollectionFormDialog";
 import { CollectionIcon } from "../components/CollectionIcon";
 import { DelayedSkeleton } from "../components/DelayedSkeleton";
+import { EmptyCollectionsIcon } from "../components/EmptyCardsIcon";
+import { EmptyState } from "../components/EmptyState";
+import { IconButton } from "../components/IconButton";
 import type { Card } from "../contracts/card";
 import { useOnlineStatus } from "../lib/browserState";
 import { cardsQuery, collectionsQuery } from "../lib/queries";
 import styles from "./cards.module.css";
 
 export const Route = createFileRoute("/cards/")({ component: CollectionsRoute });
+
+function AddIcon() {
+  return (
+    <svg viewBox="0 0 24 24" focusable="false">
+      <path d="M12 5v14M5 12h14" />
+    </svg>
+  );
+}
 
 function countCardsByCollection(cards: Card[]): Map<string, number> {
   const counts = new Map<string, number>();
@@ -52,12 +63,15 @@ function CollectionsRoute() {
     content = (
       <>
         {collectionList.length === 0 ? (
-          <div className={styles.center}>
-            <p>{t("collections.empty")}</p>
-            <button type="button" onClick={() => setCreating(true)} disabled={!online}>
-              {t("collections.add")}
-            </button>
-          </div>
+          <EmptyState
+            text={t("collections.empty")}
+            icon={<EmptyCollectionsIcon />}
+            action={
+              <IconButton icon={<AddIcon />} onClick={() => setCreating(true)} disabled={!online}>
+                {t("collections.add")}
+              </IconButton>
+            }
+          />
         ) : (
           <>
             <ul className={styles.list}>
