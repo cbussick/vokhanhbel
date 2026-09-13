@@ -720,9 +720,7 @@ test("completes Review, Tutor, repeat-ready summary, and Me", async ({ page }) =
   expect(preloadErrors).toEqual([]);
 });
 
-test("lays out many Review Topics compactly without changing their mobile reading order", async ({
-  page,
-}) => {
+test("collapses Review Topics after the first two", async ({ page }) => {
   const state = await installMockApi(page);
   state.topics = Array.from({ length: 12 }, (_, index) => ({
     id: `${String(index + 1).padStart(8, "0")}-0000-4000-8000-000000000000`,
@@ -734,27 +732,20 @@ test("lays out many Review Topics compactly without changing their mobile readin
     deletedAt: null,
   }));
 
-  await page.setViewportSize({ width: 1024, height: 900 });
   await page.goto("/review");
 
-  const firstTopic = page.getByRole("button", { name: /^Thema 01/ });
-  const secondTopic = page.getByRole("button", { name: /^Thema 02/ });
-  const firstDesktopBox = await firstTopic.boundingBox();
-  const secondDesktopBox = await secondTopic.boundingBox();
+  await expect(page.getByRole("button", { name: /^Thema 01/ })).toBeVisible();
+  await expect(page.getByRole("button", { name: /^Thema 02/ })).toBeVisible();
+  await expect(page.getByRole("button", { name: /^Thema 03/ })).toBeHidden();
 
-  expect(firstDesktopBox).not.toBeNull();
-  expect(secondDesktopBox).not.toBeNull();
-  expect(Math.abs(firstDesktopBox!.y - secondDesktopBox!.y)).toBeLessThanOrEqual(1);
-  expect(secondDesktopBox!.x).toBeGreaterThan(firstDesktopBox!.x);
+  const disclosure = page.getByText("10 weitere Themen anzeigen", { exact: true });
+  await disclosure.click();
+  await expect(page.getByRole("button", { name: /^Thema 03/ })).toBeVisible();
+  await expect(page.getByRole("button", { name: /^Thema 12/ })).toBeVisible();
+  await expect(page.getByText("Weniger Themen anzeigen", { exact: true })).toBeVisible();
 
-  await page.setViewportSize({ width: 320, height: 700 });
-  const firstMobileBox = await firstTopic.boundingBox();
-  const secondMobileBox = await secondTopic.boundingBox();
-
-  expect(firstMobileBox).not.toBeNull();
-  expect(secondMobileBox).not.toBeNull();
-  expect(Math.abs(firstMobileBox!.x - secondMobileBox!.x)).toBeLessThanOrEqual(1);
-  expect(secondMobileBox!.y).toBeGreaterThan(firstMobileBox!.y);
+  await page.getByText("Weniger Themen anzeigen", { exact: true }).click();
+  await expect(page.getByRole("button", { name: /^Thema 03/ })).toBeHidden();
 });
 
 test("does not make a short Card front scrollable", async ({ page }) => {
