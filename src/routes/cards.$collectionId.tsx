@@ -248,6 +248,7 @@ function CollectionCardsRoute() {
         {editingCollection && (
           <CollectionFormDialog
             collection={collection}
+            cardCount={inCollection.length}
             onClose={() => setEditingCollection(false)}
             onDeleted={() => void navigate({ to: "/cards" })}
           />

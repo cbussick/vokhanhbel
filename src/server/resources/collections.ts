@@ -1,10 +1,12 @@
-import { and, asc, count, eq, isNull } from "drizzle-orm";
+import { and, asc, eq, isNull } from "drizzle-orm";
+import { z } from "zod";
 import type { CollectionInput } from "../../contracts/collection.js";
 import { problemTypes } from "../../contracts/problem.js";
-import { getDatabase } from "../database/client.js";
+import { getDatabase, getPool } from "../database/client.js";
 import { isUniqueViolation } from "../database/errors.js";
-import { cards, collections, topics } from "../database/schema.js";
+import { collections } from "../database/schema.js";
 import { AppProblem } from "../http/problem.js";
+import { deleteAudioObject } from "./audio.js";
 import { mapCollection } from "./collectionMapper.js";
 
 function throwNameConflict(): never {
@@ -74,26 +76,68 @@ export async function updateCollection(collectionId: string, input: CollectionIn
 }
 
 export async function deleteCollection(collectionId: string): Promise<void> {
-  const database = getDatabase();
-  const [held] = await database
-    .select({ value: count() })
-    .from(cards)
-    .where(and(eq(cards.collectionId, collectionId), isNull(cards.deletedAt)));
+  const client = await getPool().connect();
+  const obsoleteAudio: { id: string; objectKey: string }[] = [];
 
-  if ((held?.value ?? 0) > 0)
-    throw new AppProblem(409, problemTypes.collectionNotEmpty, "Verschiebe zuerst die Karten");
+  try {
+    await client.query("BEGIN");
+    const selected = await client.query(
+      "SELECT id FROM collections WHERE id=$1 AND deleted_at IS NULL FOR UPDATE",
+      [collectionId],
+    );
 
-  const rows = await database
-    .update(collections)
-    .set({ deletedAt: new Date(), updatedAt: new Date() })
-    .where(and(eq(collections.id, collectionId), isNull(collections.deletedAt)))
-    .returning({ id: collections.id });
+    if (!selected.rows[0])
+      throw new AppProblem(404, problemTypes.collectionNotFound, "Sammlung nicht gefunden");
 
-  if (!rows[0])
-    throw new AppProblem(404, problemTypes.collectionNotFound, "Sammlung nicht gefunden");
+    const audio = await client.query(
+      `SELECT audio_assets.id, audio_assets.object_key
+       FROM audio_assets
+       INNER JOIN cards ON audio_assets.claimed_card_id=cards.id
+       WHERE cards.collection_id=$1 AND cards.deleted_at IS NULL
+       FOR UPDATE OF audio_assets`,
+      [collectionId],
+    );
+    obsoleteAudio.push(
+      ...z
+        .array(z.object({ id: z.uuid(), object_key: z.string() }))
+        .parse(audio.rows)
+        .map((row) => ({ id: row.id, objectKey: row.object_key })),
+    );
 
-  await database
-    .update(topics)
-    .set({ deletedAt: new Date(), updatedAt: new Date() })
-    .where(and(eq(topics.collectionId, collectionId), isNull(topics.deletedAt)));
+    await client.query(
+      `UPDATE audio_assets SET deleted_at=now(), claimed_card_id=NULL, claimed_face=NULL
+       WHERE claimed_card_id IN (
+         SELECT id FROM cards WHERE collection_id=$1 AND deleted_at IS NULL
+       )`,
+      [collectionId],
+    );
+    await client.query(
+      `DELETE FROM card_topics WHERE card_id IN (
+         SELECT id FROM cards WHERE collection_id=$1 AND deleted_at IS NULL
+       )`,
+      [collectionId],
+    );
+    await client.query(
+      `UPDATE cards
+       SET deleted_at=now(), updated_at=now(), front_audio_id=NULL, back_audio_id=NULL
+       WHERE collection_id=$1 AND deleted_at IS NULL`,
+      [collectionId],
+    );
+    await client.query(
+      `UPDATE topics SET deleted_at=now(), updated_at=now()
+       WHERE collection_id=$1 AND deleted_at IS NULL`,
+      [collectionId],
+    );
+    await client.query("UPDATE collections SET deleted_at=now(), updated_at=now() WHERE id=$1", [
+      collectionId,
+    ]);
+    await client.query("COMMIT");
+  } catch (error) {
+    await client.query("ROLLBACK");
+    throw error;
+  } finally {
+    client.release();
+  }
+
+  await Promise.all(obsoleteAudio.map((audio) => deleteAudioObject(audio, "collection-delete")));
 }

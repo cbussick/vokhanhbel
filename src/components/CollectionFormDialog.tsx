@@ -59,11 +59,13 @@ export function CollectionFormDialog({
   onClose,
   onCreated,
   onDeleted,
+  cardCount = 0,
 }: {
   collection?: Collection;
   onClose: () => void;
   onCreated?: (collection: Collection) => void;
   onDeleted?: () => void;
+  cardCount?: number;
 }) {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
@@ -83,7 +85,6 @@ export function CollectionFormDialog({
     if (!(value instanceof ApiError)) return fallback;
     if (value.problem.type === problemTypes.collectionNameConflict)
       return t("collections.nameConflict");
-    if (value.problem.type === problemTypes.collectionNotEmpty) return t("collections.notEmpty");
 
     return fallback;
   };
@@ -128,6 +129,7 @@ export function CollectionFormDialog({
     onSuccess: async () => {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: queryKeys.collections }),
+        queryClient.invalidateQueries({ queryKey: queryKeys.cards }),
         queryClient.invalidateQueries({ queryKey: queryKeys.topics }),
       ]);
 
@@ -180,6 +182,9 @@ export function CollectionFormDialog({
       {isConfirmingDelete ? (
         <div className={styles.confirm}>
           <p>{t("collections.deleteConfirm", { name: collection?.name ?? "" })}</p>
+          {cardCount > 0 ? (
+            <p>{t("collections.deleteCardsConfirm", { count: cardCount })}</p>
+          ) : null}
           <div className={styles.actions}>
             <button
               type="button"

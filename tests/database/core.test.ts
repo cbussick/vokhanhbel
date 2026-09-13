@@ -244,22 +244,28 @@ describe("PostgreSQL application behavior", () => {
     ).rejects.toThrow();
   });
 
-  it("keeps a Collection that still holds Cards and deletes the last empty Collection", async () => {
+  it("deletes a Collection and all of its Cards while preserving their Reviews", async () => {
     const other = await createCollection(englishCollection);
     const card = await createCard({
       collectionId: other.id,
       front: "Take care",
       back: "Pass auf",
     });
-
-    await expect(deleteCollection(other.id)).rejects.toMatchObject({
-      status: 409,
-      type: "/problems/collection-not-empty",
+    await recordReview({
+      id: crypto.randomUUID(),
+      cardId: card.id,
+      grade: "knew_it",
+      reviewedAt: new Date().toISOString(),
     });
 
-    await deleteCard(card.id);
-    await deleteCollection(other.id);
+    await expect(deleteCollection(other.id)).resolves.toBeUndefined();
+
     expect(await listCollections()).toHaveLength(1);
+    expect((await listCards()).find((entry) => entry.id === card.id)).toBeUndefined();
+    const retained = await getPool().query("SELECT card_id FROM reviews WHERE card_id=$1", [
+      card.id,
+    ]);
+    expect(retained.rows).toEqual([{ card_id: card.id }]);
 
     await expect(deleteCollection(defaultCollectionId)).resolves.toBeUndefined();
     expect(await listCollections()).toEqual([]);
