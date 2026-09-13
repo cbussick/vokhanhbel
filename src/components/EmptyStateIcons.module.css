@@ -4,6 +4,7 @@
   stroke-width: 2;
 }
 
+.stackBack,
 .front {
   fill: var(--color-surface);
   stroke: var(--color-primary-text);
