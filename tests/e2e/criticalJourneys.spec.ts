@@ -903,6 +903,27 @@ test("uses desktop space for route content without overstretching focused work",
   ).toBeLessThanOrEqual(1);
 });
 
+test("shrinks the Card editor to a compact deletion confirmation", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  const state = await installMockApi(page);
+  await page.goto(`/cards/${mockCollection.id}/${state.cards[0]!.id}`);
+
+  const dialog = page.getByRole("dialog", { name: "Karte bearbeiten" });
+  const editorBox = await dialog.boundingBox();
+  expect(editorBox).not.toBeNull();
+  expect(editorBox!.width).toBeGreaterThan(1_000);
+
+  await dialog.getByRole("button", { name: "Karte löschen" }).click();
+
+  const confirmationBox = await dialog.boundingBox();
+  expect(confirmationBox).not.toBeNull();
+  expect(confirmationBox!.width).toBeLessThanOrEqual(608);
+  expect(confirmationBox!.height).toBeLessThan(editorBox!.height);
+
+  await dialog.getByRole("button", { name: "Abbrechen" }).click();
+  await expect.poll(async () => (await dialog.boundingBox())?.width ?? 0).toBeGreaterThan(1_000);
+});
+
 test("keeps audio controls compact in the collection overview", async ({ page }) => {
   const state = await installMockApi(page);
   state.cards = [
