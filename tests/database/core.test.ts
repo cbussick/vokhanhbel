@@ -174,6 +174,16 @@ describe("PostgreSQL application behavior", () => {
     expect(usage.rows[0]?.count).toBe("0");
   });
 
+  it("requires every new Card to name its Collection at the database boundary", async () => {
+    const result = await getPool().query<{ column_default: string | null }>(
+      `SELECT column_default
+       FROM information_schema.columns
+       WHERE table_schema = 'public' AND table_name = 'cards' AND column_name = 'collection_id'`,
+    );
+
+    expect(result.rows[0]?.column_default).toBeNull();
+  });
+
   it("rejects a Card written into an unknown Collection", async () => {
     await expect(
       createCard({ collectionId: crypto.randomUUID(), front: "waise", back: "orphan" }),
