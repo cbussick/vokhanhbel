@@ -2,7 +2,10 @@ import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { useTranslation } from "react-i18next";
 import type { SummaryView } from "../../state/ReviewSessionContext";
 import { AppShell } from "../AppShell";
+import { CollectionIcon } from "../CollectionIcon";
 import { RequireSession } from "../RequireSession";
+import { TopicIcon } from "../TopicIcon";
+import { TutopherAvatar } from "../TutopherAvatar";
 import styles from "./reviewSession.module.css";
 
 const confettiColors = [
@@ -82,6 +85,17 @@ function Confetti() {
   );
 }
 
+function AllCardsIcon() {
+  return (
+    <span className={styles.summaryScopeIcon} aria-hidden="true">
+      <svg viewBox="0 0 24 24" focusable="false">
+        <rect x="4" y="3" width="14" height="17" rx="2" />
+        <path d="M8 7h6M8 11h6M8 15h4M18 7h2v14a2 2 0 0 1-2 2H8" />
+      </svg>
+    </span>
+  );
+}
+
 /** Where a Review Session ends: what it earned, the Streak it extended, and a small celebration. */
 export function SessionSummary({
   view,
@@ -108,32 +122,72 @@ export function SessionSummary({
       <AppShell title={t("review.title")}>
         <section className={styles.summary}>
           {view.firstRound && <Confetti />}
-          <h2 ref={headingRef} tabIndex={-1}>
-            {t("review.summary")}
-          </h2>
-          <dl className={styles.summaryStats}>
-            <div>
-              <dt>{t("review.summaryReviews")}</dt>
-              <dd>{view.cumulativeReviewSubmissions}</dd>
+          <div className={styles.summaryCard}>
+            <div className={styles.summaryPortrait}>
+              <TutopherAvatar size="large" />
             </div>
-            <div>
-              <dt>{t("review.summaryPoints")}</dt>
-              <dd>{view.cumulativeOptimisticPoints}</dd>
+            <div className={styles.summaryContent}>
+              <div className={styles.summaryScope}>
+                {view.scope.kind === "all" ? (
+                  <AllCardsIcon />
+                ) : (
+                  <span className={styles.summaryScopeIcons} aria-hidden="true">
+                    <CollectionIcon icon={view.scope.collection.icon} />
+                    {view.scope.topics[0] ? (
+                      <TopicIcon icon={view.scope.topics[0].icon} size="compact" />
+                    ) : null}
+                    {view.scope.topics.length > 1 ? (
+                      <span className={styles.summaryScopeMore}>
+                        +{view.scope.topics.length - 1}
+                      </span>
+                    ) : null}
+                  </span>
+                )}
+                <p>
+                  {view.scope.kind === "all"
+                    ? t("review.scopeAllCards")
+                    : view.scope.topics.length === 0
+                      ? view.scope.collection.name
+                      : view.scope.topics.length === 1
+                        ? `${view.scope.collection.name} · ${view.scope.topics[0]!.name}`
+                        : t("review.scopeTopics", {
+                            collection: view.scope.collection.name,
+                            count: view.scope.topics.length,
+                          })}
+                </p>
+              </div>
+              <h2 ref={headingRef} tabIndex={-1}>
+                {t("review.summary")}
+              </h2>
+              <dl className={styles.summaryStats}>
+                <div>
+                  <dt>{t("review.summaryReviews")}</dt>
+                  <dd>{view.cumulativeReviewSubmissions}</dd>
+                </div>
+                <div>
+                  <dt>{t("review.summaryPoints")}</dt>
+                  <dd>{view.cumulativeOptimisticPoints}</dd>
+                </div>
+                <div>
+                  <dt>{t("me.streak")}</dt>
+                  <dd>{currentStreak}</dd>
+                </div>
+              </dl>
+              <div className={styles.summaryActions}>
+                {view.canRepeatForgotten && (
+                  <button
+                    type="button"
+                    className={styles.summaryRepeat}
+                    onClick={onRepeatForgotten}
+                  >
+                    {t("review.repeat")}
+                  </button>
+                )}
+                <button type="button" className={styles.summaryFinish} onClick={onFinish}>
+                  {t("common.finish")}
+                </button>
+              </div>
             </div>
-            <div>
-              <dt>{t("me.streak")}</dt>
-              <dd>{currentStreak}</dd>
-            </div>
-          </dl>
-          <div>
-            {view.canRepeatForgotten && (
-              <button type="button" className={styles.summaryRepeat} onClick={onRepeatForgotten}>
-                {t("review.repeat")}
-              </button>
-            )}
-            <button type="button" className={styles.summaryFinish} onClick={onFinish}>
-              {t("common.finish")}
-            </button>
           </div>
         </section>
       </AppShell>

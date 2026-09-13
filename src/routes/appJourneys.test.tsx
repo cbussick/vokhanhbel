@@ -755,6 +755,10 @@ describe("rendered app journeys", () => {
 
     expect(await screen.findByText("Take care")).toBeVisible();
     expect(screen.getByText("1 / 1")).toBeVisible();
+
+    await user.click(screen.getByRole("button", { name: "Antwort zeigen" }));
+    await user.click(await screen.findByRole("button", { name: /Gewusst/ }));
+    expect(await screen.findByText("Vietnamesisch")).toBeVisible();
   });
 
   it("reviews only the Cards of the started Topic", async () => {
@@ -764,6 +768,10 @@ describe("rendered app journeys", () => {
     await user.click(await screen.findByRole("button", { name: /Tiere/ }));
     expect(await screen.findByText("Take care")).toBeVisible();
     expect(screen.getByText("1 / 1")).toBeVisible();
+
+    await user.click(screen.getByRole("button", { name: "Antwort zeigen" }));
+    await user.click(await screen.findByRole("button", { name: /Gewusst/ }));
+    expect(await screen.findByText("Vietnamesisch · Tiere")).toBeVisible();
   });
 
   it("shows one add Card action when a Collection has no saved Cards", async () => {
@@ -2484,7 +2492,7 @@ describe("rendered app journeys", () => {
       "Nachrichten werden zur Beantwortung an OpenAI gesendet.",
     );
     const transcript = dataFlow.parentElement;
-    const emptyStateAvatar = dialog.querySelector('svg[viewBox="0 0 64 64"]');
+    const emptyStateAvatar = dialog.querySelector("[data-tutopher-avatar]");
 
     expect(transcript).not.toContainElement(warning);
     expect(transcript).toContainElement(dataFlow);

@@ -55,13 +55,13 @@ export function CollectionIcon({
   size = "default",
 }: {
   icon: CollectionIconKey;
-  size?: "default" | "compact";
+  size?: "compact" | "default" | "large";
 }) {
   const Icon = iconsByKey[icon];
 
   return (
     <span
-      className={`${styles.frame} ${size === "compact" ? styles.compact : ""}`}
+      className={`${styles.frame} ${size === "compact" ? styles.compact : ""} ${size === "large" ? styles.large : ""}`}
       aria-hidden="true"
     >
       <Icon />

@@ -212,6 +212,8 @@ export const de = {
       continue: "Weiter",
       close: "Review beenden",
       summary: "Gut gemacht!",
+      scopeAllCards: "Alle Karten",
+      scopeTopics: "{{collection}} · {{count}} Themen",
       summaryReviews: "Reviews",
       summaryPoints: "Punkte",
       repeat: "Vergessene wiederholen",

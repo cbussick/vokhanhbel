@@ -603,20 +603,120 @@
 .summary {
   position: relative;
   min-block-size: 28rem;
+  container: summary-card / inline-size;
   display: grid;
-  place-content: center;
-  justify-items: center;
-  gap: var(--space-4);
-  text-align: center;
-  animation: summary-in var(--duration-normal);
+  place-items: center;
   padding: var(--space-6) max(var(--space-4), env(safe-area-inset-right))
     calc(var(--space-6) + env(safe-area-inset-bottom))
     max(var(--space-4), env(safe-area-inset-left));
+  animation: summary-in var(--duration-normal);
+}
+
+.summaryCard {
+  inline-size: min(100%, 46rem);
+  display: grid;
+  grid-template-columns: minmax(13rem, 38%) minmax(0, 1fr);
+  overflow: clip;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-large);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-medium);
+}
+
+.summaryPortrait {
+  display: grid;
+  place-items: center;
+  min-block-size: 24rem;
+  padding: var(--space-8);
+  border-inline-end: 1px solid var(--color-border);
+  background: color-mix(in oklab, var(--color-primary) 34%, var(--color-surface));
+}
+
+.summaryPortrait svg {
+  inline-size: 10rem;
+  block-size: 10rem;
+}
+
+.summaryContent {
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  gap: var(--space-6);
+  padding: var(--space-8);
+  text-align: center;
+}
+
+.summaryScope {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--color-text-secondary);
+  font-size: var(--font-sm);
+  font-weight: 700;
+}
+
+.summaryScope p {
+  margin: 0;
+}
+
+.summaryScopeIcon,
+.summaryScopeIcons {
+  position: relative;
+  display: inline-flex;
+  flex: none;
+}
+
+.summaryScopeIcons {
+  align-items: center;
+}
+
+.summaryScopeIcon {
+  inline-size: 2.5rem;
+  block-size: 2.5rem;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-medium);
+  background: var(--color-surface);
+}
+
+.summaryScopeIcon svg {
+  inline-size: 1.5rem;
+  block-size: 1.5rem;
+  fill: none;
+  stroke: currentcolor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2;
+}
+
+.summaryScopeIcons > :nth-child(2) {
+  align-self: flex-end;
+  margin-inline-start: calc(-1 * var(--space-2));
+  margin-block-start: var(--space-6);
+}
+
+.summaryScopeMore {
+  align-self: flex-end;
+  min-inline-size: 1.75rem;
+  block-size: 1.75rem;
+  display: grid;
+  place-items: center;
+  margin-inline-start: var(--space-1);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-small);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-size: var(--font-xs);
+  font-weight: 800;
 }
 
 .summary h2 {
   font-family: var(--font-display);
-  font-size: var(--font-3xl);
+  font-size: clamp(var(--font-3xl), 6cqi, var(--font-4xl));
+  line-height: 0.95;
+  letter-spacing: -0.03em;
+  text-wrap: balance;
   outline: none;
 }
 
@@ -639,10 +739,33 @@
   font-weight: 800;
 }
 
-.summary > div:last-child {
+.summaryActions {
   display: grid;
   gap: var(--space-2);
   inline-size: min(100%, 20rem);
+}
+
+@container summary-card (inline-size < 34rem) {
+  .summaryCard {
+    grid-template-columns: 1fr;
+  }
+
+  .summaryPortrait {
+    min-block-size: 11rem;
+    padding: var(--space-6);
+    border-inline-end: 0;
+    border-block-end: 1px solid var(--color-border);
+  }
+
+  .summaryPortrait svg {
+    inline-size: 7rem;
+    block-size: 7rem;
+  }
+
+  .summaryContent {
+    gap: var(--space-4);
+    padding: var(--space-6);
+  }
 }
 
 .summary button {

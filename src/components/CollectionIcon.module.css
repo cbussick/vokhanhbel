@@ -22,6 +22,17 @@
   block-size: 1rem;
 }
 
+.large {
+  inline-size: 5.5rem;
+  block-size: 5.5rem;
+  border-radius: var(--radius-large);
+}
+
+.large .glyph {
+  inline-size: 3.5rem;
+  block-size: 3.5rem;
+}
+
 .glyph {
   inline-size: 1.5rem;
   block-size: 1.5rem;
