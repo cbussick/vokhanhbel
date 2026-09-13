@@ -19,7 +19,7 @@
 }
 
 .collections {
-  inline-size: min(100%, 28rem);
+  inline-size: min(100%, 44rem);
   display: grid;
   gap: var(--space-3);
   list-style: none;
@@ -52,12 +52,17 @@
 }
 
 .topicRows {
-  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 13rem), 1fr));
+  gap: 1px;
   border-block-start: 1px solid var(--color-border);
+  background: var(--color-divider);
+  list-style: none;
 }
 
-.topicRows li + li {
-  border-block-start: 1px solid var(--color-divider);
+.topicRows li {
+  min-inline-size: 0;
+  background: var(--color-surface);
 }
 
 .collections button:disabled {
