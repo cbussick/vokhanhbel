@@ -1,5 +1,6 @@
 /* eslint-disable jsx-a11y/media-has-caption -- these learner recordings have no transcript by design */
-import { useEffect, useRef, useState } from "react";
+import { RotateCcw } from "lucide-react";
+import { useEffect, useId, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { apiPaths } from "../../contracts/apiPaths";
 import type { AudioMetadata } from "../../contracts/card";
@@ -10,6 +11,56 @@ export function formatAudioDuration(durationMs: number): string {
   const seconds = Math.max(0, Math.ceil(durationMs / 1_000));
 
   return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`;
+}
+
+function FilledPlaybackIcon({ kind }: { kind: "play" | "pause" }) {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" className={styles.filledIcon}>
+      <path d={kind === "play" ? "M8.5 5.7v12.6L18 12z" : "M7 5h4v14H7zm6 0h4v14h-4z"} />
+    </svg>
+  );
+}
+
+const waveformHeights = [30, 58, 85, 50, 72, 95, 64, 38, 76, 42, 90, 55, 70, 32, 60];
+const waveformPath = waveformHeights
+  .map((height, index) => {
+    const halfHeight = (height / 100) * 14;
+    const x = index * 5 + 1.5;
+
+    return `M${x} ${16 - halfHeight}V${16 + halfHeight}`;
+  })
+  .join("");
+const waveformPatternWidth = waveformHeights.length * 5;
+
+function Waveform({ progress }: { progress: number }) {
+  const id = useId().replaceAll(":", "");
+  const patternId = `waveform-pattern-${id}`;
+  const maskId = `waveform-mask-${id}`;
+  const gradientId = `waveform-gradient-${id}`;
+  const offset = `${Math.min(100, progress)}%`;
+
+  return (
+    <svg className={styles.waveform} aria-hidden="true">
+      <defs>
+        <pattern
+          id={patternId}
+          width={waveformPatternWidth}
+          height="32"
+          patternUnits="userSpaceOnUse"
+        >
+          <path d={waveformPath} />
+        </pattern>
+        <mask id={maskId}>
+          <rect width="100%" height="100%" fill={`url(#${patternId})`} />
+        </mask>
+        <linearGradient id={gradientId} x1="0" x2="1">
+          <stop offset={offset} stopColor="var(--color-primary-text)" />
+          <stop offset={offset} stopColor="var(--color-border)" />
+        </linearGradient>
+      </defs>
+      <rect width="100%" height="100%" fill={`url(#${gradientId})`} mask={`url(#${maskId})`} />
+    </svg>
+  );
 }
 
 export function AudioPlayer({
@@ -140,11 +191,11 @@ export function AudioPlayer({
         </button>
       ) : state === "playing" ? (
         <button {...controlProps} onClick={pause} aria-label={`${label}: ${t("audio.pause")}`}>
-          <span aria-hidden="true">Ⅱ</span>
+          <FilledPlaybackIcon kind="pause" />
         </button>
       ) : state === "error" ? (
         <button {...controlProps} onClick={retry} aria-label={`${label}: ${t("audio.retry")}`}>
-          ↻
+          <RotateCcw aria-hidden="true" />
         </button>
       ) : (
         <button
@@ -152,10 +203,16 @@ export function AudioPlayer({
           onClick={() => void play()}
           aria-label={`${label}: ${state === "ended" ? t("audio.replay") : t("audio.play")}`}
         >
-          <span aria-hidden="true">{state === "ended" ? "↻" : "▶"}</span>
+          {state === "ended" ? (
+            <RotateCcw aria-hidden="true" />
+          ) : (
+            <FilledPlaybackIcon kind="play" />
+          )}
         </button>
       )}
+      <Waveform progress={(currentTime / audio.durationMs) * 100} />
       <progress
+        className={styles.progress}
         aria-label={`${label}: ${t("audio.progress")}`}
         value={Math.min(currentTime, audio.durationMs)}
         max={audio.durationMs}

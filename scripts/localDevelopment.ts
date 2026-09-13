@@ -1,5 +1,6 @@
 import { execFileSync, spawn } from "node:child_process";
 import { createHash } from "node:crypto";
+import { rmSync } from "node:fs";
 import { createServer } from "node:net";
 import { basename, resolve } from "node:path";
 
@@ -55,15 +56,22 @@ function startDatabase(project: string): string {
   return databaseUrlFromPublishedPort(publishedPort);
 }
 
+export function localAudioDirectory(checkoutPath: string): string {
+  return resolve(checkoutPath, ".scratch", "audio");
+}
+
 export function developmentEnvironment(
   databaseUrl: string,
   baseEnvironment: NodeJS.ProcessEnv = process.env,
 ): NodeJS.ProcessEnv {
-  // Override both names because drizzle.config.ts intentionally prefers the unpooled URL.
+  // Override both names because drizzle.config.ts intentionally prefers the unpooled URL. Local
+  // audio belongs to this checkout just as its database volume does; preview and production never
+  // receive this variable and continue to require R2.
   return {
     ...baseEnvironment,
     DATABASE_URL: databaseUrl,
     DATABASE_URL_UNPOOLED: databaseUrl,
+    AUDIO_OBJECT_DIRECTORY: localAudioDirectory(repositoryRoot),
   };
 }
 
@@ -148,6 +156,7 @@ async function main(): Promise<void> {
   }
   if (command === "clean") {
     runDocker(project, "down", "--volumes");
+    rmSync(localAudioDirectory(repositoryRoot), { recursive: true, force: true });
 
     return;
   }

@@ -209,7 +209,7 @@
 }
 
 .rowLayout:has(.faceAudio) {
-  grid-template-columns: minmax(0, 1fr) minmax(8.5rem, 12rem);
+  grid-template-columns: minmax(0, 1fr) minmax(calc(9rem + 5px), calc(13rem + 5px));
 }
 
 .list .cardLink {
@@ -267,7 +267,7 @@
 
 @supports not selector(:has(*)) {
   .hasAudio {
-    grid-template-columns: minmax(0, 1fr) minmax(8.5rem, 12rem);
+    grid-template-columns: minmax(0, 1fr) minmax(calc(9rem + 5px), calc(13rem + 5px));
   }
 }
 

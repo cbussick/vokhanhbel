@@ -1,5 +1,11 @@
+import { mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
+import { dirname, resolve, sep } from "node:path";
 import { z } from "zod";
-import { getR2Environment, type R2Environment } from "../config/environment.js";
+import {
+  getR2Environment,
+  getServerEnvironment,
+  type R2Environment,
+} from "../config/environment.js";
 
 export interface AudioObjectRange {
   start: number;
@@ -18,6 +24,19 @@ export interface AudioObjectStore {
   delete: (objectKey: string) => Promise<void>;
 }
 
+function storedBytesInRange(bytes: Uint8Array, range?: AudioObjectRange): StoredAudioObject | null {
+  const start = range?.start ?? 0;
+  const end = Math.min(range?.end ?? bytes.byteLength - 1, bytes.byteLength - 1);
+
+  if (start < 0 || start >= bytes.byteLength || end < start) return null;
+
+  return {
+    bytes: bytes.slice(start, end + 1),
+    totalSize: bytes.byteLength,
+    contentRange: range ? `bytes ${start}-${end}/${bytes.byteLength}` : undefined,
+  };
+}
+
 export class InMemoryAudioObjectStore implements AudioObjectStore {
   readonly objects = new Map<string, { bytes: Uint8Array; contentType: string }>();
 
@@ -31,22 +50,57 @@ export class InMemoryAudioObjectStore implements AudioObjectStore {
     const object = this.objects.get(objectKey);
 
     if (!object) return Promise.resolve(null);
-    const start = range?.start ?? 0;
-    const end = Math.min(range?.end ?? object.bytes.byteLength - 1, object.bytes.byteLength - 1);
 
-    if (start < 0 || start >= object.bytes.byteLength || end < start) return Promise.resolve(null);
-
-    return Promise.resolve({
-      bytes: object.bytes.slice(start, end + 1),
-      totalSize: object.bytes.byteLength,
-      contentRange: range ? `bytes ${start}-${end}/${object.bytes.byteLength}` : undefined,
-    });
+    return Promise.resolve(storedBytesInRange(object.bytes, range));
   }
 
   delete(objectKey: string): Promise<void> {
     this.objects.delete(objectKey);
 
     return Promise.resolve();
+  }
+}
+
+export class LocalAudioObjectStore implements AudioObjectStore {
+  private readonly root: string;
+
+  constructor(directory: string) {
+    this.root = resolve(directory);
+  }
+
+  private pathFor(objectKey: string): string {
+    const path = resolve(this.root, objectKey);
+
+    if (!path.startsWith(`${this.root}${sep}`))
+      throw new Error("Audio object key escapes local store");
+
+    return path;
+  }
+
+  async put(objectKey: string, bytes: Uint8Array, _contentType: string): Promise<void> {
+    const path = this.pathFor(objectKey);
+    const temporaryPath = `${path}.${crypto.randomUUID()}.tmp`;
+
+    await mkdir(dirname(path), { recursive: true });
+    await writeFile(temporaryPath, bytes);
+    await rename(temporaryPath, path);
+  }
+
+  async read(objectKey: string, range?: AudioObjectRange): Promise<StoredAudioObject | null> {
+    let bytes: Uint8Array;
+
+    try {
+      bytes = Uint8Array.from(await readFile(this.pathFor(objectKey)));
+    } catch (error) {
+      if (error instanceof Error && "code" in error && error.code === "ENOENT") return null;
+      throw error;
+    }
+
+    return storedBytesInRange(bytes, range);
+  }
+
+  async delete(objectKey: string): Promise<void> {
+    await rm(this.pathFor(objectKey), { force: true });
   }
 }
 
@@ -242,7 +296,15 @@ export class R2AudioObjectStore implements AudioObjectStore {
 let audioObjectStore: AudioObjectStore | undefined;
 
 export function getAudioObjectStore(): AudioObjectStore {
-  audioObjectStore ??= new R2AudioObjectStore();
+  const environment = getServerEnvironment();
+  const localDirectory = environment.AUDIO_OBJECT_DIRECTORY;
+
+  if (localDirectory && environment.R2_ENVIRONMENT)
+    throw new Error("Local audio storage cannot be combined with deployed R2 configuration");
+
+  audioObjectStore ??= localDirectory
+    ? new LocalAudioObjectStore(localDirectory)
+    : new R2AudioObjectStore();
 
   return audioObjectStore;
 }

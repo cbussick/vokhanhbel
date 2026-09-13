@@ -6,6 +6,7 @@ const serverEnvironmentSchema = z.object({
   OPENAI_API_KEY: z.string().min(1),
   OPENAI_MODEL: z.string().min(1).default("gpt-5.6-luna"),
   RATE_LIMIT_HMAC_SECRET: z.string().min(32),
+  AUDIO_OBJECT_DIRECTORY: z.string().min(1).optional(),
   R2_ENVIRONMENT: z.enum(["preview", "production"]).optional(),
   R2_ACCOUNT_ID: z.string().min(1).optional(),
   R2_BUCKET: z.string().min(1).optional(),
