@@ -174,6 +174,16 @@ describe("PostgreSQL application behavior", () => {
     expect(usage.rows[0]?.count).toBe("0");
   });
 
+  it("requires every new Card to name its Collection at the database boundary", async () => {
+    const result = await getPool().query<{ column_default: string | null }>(
+      `SELECT column_default
+       FROM information_schema.columns
+       WHERE table_schema = 'public' AND table_name = 'cards' AND column_name = 'collection_id'`,
+    );
+
+    expect(result.rows[0]?.column_default).toBeNull();
+  });
+
   it("rejects a Card written into an unknown Collection", async () => {
     await expect(
       createCard({ collectionId: crypto.randomUUID(), front: "waise", back: "orphan" }),
@@ -526,9 +536,10 @@ describe("PostgreSQL application behavior", () => {
 
   it("keeps legacy Card columns synchronized without repairing normalized text", async () => {
     const inserted = await getPool().query(
-      `INSERT INTO cards (front, normalized_front, back)
-       VALUES ('legacy front', 'legacy front', 'legacy back')
+      `INSERT INTO cards (collection_id, front, normalized_front, back)
+       VALUES ($1, 'legacy front', 'legacy front', 'legacy back')
        RETURNING id, front_text, back_text`,
+      [defaultCollectionId],
     );
 
     expect(inserted.rows[0]).toMatchObject({

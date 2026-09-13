@@ -16,10 +16,7 @@ import type { Card } from "../../contracts/card.js";
 import { defaultCollectionIcon } from "../../contracts/collection.js";
 import { defaultTopicIcon } from "../../contracts/topic.js";
 
-/**
- * Every Card created before Collections existed belongs here, and the column default keeps the
- * previously deployed app writable while the migration runs ahead of the deploy.
- */
+/** Every Card created before Collections existed belongs here. */
 export const defaultCollectionId = "00000000-0000-4000-8000-000000000001";
 
 export const collections = pgTable(
@@ -159,7 +156,6 @@ export const cards = pgTable(
     id: uuid("id").primaryKey().defaultRandom(),
     collectionId: uuid("collection_id")
       .notNull()
-      .default(defaultCollectionId)
       .references(() => collections.id, { onDelete: "restrict", onUpdate: "restrict" }),
     frontText: text("front_text"),
     normalizedFront: text("normalized_front"),
