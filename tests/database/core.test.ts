@@ -536,9 +536,10 @@ describe("PostgreSQL application behavior", () => {
 
   it("keeps legacy Card columns synchronized without repairing normalized text", async () => {
     const inserted = await getPool().query(
-      `INSERT INTO cards (front, normalized_front, back)
-       VALUES ('legacy front', 'legacy front', 'legacy back')
+      `INSERT INTO cards (collection_id, front, normalized_front, back)
+       VALUES ($1, 'legacy front', 'legacy front', 'legacy back')
        RETURNING id, front_text, back_text`,
+      [defaultCollectionId],
     );
 
     expect(inserted.rows[0]).toMatchObject({
