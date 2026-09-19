@@ -1,6 +1,8 @@
 .content {
   display: grid;
   justify-items: center;
-  gap: var(--space-5);
+
+  /* Keep text and media distinct in every Card face; only defined spacing tokens resolve. */
+  gap: var(--space-6);
   inline-size: 100%;
 }
