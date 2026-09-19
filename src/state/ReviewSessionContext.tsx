@@ -157,7 +157,7 @@ export interface TutorExerciseContext {
 
 interface ReviewSessionContextValue {
   view: ReviewSessionView;
-  startReviewSession: (dueCards: Card[], pool: Card[], scope?: ReviewScope) => void;
+  startReviewSession: (dueCards: Card[], scope?: ReviewScope) => void;
   revealAnswer: () => void;
   gradeCard: (grade: Grade) => void;
   chooseOption: (optionId: string) => void;
@@ -368,11 +368,7 @@ export function ReviewSessionProvider({ children }: { children: ReactNode }) {
     });
   };
 
-  const startReviewSession = (
-    dueCards: Card[],
-    pool: Card[],
-    requestedScope: ReviewScope = { kind: "all" },
-  ) => {
+  const startReviewSession = (dueCards: Card[], requestedScope: ReviewScope = { kind: "all" }) => {
     const initialQueue = dueCards.slice(0, reviewSessionSize);
 
     if (initialQueue.length === 0) return;
@@ -380,7 +376,9 @@ export function ReviewSessionProvider({ children }: { children: ReactNode }) {
     setScope(requestedScope);
 
     const previousGroupedKind = getLastGroupedExerciseKind();
-    const exercises = planExercises(initialQueue, pool, Math.random, previousGroupedKind);
+    // Every option and grouped Exercise must come from the Cards in this Review Session. This keeps
+    // a Topic or Collection Review Session from borrowing answers from outside its selected queue.
+    const exercises = planExercises(initialQueue, initialQueue, Math.random, previousGroupedKind);
     // The grouped kind this Session actually planned becomes next Session's preference — see
     // `groupedExerciseOrder` in exercisePlanner.ts for how the alternation reads it back. When it
     // planned none, the kind that merely led the attempt is remembered instead, so a Sammlung that

@@ -774,6 +774,29 @@ describe("rendered app journeys", () => {
     expect(await screen.findByText("Vietnamesisch · Tiere")).toBeVisible();
   });
 
+  it("uses only the Topic Review Session's Cards as answer options", async () => {
+    const user = userEvent.setup();
+    const outsideTopic = ["Hund", "Pferd", "Kuh"].map((back, index) => ({
+      ...testCards[0]!,
+      id: `33333333-3333-4333-8333-33333333333${index}`,
+      topicIds: [],
+      front: `Tier ${index}`,
+      back,
+    }));
+
+    mockServer.use(
+      http.get("/api/cards", () => HttpResponse.json([testCards[0], ...outsideTopic])),
+    );
+    await renderApp("/review");
+
+    await user.click(await screen.findByRole("button", { name: /Tiere/ }));
+
+    // The three Cards outside Tiere would make this multiple choice if the planner borrowed from
+    // the whole Collection. With the Review Session as its option pool, the lone Topic Card flips.
+    expect(await screen.findByRole("button", { name: "Antwort zeigen" })).toBeVisible();
+    expect(screen.queryByRole("group", { name: "Wähle die richtige Übersetzung" })).toBeNull();
+  });
+
   it("shows one add Card action when a Collection has no saved Cards", async () => {
     mockServer.use(http.get("/api/cards", () => HttpResponse.json([])));
 
@@ -1635,17 +1658,17 @@ describe("rendered app journeys", () => {
       audioCard(
         "99999999-9999-4999-8999-999999999992",
         "aaaaaaaa-9999-4aaa-8aaa-aaaaaaaaaaa2",
-        false,
+        true,
       ),
       audioCard(
         "99999999-9999-4999-8999-999999999993",
         "aaaaaaaa-9999-4aaa-8aaa-aaaaaaaaaaa3",
-        false,
+        true,
       ),
       audioCard(
         "99999999-9999-4999-8999-999999999994",
         "aaaaaaaa-9999-4aaa-8aaa-aaaaaaaaaaa4",
-        false,
+        true,
       ),
     ];
     let reviews = 0;
@@ -1683,7 +1706,7 @@ describe("rendered app journeys", () => {
 
     fireEvent.error(optionAudio[1]!);
     await user.click(await screen.findByRole("button", { name: "Karte überspringen" }));
-    expect(await screen.findByRole("heading", { name: "Gut gemacht!" })).toBeVisible();
+    expect(await screen.findByRole("progressbar", { name: "Karte 1 von 3" })).toBeVisible();
     expect(reviews).toBe(0);
   });
 

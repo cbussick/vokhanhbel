@@ -99,10 +99,7 @@ function ReviewRoute() {
   }, [t]);
 
   const begin = (selected: Card[], scope: ReviewScope = { kind: "all" }) => {
-    // The distractor pool is every Card the Learner has, not just the ones due today: VOK-15 draws
-    // wrong options from a Card's Thema and then the rest of its Sammlung, which is wider than the
-    // due queue.
-    reviewSession.startReviewSession(selected, cards.data ?? [], scope);
+    reviewSession.startReviewSession(selected, scope);
     window.setTimeout(() => void navigate({ to: "/review/session" }), 0);
   };
 
