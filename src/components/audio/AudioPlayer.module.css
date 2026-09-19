@@ -1,9 +1,15 @@
+.playerContainer {
+  container: audio-player / inline-size;
+  inline-size: min(100%, 24rem);
+  min-inline-size: 0;
+}
+
 .player {
   display: grid;
   grid-template-columns: 48px minmax(5rem, 1fr) auto;
   align-items: center;
   gap: var(--space-3);
-  inline-size: min(100%, 24rem);
+  inline-size: 100%;
   padding: var(--space-3);
   border: 0;
   border-radius: var(--space-3);
@@ -96,6 +102,32 @@
 .compact button {
   min-inline-size: 44px;
   min-block-size: 44px;
+}
+
+@container audio-player (inline-size < 13rem) {
+  .player,
+  .compact {
+    grid-template-columns: 48px minmax(0, 1fr);
+  }
+
+  .compact {
+    grid-template-columns: 44px minmax(0, 1fr);
+  }
+
+  .waveform {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+
+  .time {
+    grid-column: 2;
+    grid-row: 1;
+    justify-self: end;
+  }
+
+  .status {
+    grid-row: 3;
+  }
 }
 
 @keyframes player-loading {

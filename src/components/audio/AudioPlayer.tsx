@@ -160,70 +160,76 @@ export function AudioPlayer({
   const controlProps = { type: "button", "aria-describedby": describedBy } as const;
 
   return (
-    <div className={`${styles.player} ${compact ? styles.compact : ""}`}>
-      <audio
-        ref={elementRef}
-        preload="none"
-        onPlaying={() => {
-          setState("playing");
-          onAvailabilityChange?.(true);
-        }}
-        onPause={() => setState((value) => (value === "ended" ? value : "paused"))}
-        onTimeUpdate={(event) => setCurrentTime(event.currentTarget.currentTime * 1_000)}
-        onEnded={() => {
-          setState("ended");
-          endPlayback(participantRef.current);
-        }}
-        onError={() => {
-          setState("error");
-          onAvailabilityChange?.(false);
-          endPlayback(participantRef.current);
-        }}
-      />
-      {state === "loading" ? (
-        <button
-          {...controlProps}
-          aria-busy="true"
-          aria-disabled="true"
-          aria-label={`${label}: ${t("audio.loading")}`}
-        >
-          <span className={styles.spinner} aria-hidden="true" />
-        </button>
-      ) : state === "playing" ? (
-        <button {...controlProps} onClick={pause} aria-label={`${label}: ${t("audio.pause")}`}>
-          <FilledPlaybackIcon kind="pause" />
-        </button>
-      ) : state === "error" ? (
-        <button {...controlProps} onClick={retry} aria-label={`${label}: ${t("audio.retry")}`}>
-          <RotateCcw aria-hidden="true" />
-        </button>
-      ) : (
-        <button
-          {...controlProps}
-          onClick={() => void play()}
-          aria-label={`${label}: ${state === "ended" ? t("audio.replay") : t("audio.play")}`}
-        >
-          {state === "ended" ? (
+    <div className={styles.playerContainer}>
+      <div className={`${styles.player} ${compact ? styles.compact : ""}`}>
+        <audio
+          ref={elementRef}
+          preload="none"
+          onPlaying={() => {
+            setState("playing");
+            onAvailabilityChange?.(true);
+          }}
+          onPause={() => setState((value) => (value === "ended" ? value : "paused"))}
+          onTimeUpdate={(event) => setCurrentTime(event.currentTarget.currentTime * 1_000)}
+          onEnded={() => {
+            setState("ended");
+            endPlayback(participantRef.current);
+          }}
+          onError={() => {
+            setState("error");
+            onAvailabilityChange?.(false);
+            endPlayback(participantRef.current);
+          }}
+        />
+        {state === "loading" ? (
+          <button
+            {...controlProps}
+            aria-busy="true"
+            aria-disabled="true"
+            aria-label={`${label}: ${t("audio.loading")}`}
+          >
+            <span className={styles.spinner} aria-hidden="true" />
+          </button>
+        ) : state === "playing" ? (
+          <button {...controlProps} onClick={pause} aria-label={`${label}: ${t("audio.pause")}`}>
+            <FilledPlaybackIcon kind="pause" />
+          </button>
+        ) : state === "error" ? (
+          <button {...controlProps} onClick={retry} aria-label={`${label}: ${t("audio.retry")}`}>
             <RotateCcw aria-hidden="true" />
-          ) : (
-            <FilledPlaybackIcon kind="play" />
-          )}
-        </button>
-      )}
-      <Waveform progress={(currentTime / audio.durationMs) * 100} />
-      <progress
-        className={styles.progress}
-        aria-label={`${label}: ${t("audio.progress")}`}
-        value={Math.min(currentTime, audio.durationMs)}
-        max={audio.durationMs}
-      />
-      <span className={styles.time}>{formatAudioDuration(audio.durationMs)}</span>
-      <span
-        className={state === "error" ? styles.status : styles.visuallyHidden}
-        aria-live="polite"
-      >
-        {state === "loading" ? t("audio.loading") : state === "error" ? t("audio.unavailable") : ""}
-      </span>
+          </button>
+        ) : (
+          <button
+            {...controlProps}
+            onClick={() => void play()}
+            aria-label={`${label}: ${state === "ended" ? t("audio.replay") : t("audio.play")}`}
+          >
+            {state === "ended" ? (
+              <RotateCcw aria-hidden="true" />
+            ) : (
+              <FilledPlaybackIcon kind="play" />
+            )}
+          </button>
+        )}
+        <Waveform progress={(currentTime / audio.durationMs) * 100} />
+        <progress
+          className={styles.progress}
+          aria-label={`${label}: ${t("audio.progress")}`}
+          value={Math.min(currentTime, audio.durationMs)}
+          max={audio.durationMs}
+        />
+        <span className={styles.time}>{formatAudioDuration(audio.durationMs)}</span>
+        <span
+          className={state === "error" ? styles.status : styles.visuallyHidden}
+          aria-live="polite"
+        >
+          {state === "loading"
+            ? t("audio.loading")
+            : state === "error"
+              ? t("audio.unavailable")
+              : ""}
+        </span>
+      </div>
     </div>
   );
 }

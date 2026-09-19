@@ -1301,11 +1301,13 @@ for (const viewport of [
     await expect(page.getByRole("heading", { name: "Vietnamesisch" })).toBeVisible();
     await expect(page).toHaveScreenshot(`collection-cards-${viewport.name}.png`, {
       animations: "disabled",
+      maxDiffPixelRatio: 0.01,
     });
     await page.getByRole("button", { name: "Thema hinzufügen" }).click();
     await expect(page.getByRole("heading", { name: "Thema erstellen" })).toBeVisible();
     await expect(page).toHaveScreenshot(`topic-editor-${viewport.name}.png`, {
       animations: "disabled",
+      maxDiffPixelRatio: 0.01,
     });
     await page
       .getByRole("button", { name: viewport.name === "mobile" ? "Zurück" : "Schließen" })
@@ -1314,11 +1316,13 @@ for (const viewport of [
     await expect(page.getByRole("heading", { name: "Karte erstellen" })).toBeVisible();
     await expect(page).toHaveScreenshot(`card-editor-${viewport.name}.png`, {
       animations: "disabled",
+      maxDiffPixelRatio: 0.01,
     });
     await page.getByRole("combobox", { name: "Sammlung" }).click();
     await expect(page.getByRole("listbox")).toBeVisible();
     await expect(page).toHaveScreenshot(`card-editor-collection-open-${viewport.name}.png`, {
       animations: "disabled",
+      maxDiffPixelRatio: 0.01,
     });
     await page.getByRole("combobox", { name: "Sammlung" }).press("Escape");
     await page
@@ -1652,6 +1656,42 @@ for (const viewport of [
 
     await expect(page.getByText("Richtig!")).toBeHidden();
     await expect(page.getByText("Leider falsch.")).toBeHidden();
+  });
+
+  test(`keeps Swipe Card audio inside its player at ${viewport.name} width`, async ({
+    page,
+    browserName,
+  }) => {
+    test.skip(browserName !== "chromium", "One browser owns the cross-platform visual baselines.");
+    await page.setViewportSize(viewport);
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    const state = await installMockApi(page);
+
+    state.cards = [
+      createCard(
+        { text: "der Apfel", audio: audio("88888888-8888-4888-8888-888888888899") },
+        "the apple",
+      ),
+      createCard("die Birne", "das Haus"),
+      createCard("der Pfirsich", "das Haus"),
+    ];
+    await page.goto("/review");
+    await page.getByRole("button", { name: "Review starten" }).click();
+
+    const player = page.getByRole("button", { name: "Audio Vorderseite: Abspielen" }).locator("..");
+    const swipeCard = page
+      .getByText("der Apfel")
+      .locator("xpath=ancestor::div[contains(@class, 'swipeCard')]");
+    const [playerBox, cardBox] = await Promise.all([player.boundingBox(), swipeCard.boundingBox()]);
+
+    expect(playerBox).not.toBeNull();
+    expect(cardBox).not.toBeNull();
+    expect(playerBox!.x).toBeGreaterThanOrEqual(cardBox!.x);
+    expect(playerBox!.x + playerBox!.width).toBeLessThanOrEqual(cardBox!.x + cardBox!.width);
+    await expectNoSeriousAxeViolations(page);
+    await expect(page).toHaveScreenshot(`review-swipe-audio-${viewport.name}.png`, {
+      animations: "disabled",
+    });
   });
 
   test(`swipes a Card onto an answer accessibly, by tap and by keyboard, at ${viewport.name} width`, async ({
