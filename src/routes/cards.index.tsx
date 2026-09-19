@@ -76,11 +76,6 @@ function CollectionsRoute() {
           <>
             <ul className={`${styles.list} ${styles.collectionList}`}>
               {collectionList.map((collection) => {
-                const languageName = (language: string | null) =>
-                  language
-                    ? t(`collections.languages.${language}`, { defaultValue: language })
-                    : t("collections.noLanguage");
-
                 return (
                   <li key={collection.id}>
                     <Link
@@ -98,14 +93,6 @@ function CollectionsRoute() {
                           })}
                         </span>
                         <strong>{collection.name}</strong>
-                        <span className={styles.collectionLanguages}>
-                          <span>
-                            {t("cards.front")} · {languageName(collection.frontLanguage)}
-                          </span>
-                          <span>
-                            {t("cards.back")} · {languageName(collection.backLanguage)}
-                          </span>
-                        </span>
                       </span>
                       <span className={styles.collectionArrow} aria-hidden="true">
                         →
