@@ -322,13 +322,6 @@
   font-weight: 700;
 }
 
-.collectionLanguages {
-  display: grid;
-  gap: var(--space-1);
-  color: var(--color-text-secondary);
-  font-size: var(--font-sm);
-}
-
 .collectionArrow {
   align-self: center;
   padding-inline-end: var(--space-4);

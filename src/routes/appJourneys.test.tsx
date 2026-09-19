@@ -798,6 +798,14 @@ describe("rendered app journeys", () => {
     expect(screen.getByRole("button", { name: "Karte hinzufügen" })).toBeVisible();
   });
 
+  it("shows Collection cards without Face Language details", async () => {
+    await renderApp("/cards");
+
+    expect(await screen.findByRole("link", { name: /Vietnamesisch/ })).toBeVisible();
+    expect(screen.queryByText(/Vorderseite ·/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Rückseite ·/)).not.toBeInTheDocument();
+  });
+
   it("shows the shared empty state when there are no Collections", async () => {
     mockServer.use(http.get("/api/collections", () => HttpResponse.json([])));
 

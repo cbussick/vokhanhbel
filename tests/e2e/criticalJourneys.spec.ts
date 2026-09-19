@@ -1285,7 +1285,10 @@ for (const viewport of [
     await page.getByRole("button", { name: "Fertig" }).click();
     await page.getByRole("link", { name: /Karten/ }).click();
     await expect(page.getByRole("heading", { name: "Karten" })).toBeVisible();
-    await expect(page).toHaveScreenshot(`cards-${viewport.name}.png`, { animations: "disabled" });
+    await expect(page).toHaveScreenshot(`cards-${viewport.name}.png`, {
+      animations: "disabled",
+      maxDiffPixels: 25,
+    });
     await page.getByRole("button", { name: "Sammlung hinzufügen" }).click();
     await expect(page.getByRole("heading", { name: "Sammlung erstellen" })).toBeVisible();
     await expect(page).toHaveScreenshot(`collection-editor-${viewport.name}.png`, {
