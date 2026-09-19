@@ -86,7 +86,14 @@ export function SwipeExercise({
   };
 
   const handlePointerDown = (event: PointerEvent<HTMLDivElement>) => {
-    if (!interactive) return;
+    // An interactive control on the Card owns its pointer sequence. Capturing its pointer here
+    // retargets the eventual click to the Card in Chromium, so an AudioPlayer never receives it.
+    if (
+      !interactive ||
+      (event.target instanceof Element &&
+        event.target.closest("button, input, select, textarea, a"))
+    )
+      return;
 
     event.currentTarget.setPointerCapture(event.pointerId);
     setDragging(true);

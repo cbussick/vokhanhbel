@@ -1626,6 +1626,34 @@ for (const viewport of [
     await expect(continueButton).toBeFocused();
   });
 
+  test(`plays Card audio without starting a swipe at ${viewport.name} width`, async ({
+    page,
+    browserName,
+  }) => {
+    test.skip(browserName !== "chromium", "Chromium covers the pointer interaction regression.");
+    await page.setViewportSize(viewport);
+    const state = await installMockApi(page);
+    const audioId = "88888888-8888-4888-8888-888888888899";
+
+    state.cards = [
+      createCard({ text: "der Apfel", audio: audio(audioId) }, "the apple"),
+      createCard("die Birne", "das Haus"),
+      createCard("der Pfirsich", "das Haus"),
+    ];
+    await page.goto("/review");
+    await page.getByRole("button", { name: "Review starten" }).click();
+
+    const audioRequest = page.waitForRequest((request) =>
+      request.url().endsWith(`/api/audio/${audioId}`),
+    );
+
+    await page.getByRole("button", { name: "Audio Vorderseite: Abspielen" }).click();
+    await audioRequest;
+
+    await expect(page.getByText("Richtig!")).toBeHidden();
+    await expect(page.getByText("Leider falsch.")).toBeHidden();
+  });
+
   test(`swipes a Card onto an answer accessibly, by tap and by keyboard, at ${viewport.name} width`, async ({
     page,
     browserName,
