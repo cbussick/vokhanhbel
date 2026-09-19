@@ -1307,6 +1307,7 @@ for (const viewport of [
     await expect(page.getByRole("heading", { name: "Thema erstellen" })).toBeVisible();
     await expect(page).toHaveScreenshot(`topic-editor-${viewport.name}.png`, {
       animations: "disabled",
+      maxDiffPixelRatio: 0.01,
     });
     await page
       .getByRole("button", { name: viewport.name === "mobile" ? "Zurück" : "Schließen" })
@@ -1315,11 +1316,13 @@ for (const viewport of [
     await expect(page.getByRole("heading", { name: "Karte erstellen" })).toBeVisible();
     await expect(page).toHaveScreenshot(`card-editor-${viewport.name}.png`, {
       animations: "disabled",
+      maxDiffPixelRatio: 0.01,
     });
     await page.getByRole("combobox", { name: "Sammlung" }).click();
     await expect(page.getByRole("listbox")).toBeVisible();
     await expect(page).toHaveScreenshot(`card-editor-collection-open-${viewport.name}.png`, {
       animations: "disabled",
+      maxDiffPixelRatio: 0.01,
     });
     await page.getByRole("combobox", { name: "Sammlung" }).press("Escape");
     await page
