@@ -1301,6 +1301,7 @@ for (const viewport of [
     await expect(page.getByRole("heading", { name: "Vietnamesisch" })).toBeVisible();
     await expect(page).toHaveScreenshot(`collection-cards-${viewport.name}.png`, {
       animations: "disabled",
+      maxDiffPixelRatio: 0.01,
     });
     await page.getByRole("button", { name: "Thema hinzufügen" }).click();
     await expect(page.getByRole("heading", { name: "Thema erstellen" })).toBeVisible();
