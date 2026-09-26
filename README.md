@@ -12,6 +12,9 @@ This README is the entry point to the project's canonical documentation.
 
 ## Project guides
 
+- [Design system and Storybook](docs/design-system.md) — live tokens, component states, and design
+  inconsistencies to review. Run `npm run storybook` to browse the catalog.
+
 - [Architecture decisions](docs/adr/README.md) — accepted technical and product decisions.
 - [Deployment strategy](docs/deployment-strategy.md) — environment separation, release order, and
   rollback strategy.
