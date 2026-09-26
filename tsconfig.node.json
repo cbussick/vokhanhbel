@@ -27,6 +27,7 @@
     "vite.config.ts",
     "vitest.database.config.ts",
     "playwright.config.ts",
+    "playwright.storybook.config.ts",
     "drizzle.config.ts"
   ]
 }

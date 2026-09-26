@@ -1,6 +1,7 @@
 node_modules/
 .worktrees/
 dist/
+storybook-static/
 coverage/
 playwright-report/
 test-results/
