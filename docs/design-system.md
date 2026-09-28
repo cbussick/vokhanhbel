@@ -1,8 +1,9 @@
 # Design system and Storybook (VOK-32)
 
 The current app is the design system. Storybook catalogs it; it does not introduce a new visual
-language, UI package, or token build pipeline. Production component markup, CSS, and token values
-are unchanged by this ticket.
+language, UI package, or token build pipeline. Production rendered markup, CSS, and token values
+are preserved. The unchanged plain plus glyph was extracted from the route files as AddActionIcon
+so app buttons and stories import the same icon; the framed selector AddIcon stays separate.
 
 ## Run and verify
 
@@ -61,7 +62,8 @@ artwork to semantic UI colors, or map white foregrounds to a token whose meaning
   pretend a shared text Button already exists.
 - **Screens:** AppShell variants; Card/Collection pages with real tiles, rows and detail content;
   review overview; points/statistics; flip, matching, multiple-choice and swipe Exercises; summary.
-- **Composition-only coverage:** AddIcon is exercised by IconButton; EmptyCardsIcon and
+- **Composition-only coverage:** AddActionIcon is exercised by IconButton, and the framed AddIcon
+  by CollectionSelect/TopicSelect; EmptyCardsIcon and
   EmptyCollectionsIcon by EmptyState; VisualCardFace by CardFace; ListboxRoot/ListboxOption by all
   selects; OptionOutcome by review options; ExerciseScreen by all four Exercises. Their private
   internals are not exported just for Storybook.
@@ -96,6 +98,9 @@ The detailed, source-linked findings are maintained in `src/storybook/audit.ts` 
 7. Disabled and aria-disabled states have intentionally different interaction semantics; contrast
    must be assessed on real pairings. White on success green is not a suitable normal-text pairing.
 8. Artwork colors are separate from semantic UI colors.
+9. The generically named AddIcon is actually a framed select-option icon, not the plain action
+   glyph. Stories must match the app's slot content, not just import the same button. A browser
+   regression compares icon background, dimensions, alignment and stroke against the real app page.
 
 ## Adding stories
 

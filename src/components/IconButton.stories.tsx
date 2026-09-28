@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { fn } from "storybook/test";
-import { AddIcon } from "./AddIcon";
+import { AddActionIcon as AddIcon } from "./AddActionIcon";
 import { IconButton } from "./IconButton";
 const meta = {
   title: "Components/IconButton",

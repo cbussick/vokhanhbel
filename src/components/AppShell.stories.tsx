@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { AddIcon } from "./AddIcon";
+import { AddActionIcon as AddIcon } from "./AddActionIcon";
 import { AppShell } from "./AppShell";
 import { CollectionIcon } from "./CollectionIcon";
 import { EmptyState } from "./EmptyState";

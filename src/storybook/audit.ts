@@ -1,5 +1,14 @@
 export const findings = [
   {
+    title: "Add icons have different, context-specific treatments",
+    sources:
+      "src/components/AddActionIcon.tsx; src/components/AddIcon.tsx; src/components/CollectionIcon.module.css",
+    observation:
+      "Action buttons use the unframed AddActionIcon glyph. AddIcon is a framed create-option symbol for CollectionSelect and TopicSelect. Its generic name hides that distinction: using it inside IconButton adds a white box and overflows the button's icon slot. The initial Storybook examples made exactly this mistake; the app and stories now import the same unchanged action glyph.",
+    decision:
+      "Keep the two treatments distinct. Consider renaming the framed AddIcon to reflect its select-option role; its existing appearance has not been changed.",
+  },
+  {
     title: "Text buttons do not share a component",
     sources:
       "src/components/Dialog.module.css; src/components/IconButton.module.css; src/routes/login.module.css; src/routes/review.module.css; src/components/ErrorScreen.module.css; src/components/review/reviewSession.module.css",
