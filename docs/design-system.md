@@ -1,9 +1,14 @@
 # Design system and Storybook (VOK-32)
 
 The current app is the design system. Storybook catalogs it; it does not introduce a new visual
-language, UI package, or token build pipeline. Production rendered markup, CSS, and token values
-are preserved. The unchanged plain plus glyph was extracted from the route files as AddActionIcon
+language, UI package, or token build pipeline. Production appearance and selection behavior are
+preserved. The unchanged plain plus glyph was extracted from the route files as AddActionIcon
 so app buttons and stories import the same icon; the framed selector AddIcon stays separate.
+LanguageSelect, CollectionSelect and TopicSelect now use the app's shared Select (see below).
+
+Do not change production UI to accommodate Storybook. App changes need their own app-level reason
+and approval; Storybook then imports and displays the result. Fixtures and providers supply data
+and context, not alternative controls, icons, or corrective component styles.
 
 ## Run and verify
 
@@ -54,7 +59,7 @@ artwork to semantic UI colors, or map white foregrounds to a token whose meaning
 
 - **Foundations:** live color swatches, foreground/background pairings, local literal colors,
   spacing bars, radius samples, font families/sizes/weights and Vietnamese/German samples.
-- **Components:** IconButton; Collection/Topic/Language selects; Dialog and Card/Collection/Topic
+- **Components:** IconButton; shared Select and Collection/Topic/Language compositions; Dialog and Card/Collection/Topic
   form dialogs; empty/error/loading/pending states; Collection/Topic icons; Tutopher; Tutor dialog;
   Clip player/input/generation; CardFace; review options/footer/Tutor action/audio-unavailable notice;
   connectivity states.
@@ -82,6 +87,38 @@ support reveal, swipe and multiple-choice selection. Matching permits local sele
 feedback but does not advance a fixed fixture. Form writes return disposable fixture responses,
 not a persisted in-memory application. Replay a story to reset it.
 
+## Shared Select in the app
+
+`src/components/Select.tsx` owns the trigger, menu, optional decorative icons, selection, trailing
+action, focus/keyboard handling and optional clipping escape. `Select.module.css` is the former
+CollectionSelect stylesheet, with unchanged visual rules. The icon slot adds no frame or artwork.
+The existing `useListbox`, `ListboxRoot` and `ListboxOption` remain internal interaction building blocks.
+
+- Single mode takes a value and calls `onChange(value)`. `undefined` means no selected option;
+  `null` can be an actual option (Face Language's “Keine Angabe”).
+- `multiple` takes an array and calls `onChange(values)` to toggle membership. Choosing closes the
+  menu; Tab only dismisses. The trigger keeps its placeholder. TopicSelect owns the removable chips,
+  rendered as children inside the same focus/pointer boundary and layout as before.
+- `action` is not a selected value and is excluded from typeahead. CollectionSelect and TopicSelect
+  supply their translated create action and the existing framed AddIcon.
+- Domain wrappers still own language/Collection/Topic options and icons. LanguageSelect preserves
+  unknown locales; the shared control knows nothing about the locale catalog or domain schemas.
+- `escapeClipping` retains LanguageSelect's existing top-layer positioning and non-popover fallback.
+
+The `keyboard` profiles deliberately preserve an existing inconsistency, rather than silently
+changing app behavior during extraction:
+
+| Composition      | Profile              | Additional keys                                              |
+| ---------------- | -------------------- | ------------------------------------------------------------ |
+| LanguageSelect   | `basic`              | None beyond arrows, Home/End, Enter/Space, Escape and Tab    |
+| TopicSelect      | `typeahead`          | Printable-character navigation; Tab never toggles membership |
+| CollectionSelect | `extended` (default) | Typeahead, PageUp/PageDown, Alt+ArrowUp confirmation         |
+
+All three wrappers are exercised by app tests and their existing stories. The Select stories import
+the same production control with the app's labels/icons; multiple selection with chips remains in
+TopicSelect's composition stories. Characterization tests cover the preserved domain behavior;
+browser checks cover touch scrolling, dialog clipping, creation flows and app screenshots.
+
 ## Reported differences — no automatic fixes
 
 The detailed, source-linked findings are maintained in `src/storybook/audit.ts` and rendered under
@@ -101,6 +138,8 @@ The detailed, source-linked findings are maintained in `src/storybook/audit.ts` 
 9. The generically named AddIcon is actually a framed select-option icon, not the plain action
    glyph. Stories must match the app's slot content, not just import the same button. A browser
    regression compares icon background, dimensions, alignment and stroke against the real app page.
+10. Select keyboard shortcuts differ between the three domain compositions. The shared control
+    preserves those profiles; deciding to align them is separate from extracting the control.
 
 ## Adding stories
 
@@ -126,6 +165,8 @@ manual keyboard, forced-colors, reduced-motion and assistive-technology review i
 
 ## Documentation sources
 
+- Select-only keyboard interaction: https://www.w3.org/WAI/ARIA/apg/patterns/combobox/examples/combobox-select-only/
+- Multiple-selection semantics: https://www.w3.org/WAI/ARIA/apg/patterns/listbox/
 - React/Vite framework: https://storybook.js.org/docs/get-started/frameworks/react-vite
 - Isolated Vite configuration: https://storybook.js.org/docs/builders/vite#override-the-default-configuration
 - Typed stories: https://storybook.js.org/docs/writing-stories/typescript

@@ -1,24 +1,23 @@
 import { expect, test } from "@playwright/test";
+import { openStory } from "./openStory.js";
 
 for (const component of ["cardformdialog", "collectionformdialog", "topicformdialog"]) {
   test(`${component}: saving is blocked and failure is visible`, async ({ page }) => {
-    await page.goto(`/iframe.html?id=components-${component}--saving&viewMode=story`);
+    await openStory(page, `components-${component}--saving`);
     await expect(page.getByRole("button", { name: "Wird gespeichert …" })).toBeDisabled();
-    await page.goto(`/iframe.html?id=components-${component}--save-failed&viewMode=story`);
+    await openStory(page, `components-${component}--save-failed`);
     await expect(page.getByRole("alert")).toBeVisible();
     await expect(page.getByRole("button", { name: "Speichern", exact: true })).toBeEnabled();
   });
 }
 
 test("pronunciation states are produced by mocked requests", async ({ page }) => {
-  await page.goto(
-    "/iframe.html?id=components-audio-pronunciationgenerator--generating&viewMode=story",
-  );
+  await openStory(page, "components-audio-pronunciationgenerator--generating");
   await expect(page.getByRole("button", { name: "Wird erzeugt …" })).toHaveAttribute(
     "aria-busy",
     "true",
   );
-  await page.goto("/iframe.html?id=components-audio-pronunciationgenerator--failed&viewMode=story");
+  await openStory(page, "components-audio-pronunciationgenerator--failed");
   await expect(page.getByRole("alert")).toContainText("Die Aussprache konnte nicht erzeugt werden");
 });
 

@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { expect, test } from "@playwright/test";
 import { z } from "zod";
+import { openStory } from "./openStory.js";
 
 const index = z
   .object({
@@ -13,13 +14,6 @@ const index = z
     JSON.parse(readFileSync(new URL("../../storybook-static/index.json", import.meta.url), "utf8")),
   );
 
-declare global {
-  interface Window {
-    /** Storybook 10's render lifecycle includes execution of the story's play function. */
-    __STORYBOOK_PREVIEW__?: { currentRender?: { phase?: string } };
-  }
-}
-
 for (const story of Object.values(index.entries).filter((entry) => entry.type === "story")) {
   test(`${story.title} / ${story.name}`, async ({ page }) => {
     const errors: string[] = [];
@@ -28,13 +22,7 @@ for (const story of Object.values(index.entries).filter((entry) => entry.type ==
       if (message.type() === "error" && !message.text().startsWith("Failed to load resource:"))
         errors.push(message.text());
     });
-    await page.goto(`/iframe.html?id=${story.id}&viewMode=story`);
-    await expect
-      // oxlint-disable-next-line no-underscore-dangle -- Storybook's pinned render lifecycle API
-      .poll(() => page.evaluate(() => window.__STORYBOOK_PREVIEW__?.currentRender?.phase), {
-        timeout: 20_000,
-      })
-      .toBe("finished");
+    await openStory(page, story.id);
     await expect(page.locator(".sb-errordisplay")).not.toBeVisible();
     await expect(page.locator("#storybook-root")).toBeAttached();
     await page.evaluate(() => document.fonts.ready);

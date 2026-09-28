@@ -1,5 +1,14 @@
 export const findings = [
   {
+    title: "Select keyboard shortcuts differ by composition",
+    sources:
+      "src/components/Select.tsx; src/components/LanguageSelect.tsx; src/components/CollectionSelect.tsx; src/components/TopicSelect.tsx",
+    observation:
+      "All three app selectors now use Select. Their existing keyboard profiles remain: Language has basic navigation, Topic adds typeahead, and Collection additionally supports paging and Alt+ArrowUp confirmation. Multiple selection only dismisses on Tab; it must not silently toggle a Topic.",
+    decision:
+      "Decide separately whether to align the optional shortcuts. The extraction preserves the app's behavior and appearance; Storybook displays the production control and domain compositions rather than driving their design.",
+  },
+  {
     title: "Add icons have different, context-specific treatments",
     sources:
       "src/components/AddActionIcon.tsx; src/components/AddIcon.tsx; src/components/CollectionIcon.module.css",
@@ -47,7 +56,7 @@ export const findings = [
   {
     title: "Spacing and control dimensions are mixed",
     sources:
-      "src/components/Dialog.module.css; src/components/LanguageSelect.tsx; src/components/review/reviewSession.module.css",
+      "src/components/Dialog.module.css; src/components/Select.tsx; src/components/review/reviewSession.module.css",
     observation:
       "The global spacing scale is widely used, but control heights, small geometry, popover gap (4px), borders, breakpoints and some local rem values are independent. Not every literal is an accidental spacing inconsistency.",
     decision:
