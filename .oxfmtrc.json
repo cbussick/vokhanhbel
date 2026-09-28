@@ -7,6 +7,8 @@
   "ignorePatterns": [
     "coverage",
     "dist",
+    "storybook-static",
+    ".storybook/public/mockServiceWorker.js",
     "drizzle/meta",
     "node_modules",
     "package-lock.json",

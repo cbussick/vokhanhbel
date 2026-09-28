@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Outlet, useNavigate, useRouterState } from "@tanstack/react-router";
 import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
+import { AddActionIcon as AddIcon } from "../components/AddActionIcon";
 import { AppShell } from "../components/AppShell";
 import { CollectionIcon } from "../components/CollectionIcon";
 import { DelayedSkeleton } from "../components/DelayedSkeleton";
@@ -21,14 +22,6 @@ import {
 import styles from "./review.module.css";
 
 export const Route = createFileRoute("/review")({ component: ReviewRouteProvider });
-
-function AddIcon() {
-  return (
-    <svg viewBox="0 0 24 24" focusable="false">
-      <path d="M12 5v14M5 12h14" />
-    </svg>
-  );
-}
 
 function byDueDate(left: Card, right: Card): number {
   return new Date(left.dueAt).getTime() - new Date(right.dueAt).getTime();

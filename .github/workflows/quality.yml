@@ -42,6 +42,9 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npx playwright install --with-deps chromium firefox webkit
+      # Unicode symbols outside the self-hosted font subsets use this Linux baseline fallback.
+      - name: Install visual-baseline fallback font
+        run: sudo apt-get install --yes --no-install-recommends fonts-dejavu-core
       - run: npm run format:check
       - run: npm run lint
       - run: npm run typecheck

@@ -27,6 +27,7 @@ export default defineConfig({
   ignorePatterns: [
     "**/*.js",
     "dist/**",
+    "storybook-static/**",
     "coverage/**",
     "src/routeTree.gen.ts",
     "tools/oxlint/anti-slop/**",

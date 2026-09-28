@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { AddActionIcon as AddIcon } from "../components/AddActionIcon";
 import { AppShell } from "../components/AppShell";
 import { CollectionFormDialog } from "../components/CollectionFormDialog";
 import { CollectionIcon } from "../components/CollectionIcon";
@@ -15,14 +16,6 @@ import { cardsQuery, collectionsQuery } from "../lib/queries";
 import styles from "./cards.module.css";
 
 export const Route = createFileRoute("/cards/")({ component: CollectionsRoute });
-
-function AddIcon() {
-  return (
-    <svg viewBox="0 0 24 24" focusable="false">
-      <path d="M12 5v14M5 12h14" />
-    </svg>
-  );
-}
 
 function countCardsByCollection(cards: Card[]): Map<string, number> {
   const counts = new Map<string, number>();

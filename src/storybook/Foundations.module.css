@@ -1,0 +1,74 @@
+.page {
+  max-inline-size: 72rem;
+  margin-inline: auto;
+  padding: var(--space-6);
+  display: grid;
+  gap: var(--space-6);
+}
+
+.page h1,
+.page h2 {
+  font-family: var(--font-display);
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr));
+  gap: var(--space-4);
+}
+
+.sample {
+  display: grid;
+  align-content: start;
+  gap: var(--space-2);
+  padding: var(--space-4);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-medium);
+  overflow-wrap: anywhere;
+  min-inline-size: 0;
+}
+
+.swatch {
+  block-size: 5rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-small);
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.bar {
+  block-size: var(--space-6);
+  background: var(--color-primary);
+}
+
+.radius {
+  inline-size: 8rem;
+  block-size: 5rem;
+  background: var(--color-primary);
+  border: 2px solid var(--color-primary-text);
+}
+
+.page code,
+.page small {
+  color: var(--color-text-secondary);
+}
+
+.page ul {
+  padding-inline-start: var(--space-6);
+}
+
+.page li + li {
+  margin-block-start: var(--space-3);
+}
+
+.field {
+  inline-size: min(100%, 28rem);
+  display: grid;
+  gap: var(--space-2);
+}

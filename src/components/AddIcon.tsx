@@ -1,5 +1,6 @@
 import styles from "./CollectionIcon.module.css";
 
+/** Framed create-option icon for CollectionSelect and TopicSelect, not an IconButton glyph. */
 export function AddIcon() {
   return (
     <span className={`${styles.frame} ${styles.compact}`} aria-hidden="true">

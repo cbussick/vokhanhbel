@@ -1,10 +1,6 @@
-import { useLayoutEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { collectionLanguages, offeredCollectionLanguage } from "../contracts/collection";
-import { ListboxOption } from "../shared/ui/ListboxOption";
-import { ListboxRoot } from "../shared/ui/ListboxRoot";
-import { useListbox } from "../shared/ui/useListbox";
-import styles from "./CollectionSelect.module.css";
+import { Select } from "./Select";
 
 /**
  * The unset option is the stored null, not a locale standing in for "not a language". Offering it
@@ -12,12 +8,8 @@ import styles from "./CollectionSelect.module.css";
  * yes/no step.
  */
 export function LanguageSelect({
-  id,
-  describedBy,
   value,
-  onChange,
-  disabled = false,
-  escapeClipping = false,
+  ...props
 }: {
   id: string;
   describedBy?: string;
@@ -27,123 +19,27 @@ export function LanguageSelect({
   escapeClipping?: boolean;
 }) {
   const { t } = useTranslation();
-  const supportsPopover = typeof CSS !== "undefined" && CSS.supports?.("selector(:popover-open)");
-  const floatsListbox = escapeClipping && supportsPopover;
-  const triggerRef = useRef<HTMLButtonElement>(null);
-  const listboxRef = useRef<HTMLUListElement>(null);
-
-  const options: (string | null)[] = [
+  const languages: (string | null)[] = [
     null,
     ...collectionLanguages,
-    // A Collection may carry a locale a newer build declared. Listing it keeps it selectable, and
-    // so keeps it intact, instead of silently swapping the Learner's declaration for another.
+    // A newer build may have declared this locale. Keep it selectable rather than rewriting it.
     ...(value !== null && !offeredCollectionLanguage(value) ? [value] : []),
   ];
-  const listbox = useListbox({
-    optionCount: options.length,
-    selectedIndex: options.indexOf(value),
-    onActivate: (index) => select(index),
-    disabled,
-  });
 
   const label = (language: string | null) => {
     if (language === null) return t("collections.noLanguage");
 
     const offered = offeredCollectionLanguage(language);
 
-    // A locale this build does not offer has no translated name, so it shows as the locale itself.
     return offered ? t(`collections.languages.${offered}`) : language;
   };
 
-  const select = (index: number) => {
-    const option = options[index];
-
-    if (option === undefined) return;
-
-    onChange(option);
-    listbox.setActiveIndex(index);
-    listbox.close();
-  };
-
-  useLayoutEffect(() => {
-    const menu = listboxRef.current;
-    const trigger = triggerRef.current;
-    if (!listbox.isOpen || !floatsListbox || !menu || !trigger || !menu.showPopover) return;
-
-    const position = () => {
-      const triggerBox = trigger.getBoundingClientRect();
-      const menuHeight = menu.getBoundingClientRect().height;
-      const gap = 4;
-      const top =
-        window.innerHeight - triggerBox.bottom >= menuHeight + gap
-          ? triggerBox.bottom + gap
-          : Math.max(gap, triggerBox.top - menuHeight - gap);
-
-      menu.style.setProperty("--listbox-top", `${top}px`);
-      menu.style.setProperty("--listbox-left", `${triggerBox.left}px`);
-      menu.style.setProperty("--listbox-width", `${triggerBox.width}px`);
-    };
-
-    menu.showPopover();
-    position();
-    const dialog = trigger.closest("dialog");
-    window.addEventListener("resize", position);
-    dialog?.addEventListener("scroll", position, { capture: true, passive: true });
-
-    return () => {
-      window.removeEventListener("resize", position);
-      dialog?.removeEventListener("scroll", position, { capture: true });
-      if (menu.matches(":popover-open")) menu.hidePopover();
-    };
-  }, [floatsListbox, listbox.isOpen]);
-
   return (
-    <ListboxRoot rootRef={listbox.rootRef} className={styles.root} onFocusLeave={listbox.close}>
-      <button
-        ref={triggerRef}
-        id={id}
-        type="button"
-        role="combobox"
-        className={styles.trigger}
-        aria-controls={listbox.listboxId}
-        aria-describedby={describedBy}
-        aria-expanded={listbox.isOpen}
-        aria-haspopup="listbox"
-        aria-activedescendant={
-          listbox.isOpen ? `${listbox.listboxId}-${listbox.activeIndex}` : undefined
-        }
-        disabled={disabled}
-        onClick={listbox.toggle}
-        onKeyDown={listbox.handleKeyDown}
-      >
-        <span className={styles.value}>{label(value)}</span>
-        <span className={styles.chevron} aria-hidden="true" />
-      </button>
-      {listbox.isOpen && (
-        <ul
-          ref={listboxRef}
-          id={listbox.listboxId}
-          role="listbox"
-          className={`${styles.listbox} ${escapeClipping ? styles.floatingListbox : ""}`}
-          aria-labelledby={id}
-          popover={floatsListbox ? "manual" : undefined}
-        >
-          {options.map((language, index) => (
-            <ListboxOption
-              optionRef={listbox.optionRef(index)}
-              id={`${listbox.listboxId}-${index}`}
-              key={language ?? "none"}
-              className={styles.option}
-              selected={language === value}
-              active={index === listbox.activeIndex}
-              onActivate={() => select(index)}
-              onActive={() => listbox.setActiveIndex(index)}
-            >
-              <span>{label(language)}</span>
-            </ListboxOption>
-          ))}
-        </ul>
-      )}
-    </ListboxRoot>
+    <Select
+      {...props}
+      value={value}
+      options={languages.map((language) => ({ value: language, label: label(language) }))}
+      keyboard="basic"
+    />
   );
 }

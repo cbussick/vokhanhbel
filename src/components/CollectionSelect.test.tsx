@@ -80,6 +80,58 @@ describe("CollectionSelect", () => {
     expect(screen.getByRole("button", { name: "Danach" })).toHaveFocus();
   });
 
+  it("preserves paging and Alt+ArrowUp confirmation", async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    const manyCollections = Array.from({ length: 25 }, (_, index) => ({
+      ...collections[0]!,
+      id: `collection-${index}`,
+      name: `Sammlung ${index}`,
+    }));
+    render(
+      <CollectionSelect
+        id="collection"
+        collections={manyCollections}
+        value="collection-0"
+        onChange={onChange}
+      />,
+    );
+
+    await user.click(screen.getByRole("combobox"));
+    await user.keyboard("{PageDown}{PageDown}{PageUp}");
+    expect(screen.getByRole("option", { name: "Sammlung 10" })).toHaveAttribute(
+      "data-active",
+      "true",
+    );
+    expect(onChange).not.toHaveBeenCalled();
+    await user.keyboard("{Alt>}{ArrowUp}{/Alt}");
+    expect(onChange).toHaveBeenCalledExactlyOnceWith("collection-10");
+    expect(screen.queryByRole("listbox")).not.toBeInTheDocument();
+  });
+
+  it("does not disable an empty selector when creating a Collection is possible", async () => {
+    const user = userEvent.setup();
+    const onCreate = vi.fn();
+    const onChange = vi.fn();
+    render(
+      <CollectionSelect
+        id="collection"
+        collections={[]}
+        value=""
+        onChange={onChange}
+        onCreate={onCreate}
+      />,
+    );
+    const trigger = screen.getByRole("combobox");
+
+    expect(trigger).toBeEnabled();
+    trigger.focus();
+    await user.keyboard("{ArrowDown}{Enter}");
+    expect(onCreate).toHaveBeenCalledOnce();
+    expect(onChange).not.toHaveBeenCalled();
+    expect(trigger).toHaveTextContent("");
+  });
+
   it("offers Sammlung erstellen without changing the selected Collection", async () => {
     const user = userEvent.setup();
     const onCreate = vi.fn();

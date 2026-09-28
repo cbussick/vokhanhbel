@@ -78,6 +78,28 @@ backup, and restore operations instead require `DATABASE_URL_UNPOOLED` so they b
 connection pool. `OPENAI_MODEL` is an optional deployment override: omit it to use the application
 default.
 
+## Browser and visual tests
+
+The screenshot references belong to Chromium on Linux. On Debian/Ubuntu, install the browser
+binaries and system dependencies, including the fallback font used by those references:
+
+```sh
+npx playwright install --with-deps chromium firefox webkit
+sudo apt-get install --yes --no-install-recommends fonts-dejavu-core
+npm run test:e2e
+```
+
+Playwright's browser dependencies do not guarantee DejaVu Sans is installed. The app's self-hosted
+font subsets do not include every symbol: the Collection link's `→` (U+2192) uses the system
+fallback. Without DejaVu Sans, this machine chose WenQuanYi Zen Hei, producing a repeatable
+19-pixel difference behind the tablet Collection dialog. Installing the missing font made the
+existing reference pass without changing application code, images, or comparison tolerances.
+The Quality workflow installs this dependency explicitly rather than relying on the runner image.
+
+When investigating a symbol-only mismatch, check `fc-match system-ui` and the browser's rendered
+font before updating a reference. The Linux baseline environment uses DejaVu Sans. Fonts and
+browser versions are part of the test environment, not a reason to restyle production components.
+
 ## Preview migration
 
 Preview uses a separate Neon database branch. Copy the preview migration template to its ignored

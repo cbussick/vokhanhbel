@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link, Outlet, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { AddActionIcon as AddIcon } from "../components/AddActionIcon";
 import { AppShell } from "../components/AppShell";
 import { AudioPlayer, formatAudioDuration } from "../components/audio/AudioPlayer";
 import { CardFormDialog } from "../components/CardFormDialog";
@@ -18,14 +19,6 @@ import { cardsQuery, collectionsQuery, topicsQuery } from "../lib/queries";
 import styles from "./cards.module.css";
 
 export const Route = createFileRoute("/cards/$collectionId")({ component: CollectionCardsRoute });
-
-function AddIcon() {
-  return (
-    <svg viewBox="0 0 24 24" focusable="false">
-      <path d="M12 5v14M5 12h14" />
-    </svg>
-  );
-}
 
 function EditIcon() {
   return (

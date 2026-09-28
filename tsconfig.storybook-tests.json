@@ -1,0 +1,11 @@
+{
+  // Browser-evaluated tests need DOM globals; API/database tests must retain Node's fetch types.
+  "extends": "./tsconfig.node.json",
+  "compilerOptions": {
+    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.storybook-tests.tsbuildinfo",
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
+    "types": ["node"]
+  },
+  "include": ["tests/storybook"],
+  "exclude": []
+}
