@@ -6,7 +6,7 @@ This README is the entry point to the project's canonical documentation.
 
 ## Start here
 
-- [Domain context](CONTEXT.md) — product purpose and canonical vocabulary.
+- [Domain glossary](GLOSSARY.md) — product purpose and canonical vocabulary.
 - [Local development and operations](docs/operations.md) — environment setup, database migrations,
   backups, and restore rehearsals.
 
