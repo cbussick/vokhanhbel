@@ -64,7 +64,7 @@ const lastGroupedExerciseKindStorageKey = "review.lastGroupedExerciseKind";
 /**
  * The grouped Exercise kind (matching or Swipe) the most recently *planned* Session used, read from
  * `localStorage` so it survives across Sessions the way the Review Session itself deliberately does
- * not (it's client-side and non-persisted — see CONTEXT.md). `planExercises` stays pure and takes
+ * not (it's client-side and non-persisted — see GLOSSARY.md). `planExercises` stays pure and takes
  * this as a plain argument rather than reaching for storage itself; this is the one place that reads
  * it, at the call site in `ReviewSessionContext`. Undefined the first time the Learner ever reviews,
  * or if storage is unavailable — the planner falls back to its original matching-first order either
