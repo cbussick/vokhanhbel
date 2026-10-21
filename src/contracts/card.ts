@@ -39,14 +39,12 @@ const nullableCardTextSchema = z.union([
 export const createCardFaceInputSchema = z
   .object({ text: nullableCardTextSchema, audioId: uuidSchema.nullable() })
   .refine((face) => face.text !== null || face.audioId !== null, { message: "empty-face" });
-export type CreateCardFaceInput = z.infer<typeof createCardFaceInputSchema>;
 
 export const updateCardFaceInputSchema = z
   .object({ text: nullableCardTextSchema.optional(), audioId: uuidSchema.nullable().optional() })
   .refine((face) => face.text !== undefined || face.audioId !== undefined, {
     message: "empty-face-update",
   });
-export type UpdateCardFaceInput = z.infer<typeof updateCardFaceInputSchema>;
 
 const structuredCardSchema = z.object({
   id: uuidSchema,

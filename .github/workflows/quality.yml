@@ -45,6 +45,8 @@ jobs:
       - run: npm run format:check
       - run: npm run lint
       - run: npm run typecheck
+      - run: npm run knip
+      - run: npm run knip:production
       - run: npm test
       - run: npm run test:db
       - run: npm run build

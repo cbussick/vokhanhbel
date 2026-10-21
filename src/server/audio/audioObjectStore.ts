@@ -104,6 +104,7 @@ export class LocalAudioObjectStore implements AudioObjectStore {
   }
 }
 
+/** @internal Failure-injection test double; retained for storage compensation tests. */
 export class FailingAudioObjectStore implements AudioObjectStore {
   readonly delegate: InMemoryAudioObjectStore;
   readonly failures = new Set<keyof AudioObjectStore>();
@@ -309,6 +310,7 @@ export function getAudioObjectStore(): AudioObjectStore {
   return audioObjectStore;
 }
 
+/** @internal Test seam that replaces R2 with an isolated object store. */
 export function setAudioObjectStoreForTests(store: AudioObjectStore | undefined): void {
   audioObjectStore = store;
 }

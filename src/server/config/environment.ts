@@ -33,6 +33,7 @@ export function getServerEnvironment(): ServerEnvironment {
   return cachedEnvironment;
 }
 
+/** @internal Reset cached configuration between isolated test environments. */
 export function resetServerEnvironmentForTests(): void {
   cachedEnvironment = undefined;
 }

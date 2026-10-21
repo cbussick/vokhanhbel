@@ -7,6 +7,8 @@
     "node": "24.x"
   },
   "scripts": {
+    "knip": "knip",
+    "knip:production": "knip --production",
     "dev": "vite",
     "dev:full": "node --env-file-if-exists=.env.local --experimental-strip-types scripts/localDevelopment.ts app",
     "db:local:up": "node --experimental-strip-types scripts/localDevelopment.ts up",
@@ -73,6 +75,7 @@
     "babel-plugin-react-compiler": "^1.0.0",
     "drizzle-kit": "^0.31.10",
     "jsdom": "^29.1.1",
+    "knip": "6.42.1",
     "msw": "^2.15.0",
     "oxfmt": "^0.64.0",
     "oxlint": "^1.79.0",

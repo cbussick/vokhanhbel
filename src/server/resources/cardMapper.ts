@@ -35,8 +35,6 @@ const joinedCardRowSchema = z.object({
   backAudio: audioRowSchema,
 });
 
-export type CardRow = z.input<typeof joinedCardRowSchema>;
-
 /**
  * A joined audio row is its metadata plus the deletion the join cannot filter, so dropping that one
  * column is the whole conversion. Reading it back through the metadata schema drops it without
