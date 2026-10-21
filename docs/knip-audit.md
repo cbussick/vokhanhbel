@@ -47,7 +47,39 @@ only in production:
 Normal mode still checks their test consumers. No broad export/file exceptions
 or issue-count/exit-code suppression is used.
 
-## Verification and limitations
+## Seroval security follow-up
+
+The production audit initially failed with Seroval 1.5.5, reached through
+`@tanstack/react-router@1.170.18 -> @tanstack/router-core@1.171.15 -> seroval`.
+The development Router plugin/generator shares the same core. Router Core requests
+`seroval@^1.5.4`; `seroval-plugins@1.5.5` accepts the peer range `seroval@^1.0`.
+There is only one installed Seroval version.
+
+- [GHSA-p6vx-979v-rg4c](https://github.com/advisories/GHSA-p6vx-979v-rg4c):
+  critical unintended plugin-callable invocation through Promise thenable
+  assimilation in `fromJSON()`. GitHub's reviewed advisory identifies 1.6.2 as
+  the first patched version; the upstream fix guards deserialized thenables.
+- [GHSA-jp82-f5mq-hwhp](https://github.com/advisories/GHSA-jp82-f5mq-hwhp):
+  high-severity memory/CPU exhaustion from unchecked TypedArray input/length in
+  JSON deserialization. Versions through 1.6.2 are affected; 1.6.3 is patched.
+
+The lockfile now selects **1.6.3**, the smallest published release patched for
+both advisories and compatible with the existing dependency/peer ranges. Only
+Seroval's version, registry tarball URL, and registry-provided integrity change.
+No direct dependency, override, audit suppression, or unrelated security upgrade
+is needed. Application code does not directly call Seroval's deserializers; the
+existing production audit gate is the regression check for this dependency
+finding, while Router compatibility is covered by the build and browser journeys.
+
+The broader audit includes development tools and remains failing: **64 findings
+(1 low, 13 moderate, 47 high, 3 critical)**. Comparing JSON audit reports against
+`f710cd5` shows the sole removed entry is Seroval (65 findings before); every
+remaining entry is unchanged. These include Vercel tooling, Vitest, Vite,
+Stylelint, and Oxfmt dependencies. They are not suppressed or treated as passing;
+remediation requires a separate scoped dependency review. The committed Quality
+workflow's production-only audit policy is unchanged.
+
+## Original integration verification (superseded by follow-up below)
 
 - `npm run knip`, `npm run knip:production`: pass, no findings.
 - Temporary `src/domain/knipProbe.ts` imported only by a colocated test: normal
@@ -75,3 +107,27 @@ Installs and heavy checks used `/tmp/fernblick-knip-heavy.lock`. No live servers
 paid evaluations, deployments, or migrations were run. Task-created dependencies
 and generated build outputs were removed after verification; existing main and
 other worktree files were preserved.
+
+## Security follow-up verification
+
+- `npm ci --no-audit --no-fund` and `npm ls seroval seroval-plugins`: pass;
+  installed Seroval is 1.6.3 with compatible dependency and peer ranges.
+- `npm audit --omit=dev --audit-level=high`: pass, zero production findings.
+  Full `npm audit` still reports the 64 unchanged development-tool findings above.
+- Formatting, lint, typecheck, both Knip modes, production build and license
+  checks: pass.
+- `npm test -- --maxWorkers=2`: 258 tests pass across 30 files.
+- `npm run test:local-development`: its integration test passes.
+- `npm run test:db`: 30 tests pass against a dedicated temporary PostgreSQL
+  container. That container and its volumes were removed afterward.
+- Browser checks use an ignored local config with an explicit repository working
+  directory and isolated preview port 44173, preserving the existing server on
+  port 4173. An initial temporary-config attempt served the wrong directory and
+  timed out; fixing that config resolved the environment failure.
+- `npm run test:e2e -- --config .scratch/knip-verification/playwright.config.ts --workers=2 --max-failures=3`:
+  89 passed, 46 skipped by existing browser-specific test annotations, no failures.
+  No application tests, assertions, skips or timeouts were changed.
+
+Normal Git transport over the existing SSH remote is still blocked by the locked
+SSH key. The branch remains local and unmerged; remote CI and required PR reviews
+have not been satisfied. No deployment or production migration was performed.
