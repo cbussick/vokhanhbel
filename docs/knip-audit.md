@@ -63,9 +63,12 @@ There is only one installed Seroval version.
   high-severity memory/CPU exhaustion from unchecked TypedArray input/length in
   JSON deserialization. Versions through 1.6.2 are affected; 1.6.3 is patched.
 
-The lockfile now selects **1.6.3**, the smallest published release patched for
-both advisories and compatible with the existing dependency/peer ranges. Only
-Seroval's version, registry tarball URL, and registry-provided integrity change.
+The original follow-up selected **1.6.3**, the smallest published release patched
+for both advisories and compatible with the existing dependency/peer ranges.
+Only Seroval's version, registry tarball URL, and registry-provided integrity
+changed in that patch. Before integration, newer main independently selected
+**1.7.0**. The combined branch preserves that exact newer entry, including its
+Node requirement, rather than downgrading it. Main's Node 24.22.1 floor is retained.
 No direct dependency, override, audit suppression, or unrelated security upgrade
 is needed. Application code does not directly call Seroval's deserializers; the
 existing production audit gate is the regression check for this dependency
@@ -128,6 +131,7 @@ other worktree files were preserved.
   89 passed, 46 skipped by existing browser-specific test annotations, no failures.
   No application tests, assertions, skips or timeouts were changed.
 
-Normal Git transport over the existing SSH remote is still blocked by the locked
-SSH key. The branch remains local and unmerged; remote CI and required PR reviews
-have not been satisfied. No deployment or production migration was performed.
+These results record the original security follow-up. Verification of the
+combined branch and integration status are tracked in
+[PR #64](https://github.com/cbussick/vokhanhbel/pull/64). Publishing uses ordinary
+Git over SSH. Verification did not run a production migration or manual deployment.
