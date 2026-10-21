@@ -74,13 +74,13 @@ is needed. Application code does not directly call Seroval's deserializers; the
 existing production audit gate is the regression check for this dependency
 finding, while Router compatibility is covered by the build and browser journeys.
 
-The broader audit includes development tools and remains failing: **64 findings
+At the Seroval integration, the full audit remained failing: **64 findings
 (1 low, 13 moderate, 47 high, 3 critical)**. Comparing JSON audit reports against
 `f710cd5` shows the sole removed entry is Seroval (65 findings before); every
-remaining entry is unchanged. These include Vercel tooling, Vitest, Vite,
-Stylelint, and Oxfmt dependencies. They are not suppressed or treated as passing;
-remediation requires a separate scoped dependency review. The committed Quality
-workflow's production-only audit policy is unchanged.
+remaining entry was unchanged. These included Vercel tooling, Vitest, Vite,
+Stylelint, and Oxfmt dependencies. They were not suppressed or treated as passing;
+remediation required a separate scoped dependency review (recorded below). The
+committed Quality workflow's production-only audit policy is unchanged.
 
 ## Original integration verification (superseded by follow-up below)
 
@@ -135,3 +135,109 @@ These results record the original security follow-up. Verification of the
 combined branch and integration status are tracked in
 [PR #64](https://github.com/cbussick/vokhanhbel/pull/64). Publishing uses ordinary
 Git over SSH. Verification did not run a production migration or manual deployment.
+
+## Range-compatible development security follow-up
+
+This separate maintenance follow-up starts from merged main `e81b378`. The earlier
+results above remain historical. Only `package.json`, `package-lock.json`, and this
+record change; application code, tests, assertions, skips, and the dedicated Docker
+integration CI step are unchanged.
+
+The manifest minima move from Vite `^8.1.4` to `^8.1.6` and from Vitest/coverage-v8
+`^4.1.10` to `^4.1.12`. The lock selects **Vite 8.1.6** and the **Vitest 4.1.12**
+family together, including `@vitest/mocker`. Ordinary npm installation and targeted
+`npm update --package-lock-only` resolve the following additional fixes within
+existing parent ranges:
+
+| Dependency               | Selected version | Existing parent range                                               |
+| ------------------------ | ---------------- | ------------------------------------------------------------------- |
+| browserslist             | 4.29.4           | Babel helper: `^4.24.0`                                             |
+| baseline-browser-mapping | 2.11.30          | Original Browserslist: `^2.10.42`                                   |
+| colord                   | 2.10.0           | Stylelint: `^2.9.3`                                                 |
+| fast-uri                 | 3.1.9            | Table's Ajv: `^3.0.1`                                               |
+| ip-address               | 10.7.4           | Socks: `^10.1.1`                                                    |
+| js-yaml                  | 4.3.2            | Cosmiconfig: `^4.1.0`                                               |
+| nanoid                   | 3.3.20           | Original PostCSS: `^3.3.12`                                         |
+| postcss                  | 8.5.31           | Original Vite: `^8.5.16`; Stylelint: `^8.5.15`                      |
+| postcss-selector-parser  | 7.1.7            | Stylelint: `^7.1.4`                                                 |
+| source-map-js            | 1.2.2            | PostCSS, CSS Tree, Magicast: `^1.2.1`                               |
+| brace-expansion          | 1.1.21 / 5.0.12  | Minimatch copies: `^1.1.7` / `^5.0.5`                               |
+| undici                   | 6.29.1 / 7.30.1  | Vercel Blob: `^6.23.0`; jsdom: `^7.25.0`; Vercel Sandbox: `^7.27.1` |
+
+Npm also refreshes compatible Vitest/Browserslist dependencies, including Chai,
+Picomatch, and browser-support data. All changed package entries are development-only;
+all production package entries and versions are unchanged. **Seroval 1.7.0** and
+**Node `>=24.22.1 <25`** remain unchanged. No override, fake integrity edit, forced
+audit fix, dependency removal, or audit suppression is used.
+
+### Audit delta and remaining blockers
+
+| Audit                    | Total | Critical | High | Moderate | Low |
+| ------------------------ | ----: | -------: | ---: | -------: | --: |
+| Full, before             |    64 |        3 |   47 |       13 |   1 |
+| Full, after              |    50 |        3 |   40 |        6 |   1 |
+| Production, before/after |     0 |        0 |    0 |        0 |   0 |
+
+These are npm vulnerable-package/metavulnerability counts, **not distinct CVEs**.
+Fourteen package entries leave the report: Vite, Vitest, coverage-v8, mocker,
+Browserslist, baseline-browser-mapping, colord, fast-uri, ip-address, nanoid,
+PostCSS, postcss-selector-parser, source-map-js, and brace-expansion. No new entry
+appears. The ranged js-yaml copy and two ranged Undici copies are also fixed, but
+those report entries remain because Vercel's pinned copies are still vulnerable.
+
+This is partial remediation. The full audit still fails with **50 findings**:
+
+- **Oxfmt 0.64.0** pins `tinypool@2.1.0`. Its fix needs an Oxfmt release outside
+  `^0.64.0`; that potentially breaking pre-1.0 change is not part of this work.
+- **Braces 3.0.3** still has no published fixed release. Its Micromatch/Fast-glob
+  chain keeps Stylelint and its configuration packages in the audit.
+- **Drizzle Kit 0.31.10** retains the legacy `@esbuild-kit/esm-loader` → core-utils
+  → `esbuild@~0.18.20` chain. The inspected stable 0.31.11 retains that loader;
+  a patch bump alone does not remediate it.
+- **Vercel 56.2.0** retains exact pins or incompatible ranges for vulnerable
+  Undici 5.x, js-yaml, Ajv, Minimatch, path-to-regexp, tar, smol-toml, Once,
+  Busboy, basic-ftp, and an affected Esbuild branch. The inspected in-range
+  56.5.0 still has blocked chains. A separate ordinary targeted tar resolution
+  probe made no lockfile change. No Vercel or major-tool upgrade is included.
+
+The three critical npm entries (Oxfmt, Tinypool, tar) remain. Audit presence alone
+does not establish application exploitability. The existing production-only CI
+audit gate and dedicated local-development integration step are unchanged; no
+finding is hidden by a policy change.
+
+### Development follow-up verification
+
+All checks use Node 24.22.1. Installs, builds, and browser runs are serialized with
+`flock /tmp/fernblick-knip-heavy.lock`; existing test budgets are unchanged.
+
+- `npm ci --no-audit --no-fund`, `npm ls --all`, and explicit version checks: pass.
+  Lockfile comparison confirms unchanged production entries and compatible Node
+  engines/ranges for the development updates.
+- `npm run format:check`, `npm run lint`, `npm run typecheck`, both Knip modes,
+  `npm run build`, and `npm run licenses`: pass.
+- `npm test -- --maxWorkers=2`: **257 tests in 29 files pass**. Existing jsdom
+  media-method warnings remain non-fatal. The Docker integration test stays in
+  its dedicated suite rather than the unit suite.
+- `npm test -- --coverage --maxWorkers=2`: the same **257 tests pass** with V8
+  coverage enabled, exercising the upgraded coverage provider without changing
+  coverage configuration or thresholds.
+- `npm run test:local-development`: **1 integration test passes**, including
+  isolated concurrent worktree databases and cleanup.
+- `npm run test:db -- --maxWorkers=2`: **30 tests in 2 files pass** against a
+  task-owned disposable PostgreSQL 17 container on the verified-free test port.
+  That container and its volumes are removed afterward. No live database is used.
+- `npm run test:e2e -- --config .scratch/knip-verification/playwright.config.ts --workers=2`:
+  **89 passed, 46 existing skips, no failures**, across Chromium, Firefox, and
+  WebKit. The ignored config has the explicit worktree cwd, isolated localhost
+  port 44183, no server reuse, and all three original browser projects.
+- The first browser run had 45 Chromium passes and 90 launch failures because
+  the shared cache lacked the required Firefox/WebKit revisions. Installing
+  matching revisions in a task-local cache resolved that environment failure;
+  the complete unchanged suite then passed. Shared browsers were not removed.
+- `npm audit --omit=dev --audit-level=high`: pass, zero findings. Full `npm audit`
+  deliberately remains failing with the 50 residual findings documented above.
+
+Audit JSON, dependency/range comparisons, test logs, the isolated browser config,
+and both initial/final browser artifacts are preserved under
+`/tmp/knip-dev-fixes.9OBwoW`. No production migration, deployment, paid evaluation,
+or publication is part of this work.
