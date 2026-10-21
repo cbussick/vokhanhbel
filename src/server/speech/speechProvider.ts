@@ -115,6 +115,7 @@ export function getSpeechProvider(): SpeechProvider {
   return speechProvider;
 }
 
+/** @internal Test seam that prevents tests from calling the paid speech API. */
 export function setSpeechProviderForTests(provider: SpeechProvider | undefined): void {
   speechProvider = provider;
 }

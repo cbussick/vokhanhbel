@@ -29,6 +29,9 @@ Copied `src/`, then removed:
   - `no-runtime-typeof` — its `allowInTypeGuards` option cleared none of our cases, which are
     feature detection and union discrimination rather than ad hoc narrowing.
 
+The Knip audit also removed `isPopulatedObjectExpression` from `shared/dictionary-types.ts`:
+none of the retained rules or other helpers calls it.
+
 Two further rules are switched off for test files in `oxlint.config.ts` rather than deleted, because
 they still apply to production code: `no-chained-type-assertions` and `no-known-value-widening`.
 

@@ -1,0 +1,26 @@
+{
+  "$schema": "https://unpkg.com/knip@6.42.1/schema.json",
+  // Vercel invokes these HTTP method exports by filename, including cron routes.
+  // Vite/TanStack discover browser routes; npm scripts discover operational CLIs.
+  "entry": [
+    "api/**/*.ts!",
+    "scripts/{hashPassword,migratePreview,migrateProduction,runMigrationContainer,verifyRestore}.ts!",
+    "drizzle.config.ts",
+  ],
+  "project": [
+    "src/**/*.{ts,tsx}!",
+    "api/**/*.ts!",
+    "scripts/**/*.ts",
+    "tools/**/*.ts",
+    "tests/**/*.ts",
+    "*.{ts,js}",
+    "!src/test/**!",
+    "!src/**/*.test-helper.ts!",
+  ],
+  // Read the config statically: importing it requires migration credentials.
+  // Its schema is already reachable through production database consumers.
+  "drizzle": false,
+  // localDevelopment.ts spawns this exact package's CLI through an absolute path.
+  "ignoreDependencies": ["vercel"],
+  "ignoreExportsUsedInFile": true,
+}
