@@ -4,6 +4,7 @@ import {
   databaseUrlFromPublishedPort,
   developmentEnvironment,
   localAudioDirectory,
+  vercelDevelopmentEnvironment,
 } from "./localDevelopment.js";
 
 describe("local development identity", () => {
@@ -36,6 +37,13 @@ describe("development command environments", () => {
       DATABASE_URL_UNPOOLED: databaseUrl,
       AUDIO_OBJECT_DIRECTORY: localAudioDirectory(process.cwd()),
     });
+  });
+
+  it("does not pass the migration-only URL to Vercel Local", () => {
+    const environment = vercelDevelopmentEnvironment(developmentEnvironment(databaseUrl, {}));
+
+    expect(environment.DATABASE_URL).toBe(databaseUrl);
+    expect(environment.DATABASE_URL_UNPOOLED).toBeUndefined();
   });
 
   it("keeps copied credentials out of the runtime without mutating the parent environment", () => {
