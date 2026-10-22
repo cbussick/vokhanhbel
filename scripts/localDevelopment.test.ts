@@ -4,7 +4,6 @@ import {
   databaseUrlFromPublishedPort,
   developmentEnvironment,
   localAudioDirectory,
-  vercelDevelopmentEnvironment,
 } from "./localDevelopment.js";
 
 describe("local development identity", () => {
@@ -39,11 +38,18 @@ describe("development command environments", () => {
     });
   });
 
-  it("does not pass the migration-only URL to Vercel Local", () => {
-    const environment = vercelDevelopmentEnvironment(developmentEnvironment(databaseUrl, {}));
+  it("keeps copied credentials out of the runtime without mutating the parent environment", () => {
+    const copied = {
+      DATABASE_URL: "postgresql://production.example.com/app",
+      AUDIO_OBJECT_DIRECTORY: "/shared/audio",
+    };
+    const environment = developmentEnvironment(databaseUrl, copied);
 
     expect(environment.DATABASE_URL).toBe(databaseUrl);
-    expect(environment.DATABASE_URL_UNPOOLED).toBeUndefined();
+    expect(environment.DATABASE_URL_UNPOOLED).toBe(databaseUrl);
+    expect(environment.AUDIO_OBJECT_DIRECTORY).toBe(localAudioDirectory(process.cwd()));
+    expect(copied.DATABASE_URL).toBe("postgresql://production.example.com/app");
+    expect(copied.AUDIO_OBJECT_DIRECTORY).toBe("/shared/audio");
   });
 });
 

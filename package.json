@@ -57,6 +57,7 @@
   "devDependencies": {
     "@axe-core/playwright": "^4.12.1",
     "@babel/core": "^7.29.7",
+    "@hono/node-server": "2.1.5",
     "@oxlint/plugins": "^1.79.0",
     "@playwright/test": "^1.61.1",
     "@rolldown/plugin-babel": "^0.2.3",
@@ -77,14 +78,19 @@
     "jsdom": "^29.1.1",
     "knip": "6.42.1",
     "msw": "^2.15.0",
-    "oxfmt": "^0.64.0",
+    "oxfmt": "^0.67.0",
     "oxlint": "^1.79.0",
     "oxlint-tsgolint": "^7.0.2001",
     "stylelint": "^17.14.0",
     "stylelint-config-standard": "^40.0.0",
     "typescript": "^7.0.2",
-    "vercel": "^56.2.0",
     "vite": "^8.1.6",
     "vitest": "^4.1.12"
+  },
+  "overrides": {
+    "@esbuild-kit/core-utils": {
+      "esbuild": "0.25.12"
+    },
+    "braces": "npm:@franciscosolis/braces@3.1.1"
   }
 }

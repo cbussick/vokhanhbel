@@ -3,6 +3,10 @@
 Knip **6.42.1** is pinned as a local devDependency. Run `npm run knip` and
 `npm run knip:production`; both pass and are included in the Quality workflow.
 
+The later [development-tool security follow-up](development-tool-security.md)
+addresses the 50 findings recorded below. The dated audit results remain here
+as history; the follow-up documents the replacements and full-audit CI gate.
+
 ## Scope and configuration
 
 - `knip.jsonc` declares `api/**/*.ts` as runtime entries: Vercel calls HTTP method
@@ -18,8 +22,8 @@ Knip **6.42.1** is pinned as a local devDependency. Run `npm run knip` and
   migration credentials. The config is instead a statically read normal entry;
   its schema is also reachable through runtime database imports. Neither audit
   needs credentials or runs migrations.
-- The only dependency exception is `vercel`: `scripts/localDevelopment.ts`
-  explicitly spawns `node_modules/vercel/dist/index.js` using an absolute path.
+- There are no dependency exceptions. The local development server now uses Vite
+  and a directly imported Node HTTP adapter rather than spawning the Vercel CLI.
 - `ignoreExportsUsedInFile` retains schemas and helpers with same-file callers.
   There are no nested packages/workspaces or externally published library APIs.
 
