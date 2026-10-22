@@ -53,4 +53,5 @@ jobs:
       - run: npm run build
       - run: npm run test:e2e
       - run: npm audit --omit=dev --audit-level=high
+      - run: npm audit --audit-level=low
       - run: npm run licenses
