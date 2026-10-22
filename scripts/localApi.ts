@@ -2,7 +2,7 @@ import { existsSync, globSync, realpathSync } from "node:fs";
 import { isAbsolute, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { getRequestListener } from "@hono/node-server";
-import type { Plugin, ViteDevServer } from "vite";
+import { normalizePath, type Plugin, type ViteDevServer } from "vite";
 import { z } from "zod";
 
 export interface DevelopmentDeployment {
@@ -29,7 +29,7 @@ const apiModuleSchema = z.object({
   OPTIONS: apiHandlerSchema,
 });
 const viteClientFiles = ["../client/client.mjs", "../client/env.mjs"].map((file) =>
-  fileURLToPath(new URL(file, import.meta.resolve("vite"))),
+  normalizePath(fileURLToPath(new URL(file, import.meta.resolve("vite")))),
 );
 const serverDirectories = ["api", "scripts", "src/server", "src/test", "tests", "tools"];
 
@@ -44,13 +44,20 @@ function isServerFile(file: string, root: string): boolean {
 }
 
 function browserFile(file: string, root: string): boolean {
-  if (viteClientFiles.includes(file) || isWithin(file, resolve(root, "node_modules/.vite/deps")))
+  const normalizedFile = normalizePath(file);
+  if (
+    viteClientFiles.includes(normalizedFile) ||
+    isWithin(file, resolve(root, "node_modules/.vite/deps"))
+  )
     return true;
-  if (isServerFile(file, root) || /(?:^|\/)\.[^/]|\.test\.[^/]+$/.test(relative(root, file)))
+  if (
+    isServerFile(file, root) ||
+    /(?:^|\/)\.[^/]|\.test\.[^/]+$/.test(normalizePath(relative(root, file)))
+  )
     return false;
 
   return (
-    file === resolve(root, "index.html") ||
+    normalizedFile === normalizePath(resolve(root, "index.html")) ||
     ["src", "public", "node_modules"].some((directory) => isWithin(file, resolve(root, directory)))
   );
 }
@@ -58,13 +65,16 @@ function browserFile(file: string, root: string): boolean {
 function apiRoutes(root: string): ApiRoute[] {
   return globSync("**/*.ts", { cwd: resolve(root, "api") })
     .map((file) => {
-      const segments = file.replace(/\.ts$/, "").split("/");
+      const segments = normalizePath(file).replace(/\.ts$/, "").split("/");
       if (segments.at(-1) === "index") segments.pop();
       if (!segments.every((segment) => /^(?:[\w-]+|\[\w+\])$/.test(segment))) {
         throw new Error("Unsupported local API entry point.");
       }
 
-      return { segments: ["api", ...segments], file: resolve(root, "api", file) };
+      return {
+        segments: ["api", ...segments],
+        file: normalizePath(resolve(root, "api", file)),
+      };
     })
     .sort((first, second) => {
       const dynamicCount = (route: ApiRoute) =>
@@ -229,7 +239,7 @@ export function localDevelopmentPlugin(
           .filter((entry) => entry.isFile())
           .map(
             (entry) =>
-              `/${relative(resolve(root, "public"), resolve(entry.parentPath, entry.name))}`,
+              `/${normalizePath(relative(resolve(root, "public"), resolve(entry.parentPath, entry.name)))}`,
           ),
       );
       const listener = getRequestListener(

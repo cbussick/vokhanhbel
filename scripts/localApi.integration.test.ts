@@ -94,6 +94,8 @@ beforeAll(() => {
   fixture(".env.local", "PRIVATE_CREDENTIAL_CANARY=never-send\n");
   fixture("Dockerfile", "PRIVATE_DOCKERFILE_CANARY");
   fixture("public/asset.svg", "<svg></svg>");
+  fixture("public/nested/asset.svg", "<svg>nested</svg>");
+  fixture("src/client/.private.ts", 'export const secret = "PRIVATE_CREDENTIAL_CANARY";');
   fixture(
     "api/explicit.ts",
     'export function HEAD() { return new Response(null, { status: 202, headers: { "X-Explicit": "yes" } }); }',
@@ -269,6 +271,7 @@ describe("local API real HTTP transport", () => {
     expect((await fetch(`${url}/@vite/client`)).status).toBe(200);
     expect((await fetch(`${url}/node_modules/vite/dist/client/env.mjs`)).status).toBe(200);
     expect(await (await fetch(`${url}/asset.svg`)).text()).toBe("<svg></svg>");
+    expect(await (await fetch(`${url}/nested/asset.svg`)).text()).toBe("<svg>nested</svg>");
     const socket = new WebSocket(
       `${url.replace("http:", "ws:")}/?token=${server.config.webSocketToken}`,
       "vite-hmr",
@@ -333,6 +336,7 @@ describe("local API real HTTP transport", () => {
     "/api/transport%00",
     "/src/server/private.ts",
     "/src/server/private.ts?raw",
+    "/src/client/.private.ts?raw",
     "/src/server/private.ts.map",
     "/src%2fserver/private.ts",
     "/@fs/etc/passwd",
