@@ -51,50 +51,8 @@ npm run dev:full
 ```
 
 The command prints the allocated loopback application URL and the Compose project, database port,
-and volume identity. It applies migrations **before** launching Vite on that strict loopback port.
-The launcher opts into `local-fullstack` mode; `npm run dev` stays frontend-only. No Vercel CLI,
-project link, cloud login, or production credentials are needed.
-
-### Local API adapter
-
-Development uses Vite's SSR module loader for the existing web-standard HTTP method exports in
-`api/`. A startup inventory resolves the committed static, `index`, and single-segment `[id]`
-entry points; requests never become import paths. API rewrites come from `vercel.json`, including
-Topics and pronunciation generation. Destination query parameters take precedence over caller
-parameters, while other parameters and the original dynamic pathname remain available to handlers.
-API misses return 404 rather than the SPA page; unsupported methods return 405 with `Allow`.
-HEAD uses an explicit handler or GET without sending its body.
-
-The dev-only `@hono/node-server` adapter owns HTTP/Fetch conversion, including multiple cookies,
-binary/multipart bodies, streaming, and disconnect cancellation. Vite invalidates backend modules
-on edits and sends a page reload; ordinary frontend HMR remains enabled. Adding an API file requires
-a restart to rebuild the inventory. This is a local adapter for the current routes, not a general
-Vercel emulator. Production stays Vercel Node Functions and Neon with the unchanged function budget.
-
-Both development modes bind only `127.0.0.1`, retain Vite's Host validation, and additionally require
-`127.0.0.1` or `localhost` with the allocated port. The browser boundary blocks `/@fs`, server source,
-operational scripts, secrets, arbitrary dependency paths, and server imports into the client graph.
-Only browser source, public assets, Vite's client, and optimized browser dependencies are served.
-Extensionless SPA URLs cannot serve repository files. Do not expose this development server through
-a public tunnel or reverse proxy.
-
-Security headers are derived from `vercel.json`. Development alone allows Vite's inline React
-refresh code, injected styles, and loopback HMR WebSockets; production and preview keep the committed
-CSP unchanged. Handler-level authentication and Origin/CSRF checks remain in place. Unhandled adapter
-failures return a generic 500 without source, stack traces, or credentials.
-
-Run the real HTTP/transport and worktree-isolation regressions with:
-
-```sh
-npm run test:local-development
-# Adapter/handler/browser-boundary tests only; no database or cloud service required:
-npm run test:local-development -- scripts/localApi.integration.test.ts
-```
-
-These Node tests have their own configuration and existing 60-second budget. They do not join the
-jsdom unit suite. Transport fixtures exercise real sockets and Vite SSR; application-handler checks
-exercise the committed handlers without database credentials. The full suite also retains the real
-Docker worktree database isolation test.
+and volume identity. `npm run dev:full` starts the complete application through Vercel's local mode
+without linking a Vercel project; `npm run dev` starts only Vite.
 
 Every checkout and worktree has a stable Compose project and persistent volume derived from its
 canonical path. Docker allocates loopback-only database ports, and the application also chooses an

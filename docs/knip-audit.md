@@ -4,8 +4,9 @@ Knip **6.42.1** is pinned as a local devDependency. Run `npm run knip` and
 `npm run knip:production`; both pass and are included in the Quality workflow.
 
 The later [development-tool security follow-up](development-tool-security.md)
-addresses the 50 findings recorded below. The dated audit results remain here
-as history; the follow-up documents the replacements and full-audit CI gate.
+records retained version fixes and the user-requested rollback of the Braces fork
+and custom local server. The dated results below remain historical; the current
+full audit has 45 findings and the original production-only CI audit gate is restored.
 
 ## Scope and configuration
 
@@ -22,8 +23,8 @@ as history; the follow-up documents the replacements and full-audit CI gate.
   migration credentials. The config is instead a statically read normal entry;
   its schema is also reachable through runtime database imports. Neither audit
   needs credentials or runs migrations.
-- There are no dependency exceptions. The local development server now uses Vite
-  and a directly imported Node HTTP adapter rather than spawning the Vercel CLI.
+- The sole dependency exception is `vercel`: `scripts/localDevelopment.ts`
+  invokes its CLI through an absolute path, which Knip does not infer.
 - `ignoreExportsUsedInFile` retains schemas and helpers with same-file callers.
   There are no nested packages/workspaces or externally published library APIs.
 
