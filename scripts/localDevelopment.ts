@@ -75,16 +75,6 @@ export function developmentEnvironment(
   };
 }
 
-export function vercelDevelopmentEnvironment(
-  migrationEnvironment: NodeJS.ProcessEnv,
-): NodeJS.ProcessEnv {
-  const runtimeEnvironment = { ...migrationEnvironment };
-  // Vercel Local's frontend proxy crashes when its runtime inherits the migration-only variable.
-  delete runtimeEnvironment.DATABASE_URL_UNPOOLED;
-
-  return runtimeEnvironment;
-}
-
 function runNode(script: string, args: string[], environment: NodeJS.ProcessEnv): Promise<number> {
   return new Promise((resolveExit, reject) => {
     const child = spawn(process.execPath, [script, ...args], {
@@ -136,12 +126,12 @@ async function runApplication(project: string, databaseUrl: string): Promise<num
   console.log(`Database: project=${project}, host=127.0.0.1, port=${new URL(databaseUrl).port}`);
   console.log(`Data volume: ${project}_vokhanhbel-postgres-data-v1\n`);
 
-  const vercel = resolve(repositoryRoot, "node_modules/vercel/dist/index.js");
+  const vite = resolve(repositoryRoot, "node_modules/vite/bin/vite.js");
 
   return runNode(
-    vercel,
-    ["dev", "--local", "--listen", `127.0.0.1:${port}`],
-    vercelDevelopmentEnvironment(environment),
+    vite,
+    ["--mode", "local-fullstack", "--host", "127.0.0.1", "--port", String(port), "--strictPort"],
+    environment,
   );
 }
 
