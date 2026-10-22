@@ -20,7 +20,5 @@
   // Read the config statically: importing it requires migration credentials.
   // Its schema is already reachable through production database consumers.
   "drizzle": false,
-  // localDevelopment.ts spawns this exact package's CLI through an absolute path.
-  "ignoreDependencies": ["vercel"],
   "ignoreExportsUsedInFile": true,
 }
