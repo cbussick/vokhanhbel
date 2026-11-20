@@ -208,12 +208,12 @@ describe("AudioInput microphone gate", () => {
     );
 
     fireEvent.click(screen.getByRole("button", { name: "Audio aufnehmen" }));
-    await act(async () => Promise.resolve());
+    await act(async () => {});
     expect(screen.getByRole("button", { name: "Aufnahme stoppen" })).toBeVisible();
     await act(async () => vi.advanceTimersByTime(100));
     expect(screen.getByText(/6\.9 s/)).toBeVisible();
     await act(async () => vi.advanceTimersByTime(6900));
-    await act(async () => Promise.resolve());
+    await act(async () => {});
     expect(onDraftChange).toHaveBeenCalledOnce();
     expect(stopTrack).toHaveBeenCalledOnce();
 
@@ -228,7 +228,7 @@ describe("AudioInput microphone gate", () => {
       />,
     );
     fireEvent.click(screen.getByRole("button", { name: "Neu aufnehmen" }));
-    await act(async () => Promise.resolve());
+    await act(async () => {});
     view.unmount();
     expect(RecorderStub.instances.at(-1)?.state).toBe("inactive");
     expect(stopTrack).toHaveBeenCalledTimes(2);
