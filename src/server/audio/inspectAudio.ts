@@ -106,9 +106,10 @@ function readEbmlNumber(
     return null;
   }
   let value = first & (mask - 1);
+  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
 
   for (let index = 1; index < length; index += 1) {
-    value = value * 256 + bytes[offset + index]!;
+    value = value * 256 + view.getUint8(offset + index);
   }
 
   return { value, length };
@@ -222,18 +223,19 @@ function inspectOgg(bytes: Uint8Array): Omit<InspectedAudio, "byteSize" | "check
 }
 
 function inspectMp3(bytes: Uint8Array): Omit<InspectedAudio, "byteSize" | "checksum"> | null {
+  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
   let offset = 0;
 
   if (ascii(bytes, 0, 3) === "ID3" && bytes.byteLength >= 10) {
     offset =
       10 +
-      ((bytes[6]! & 0x7f) << 21) +
-      ((bytes[7]! & 0x7f) << 14) +
-      ((bytes[8]! & 0x7f) << 7) +
-      (bytes[9]! & 0x7f);
+      ((view.getUint8(6) & 0x7f) << 21) +
+      ((view.getUint8(7) & 0x7f) << 14) +
+      ((view.getUint8(8) & 0x7f) << 7) +
+      (view.getUint8(9) & 0x7f);
   }
   while (offset + 4 <= bytes.byteLength) {
-    if (bytes[offset] === 0xff && (bytes[offset + 1]! & 0xe0) === 0xe0) {
+    if (bytes[offset] === 0xff && (view.getUint8(offset + 1) & 0xe0) === 0xe0) {
       break;
     }
     offset += 1;
@@ -241,18 +243,21 @@ function inspectMp3(bytes: Uint8Array): Omit<InspectedAudio, "byteSize" | "check
   if (offset + 4 > bytes.byteLength) {
     return null;
   }
-  const versionBits = (bytes[offset + 1]! >> 3) & 0x03;
-  const layerBits = (bytes[offset + 1]! >> 1) & 0x03;
-  const bitrateIndex = (bytes[offset + 2]! >> 4) & 0x0f;
-  const sampleRateIndex = (bytes[offset + 2]! >> 2) & 0x03;
+  const versionBits = (view.getUint8(offset + 1) >> 3) & 0x03;
+  const layerBits = (view.getUint8(offset + 1) >> 1) & 0x03;
+  const bitrateIndex = (view.getUint8(offset + 2) >> 4) & 0x0f;
+  const sampleRateIndex = (view.getUint8(offset + 2) >> 2) & 0x03;
   const mpeg1Bitrates = [0, 32, 40, 48, 56, 64, 80, 96, 112, 128, 160, 192, 224, 256, 320];
   const mpeg2Bitrates = [0, 8, 16, 24, 32, 40, 48, 56, 64, 80, 96, 112, 128, 144, 160];
 
   if (layerBits !== 1 || bitrateIndex === 0 || bitrateIndex === 15 || sampleRateIndex === 3) {
     throw audioProblem("MP3 ist beschädigt oder nicht unterstützt");
   }
-  const bitrate =
-    (versionBits === 3 ? mpeg1Bitrates[bitrateIndex] : mpeg2Bitrates[bitrateIndex])! * 1000;
+  const kilobits = versionBits === 3 ? mpeg1Bitrates[bitrateIndex] : mpeg2Bitrates[bitrateIndex];
+  if (kilobits === undefined || kilobits <= 0) {
+    throw audioProblem("MP3 ist beschädigt");
+  }
+  const bitrate = kilobits * 1000;
 
   return {
     contentType: "audio/mpeg",

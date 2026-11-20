@@ -82,7 +82,7 @@ describe("audio object store contract", () => {
         }),
       ),
     );
-    await expect(store.read("audio/example", { start: 1, end: 2 })).rejects.toThrow();
+    await expect(store.read("audio/example", { start: 1, end: 2 })).rejects.toThrow("Invalid string: must match pattern");
 
     vi.stubGlobal(
       "fetch",
@@ -96,7 +96,7 @@ describe("audio object store contract", () => {
         }),
       ),
     );
-    await expect(store.read("audio/example", { start: 1, end: 2 })).rejects.toThrow();
+    await expect(store.read("audio/example", { start: 1, end: 2 })).rejects.toThrow("Invalid R2 content range integers");
   });
 
   it("provides deterministic failures without losing the underlying object", async () => {
