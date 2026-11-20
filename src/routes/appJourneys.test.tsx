@@ -2,6 +2,7 @@ import { act, fireEvent, screen, waitFor, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
 import { describe, expect, it, vi } from "vitest";
+import { createCardInputSchema } from "../contracts/card";
 import type { CreateCardInput } from "../contracts/card";
 import type { CollectionInput } from "../contracts/collection";
 import type { PronunciationInput } from "../contracts/pronunciation";
@@ -243,10 +244,10 @@ describe("rendered app journeys", () => {
 
   it("creates a Card in the open Collection", async () => {
     const user = userEvent.setup();
-    let created: { collectionId?: string } = {};
+    let created: CreateCardInput | undefined;
     mockServer.use(
       http.post("/api/cards", async ({ request }) => {
-        created = (await request.json()) as { collectionId?: string };
+        created = createCardInputSchema.parse(await request.json());
 
         return HttpResponse.json({ ...testCards[1]!, front: "Schnee" }, { status: 201 });
       }),
@@ -258,7 +259,7 @@ describe("rendered app journeys", () => {
     await user.type(screen.getByLabelText("Rückseite Maximal 1.000 Zeichen"), "snow");
     await user.click(screen.getByRole("button", { name: "Speichern" }));
 
-    await waitFor(() => expect(created.collectionId).toBe(testCollections[1]!.id));
+    await waitFor(() => expect(created?.collectionId).toBe(testCollections[1]!.id));
   });
 
   it("creates a Topic from the Card dialog and keeps the Card dialog open", async () => {
