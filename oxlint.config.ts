@@ -245,7 +245,6 @@ export default defineConfig({
         "typescript/no-non-null-assertion": "off",
         "typescript/no-unsafe-type-assertion": "off",
         "typescript/return-await": "off",
-        "unicorn/catch-error-name": "off",
         "unicorn/consistent-function-scoping": "off",
         "unicorn/no-array-sort": "off",
         "unicorn/no-useless-promise-resolve-reject": "off",

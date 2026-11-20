@@ -107,11 +107,11 @@ export function CardFormDialog({
         );
 
         return saved;
-      } catch (value) {
+      } catch (error_) {
         await Promise.allSettled(
           uploadedIds.map((audioId) => apiRequest(apiPaths.audio(audioId), { method: "DELETE" })),
         );
-        throw value;
+        throw error_;
       }
     },
     onSuccess: async () => {

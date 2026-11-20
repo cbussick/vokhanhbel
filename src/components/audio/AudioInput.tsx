@@ -288,9 +288,9 @@ export function AudioInput({
         setRemainingMs(Math.max(0, maximumAudioDurationMs - (Date.now() - startedAtRef.current)));
       }, 100);
       timerRef.current = window.setTimeout(stopRecording, maximumAudioDurationMs);
-    } catch (value) {
+    } catch (error_) {
       stopTracks();
-      const name = value instanceof DOMException ? value.name : "";
+      const name = error_ instanceof DOMException ? error_.name : "";
       setRecordingState(name === "NotFoundError" ? "missing" : "denied");
     }
   };

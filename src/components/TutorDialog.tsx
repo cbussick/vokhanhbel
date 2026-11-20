@@ -221,11 +221,11 @@ export function TutorDialog({
       activeRequestRef.current = undefined;
       setAnnouncement(`${t("tutor.title")}: ${assistantReply}`);
       setRequest({ status: "idle" });
-    } catch (value) {
+    } catch (error_) {
       if (controller.signal.aborted) {return;}
 
       activeRequestRef.current = undefined;
-      const code = value instanceof Error ? value.message : "failed";
+      const code = error_ instanceof Error ? error_.message : "failed";
 
       updateMessages((items) => items.slice(0, historyLength));
       setQuestion(trimmed);
@@ -238,7 +238,7 @@ export function TutorDialog({
               ? t("tutor.dailyLimit")
               : t("tutor.error"),
         retryAfter:
-          value instanceof TutorRequestError && value.retryAfter ? Math.ceil(value.retryAfter) : 0,
+          error_ instanceof TutorRequestError && error_.retryAfter ? Math.ceil(error_.retryAfter) : 0,
       });
     }
   };
