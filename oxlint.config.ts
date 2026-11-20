@@ -235,7 +235,6 @@ export default defineConfig({
         "@nkzw/no-instanceof": "off",
         "import/no-namespace": "off",
         "no-console": "off",
-        "no-promise-executor-return": "off",
         "quality/no-array-filter-map": "off",
         "quality/no-chained-type-assertions": "off",
         "quality/no-conditional-empty-object-spread": "off",
