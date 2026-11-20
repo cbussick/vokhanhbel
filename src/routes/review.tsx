@@ -33,7 +33,7 @@ function byDueDate(left: Card, right: Card): number {
 
 /** Due Cards when there are any, otherwise the ones coming up soonest. */
 function selectQueue(cards: Array<Card>, now: number): Array<Card> {
-  const ordered = [...cards].sort(byDueDate);
+  const ordered = cards.toSorted(byDueDate);
   const due = ordered.filter((card) => new Date(card.dueAt).getTime() <= now);
 
   return due.length > 0 ? due : ordered;

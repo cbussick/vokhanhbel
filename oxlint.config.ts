@@ -244,7 +244,6 @@ export default defineConfig({
         "typescript/no-unsafe-type-assertion": "off",
         "typescript/return-await": "off",
         "unicorn/consistent-function-scoping": "off",
-        "unicorn/no-array-sort": "off",
         "unicorn/prefer-add-event-listener": "off",
         "unicorn/prefer-top-level-await": "off",
         "vitest/no-conditional-expect": "off",

@@ -37,7 +37,7 @@ export function useDueTime(dueTimes: Array<string>): number {
   const nextBoundary = dueTimes
     .map((dueAt) => new Date(dueAt).getTime())
     .filter((dueAt) => dueAt > now)
-    .sort((left, right) => left - right)[0];
+    .toSorted((left, right) => left - right)[0];
 
   useEffect(() => {
     const update = () => setNow(Date.now());

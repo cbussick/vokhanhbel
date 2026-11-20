@@ -317,7 +317,7 @@ describe("planExercises", () => {
     // Only one text sibling is available, so three distractors can't be found and this falls to
     // Swipe — whose single distractor is that text sibling, never one of the audio-backed Cards.
     expect(exercise.kind).toBe("swipe");
-    expect(exercise.options.map((option) => option.cardId).sort()).toEqual(["1", "4"]);
+    expect(exercise.options.map((option) => option.cardId).toSorted()).toEqual(["1", "4"]);
   });
 
   it("excludes deleted Cards from the distractor pool", () => {

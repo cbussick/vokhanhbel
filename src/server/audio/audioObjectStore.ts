@@ -209,7 +209,7 @@ export class R2AudioObjectStore implements AudioObjectStore {
       "x-amz-date": date,
       ...extraHeaders,
     });
-    const signedHeaderNames = [...headers.keys()].sort();
+    const signedHeaderNames = [...headers.keys()].toSorted();
     const canonicalHeaders = signedHeaderNames
       .map((name) => `${name.toLowerCase()}:${headers.get(name)!.trim()}\n`)
       .join("");

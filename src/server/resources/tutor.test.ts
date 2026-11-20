@@ -44,8 +44,8 @@ describe("Tutor provider boundary", () => {
     const body = await response.text();
 
     expect(requestRef()).toEqual({ ...exercise, input, signal: expect.any(AbortSignal) });
-    expect(Object.keys(requestRef() ?? {}).sort()).toEqual(
-      ["chosenOptionText", "exerciseCards", "input", "signal", "subjectCard"].sort(),
+    expect(Object.keys(requestRef() ?? {}).toSorted()).toEqual(
+      ["chosenOptionText", "exerciseCards", "input", "signal", "subjectCard"].toSorted(),
     );
     expect(body).toContain("event: delta");
     expect(body).toContain("Ein Apfel ist eine Frucht.");
