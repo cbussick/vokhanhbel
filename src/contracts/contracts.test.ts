@@ -34,7 +34,7 @@ describe("public contracts", () => {
       createCardInputSchema.safeParse({
         collectionId,
         front: { text: null, audioId: crypto.randomUUID() },
-        back: { text: "x".repeat(1_000), audioId: null },
+        back: { text: "x".repeat(1000), audioId: null },
       }).success,
     ).toBe(true);
   });

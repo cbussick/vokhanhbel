@@ -9,7 +9,7 @@ import { mockServer } from "./server";
 // — the assertion arriving before anything had rendered — which reads like a broken selector rather
 // than a slow one, and cost two wrong diagnoses before CI made it reproducible. `renderApp` already
 // hand-rolls a longer wait for the first render; this covers every navigation after it.
-configure({ asyncUtilTimeout: 5_000 });
+configure({ asyncUtilTimeout: 5000 });
 
 Object.defineProperty(window, "matchMedia", {
   writable: true,

@@ -92,7 +92,7 @@ export function TutorDialog({
             ? { ...state, retryAfter: Math.max(0, state.retryAfter - 1) }
             : state,
         ),
-      1_000,
+      1000,
     );
 
     return () => window.clearInterval(timer);

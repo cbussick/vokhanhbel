@@ -14,7 +14,7 @@ if (!testDatabaseName.endsWith("_test")) {
 async function isPostgresReachable(): Promise<boolean> {
   const client = new Client({
     connectionString: maintenanceDatabaseUrl,
-    connectionTimeoutMillis: 2_000,
+    connectionTimeoutMillis: 2000,
   });
 
   try {

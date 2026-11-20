@@ -135,7 +135,7 @@ describe("real API handler stack", () => {
     expect(uploadResponse.status).toBe(201);
     const audio = (await uploadResponse.json()) as { id: string; durationMs: number };
     // A recording was never told what to say, so there is nothing to disclose about it.
-    expect(audio).toMatchObject({ durationMs: 1_000, synthesizedText: null });
+    expect(audio).toMatchObject({ durationMs: 1000, synthesizedText: null });
     expect(JSON.stringify(audio)).not.toContain("objectKey");
     const recorded = await getPool().query<{ source: string; synthesized_text: string | null }>(
       "SELECT source, synthesized_text FROM audio_assets WHERE id=$1",
@@ -221,7 +221,7 @@ describe("real API handler stack", () => {
     const audio = (await generateResponse.json()) as { id: string };
     expect(audio).toMatchObject({
       contentType: "audio/mpeg",
-      durationMs: 1_000,
+      durationMs: 1000,
       byteSize: synthesizer.speech.bytes.byteLength,
       // Answered with the clip, so the Card form can say what it says without asking again.
       synthesizedText: "xin chào",

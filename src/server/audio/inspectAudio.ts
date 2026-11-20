@@ -44,7 +44,7 @@ function inspectWav(bytes: Uint8Array): Omit<InspectedAudio, "byteSize" | "check
   return {
     contentType: "audio/wav",
     codec: format === 1 ? "pcm" : "ieee-float",
-    durationMs: Math.max(1, Math.round((dataSize / byteRate) * 1_000)),
+    durationMs: Math.max(1, Math.round((dataSize / byteRate) * 1000)),
   };
 }
 
@@ -70,7 +70,7 @@ function inspectMp4(bytes: Uint8Array): Omit<InspectedAudio, "byteSize" | "check
   return {
     contentType: "audio/mp4",
     codec: "aac",
-    durationMs: Math.max(1, Math.round((duration / timescale) * 1_000)),
+    durationMs: Math.max(1, Math.round((duration / timescale) * 1000)),
   };
 }
 
@@ -164,7 +164,7 @@ function inspectOgg(bytes: Uint8Array): Omit<InspectedAudio, "byteSize" | "check
   return {
     contentType: "audio/ogg",
     codec: "opus",
-    durationMs: Math.max(1, Math.round((Number(lastGranule) / 48_000) * 1_000)),
+    durationMs: Math.max(1, Math.round((Number(lastGranule) / 48_000) * 1000)),
   };
 }
 
@@ -194,12 +194,12 @@ function inspectMp3(bytes: Uint8Array): Omit<InspectedAudio, "byteSize" | "check
   if (layerBits !== 1 || bitrateIndex === 0 || bitrateIndex === 15 || sampleRateIndex === 3)
     {throw audioProblem("MP3 ist beschädigt oder nicht unterstützt");}
   const bitrate =
-    (versionBits === 3 ? mpeg1Bitrates[bitrateIndex] : mpeg2Bitrates[bitrateIndex])! * 1_000;
+    (versionBits === 3 ? mpeg1Bitrates[bitrateIndex] : mpeg2Bitrates[bitrateIndex])! * 1000;
 
   return {
     contentType: "audio/mpeg",
     codec: "mp3",
-    durationMs: Math.max(1, Math.round(((bytes.byteLength - offset) * 8 * 1_000) / bitrate)),
+    durationMs: Math.max(1, Math.round(((bytes.byteLength - offset) * 8 * 1000) / bitrate)),
   };
 }
 

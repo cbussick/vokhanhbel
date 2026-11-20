@@ -17,18 +17,18 @@ function iosMp4Fixture(): Uint8Array {
   write(20, "mp4a");
   write(28, "mvhd");
   bytes[32] = 0;
-  view.setUint32(44, 1_000);
-  view.setUint32(48, 7_000);
+  view.setUint32(44, 1000);
+  view.setUint32(48, 7000);
 
   return bytes;
 }
 
 describe("authoritative audio inspection", () => {
   it("reads an exact seven-second WAV from bytes", async () => {
-    await expect(inspectAudio(createWavFixture(7_000), "audio/wav")).resolves.toMatchObject({
+    await expect(inspectAudio(createWavFixture(7000), "audio/wav")).resolves.toMatchObject({
       contentType: "audio/wav",
       codec: "pcm",
-      durationMs: 7_000,
+      durationMs: 7000,
     });
   });
 
@@ -36,15 +36,15 @@ describe("authoritative audio inspection", () => {
     await expect(inspectAudio(iosMp4Fixture(), "audio/mp4")).resolves.toMatchObject({
       contentType: "audio/mp4",
       codec: "aac",
-      durationMs: 7_000,
+      durationMs: 7000,
     });
   });
 
   it("rejects misleading content types, long clips, corrupt bytes, and oversized input", async () => {
-    await expect(inspectAudio(createWavFixture(1_000), "audio/mpeg")).rejects.toMatchObject({
+    await expect(inspectAudio(createWavFixture(1000), "audio/mpeg")).rejects.toMatchObject({
       status: 422,
     });
-    await expect(inspectAudio(createWavFixture(7_001), "audio/wav")).rejects.toMatchObject({
+    await expect(inspectAudio(createWavFixture(7001), "audio/wav")).rejects.toMatchObject({
       status: 422,
     });
     await expect(inspectAudio(new Uint8Array([1, 2, 3]), "audio/mpeg")).rejects.toMatchObject({

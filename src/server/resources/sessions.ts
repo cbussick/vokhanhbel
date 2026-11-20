@@ -9,9 +9,9 @@ import { getPool } from "../database/client.js";
 import { AppProblem } from "../http/problem.js";
 
 type LoginInput = z.infer<typeof loginInputSchema>;
-const loginWindowMilliseconds = 15 * 60 * 1_000;
+const loginWindowMilliseconds = 15 * 60 * 1000;
 const loginAttemptLimit = 10;
-const sessionDurationMilliseconds = 30 * 24 * 60 * 60 * 1_000;
+const sessionDurationMilliseconds = 30 * 24 * 60 * 60 * 1000;
 const loginAttemptSummarySchema = z.object({
   value: z.string().regex(/^\d+$/u),
   oldest: z.date().nullable(),
@@ -51,9 +51,9 @@ export async function login(request: Request, input: LoginInput): Promise<string
       const retryAfter = oldest
         ? Math.max(
             1,
-            Math.ceil((oldest.getTime() + loginWindowMilliseconds - now.getTime()) / 1_000),
+            Math.ceil((oldest.getTime() + loginWindowMilliseconds - now.getTime()) / 1000),
           )
-        : Math.ceil(loginWindowMilliseconds / 1_000);
+        : Math.ceil(loginWindowMilliseconds / 1000);
 
       throw new AppProblem(
         429,

@@ -71,9 +71,9 @@ export const testCards = [
  */
 export const testGeneratedAudio = {
   id: "ffffffff-ffff-4fff-8fff-ffffffffffff",
-  durationMs: 1_200,
+  durationMs: 1200,
   contentType: "audio/mpeg",
-  byteSize: 9_600,
+  byteSize: 9600,
   synthesizedText: "xin chào",
 };
 

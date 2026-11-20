@@ -68,7 +68,7 @@ function createCard(
 }
 
 function audio(id: string) {
-  return { id, durationMs: 1_000, contentType: "audio/wav" as const, byteSize: 8_044 };
+  return { id, durationMs: 1000, contentType: "audio/wav" as const, byteSize: 8044 };
 }
 
 async function json(route: Route, body: unknown, status = 200) {
@@ -82,10 +82,10 @@ async function installMockApi(page: Page, authenticated = true) {
   // construction. Seeding it here keeps the app's own code untouched and makes a planned Session
   // reproducible, which is also what lets these tests name the option they expect to be correct.
   await page.addInitScript(() => {
-    let seed = 0x2f6e2b1;
+    let seed = 0x2_f6_e2_b1;
 
     Math.random = () => {
-      seed = (seed + 0x6d2b79f5) | 0;
+      seed = (seed + 0x6d_2b_79_f5) | 0;
 
       let mixed = Math.imul(seed ^ (seed >>> 15), 1 | seed);
 
@@ -235,7 +235,7 @@ async function dragListboxUpWithTouch(page: Page, listbox: Locator) {
 
         return stableChecks;
       },
-      { intervals: [100], timeout: 5_000 },
+      { intervals: [100], timeout: 5000 },
     )
     .toBeGreaterThanOrEqual(3);
 }
@@ -921,8 +921,8 @@ test("uses desktop space for route content without overstretching focused work",
   const editorBox = await page.getByRole("dialog").boundingBox();
 
   expect(editorBox).not.toBeNull();
-  expect(editorBox!.width).toBeGreaterThan(1_000);
-  expect(editorBox!.width).toBeLessThanOrEqual(1_120);
+  expect(editorBox!.width).toBeGreaterThan(1000);
+  expect(editorBox!.width).toBeLessThanOrEqual(1120);
   await page.getByRole("button", { name: "Schließen" }).click();
 
   await page.getByRole("link", { name: /Ich/ }).click();
@@ -971,7 +971,7 @@ test("shrinks the Card editor to a compact deletion confirmation", async ({ page
   const dialog = page.getByRole("dialog", { name: "Karte bearbeiten" });
   const editorBox = await dialog.boundingBox();
   expect(editorBox).not.toBeNull();
-  expect(editorBox!.width).toBeGreaterThan(1_000);
+  expect(editorBox!.width).toBeGreaterThan(1000);
 
   await dialog.getByRole("button", { name: "Karte löschen" }).click();
 
@@ -981,7 +981,7 @@ test("shrinks the Card editor to a compact deletion confirmation", async ({ page
   expect(confirmationBox!.height).toBeLessThan(editorBox!.height);
 
   await dialog.getByRole("button", { name: "Abbrechen" }).click();
-  await expect.poll(async () => (await dialog.boundingBox())?.width ?? 0).toBeGreaterThan(1_000);
+  await expect.poll(async () => (await dialog.boundingBox())?.width ?? 0).toBeGreaterThan(1000);
 });
 
 test("deletes a Collection together with its Cards after confirmation", async ({ page }) => {

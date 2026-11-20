@@ -5,7 +5,7 @@ import { apiRequest, isTemporaryError } from "../../lib/apiClient";
 import { queryKeys } from "../../lib/queryKeys";
 import type { ReviewSubmission } from "./reviewSubmission";
 
-const retryDelays = [1_000, 2_000, 4_000];
+const retryDelays = [1000, 2000, 4000];
 
 interface QueuedReviewSubmission extends ReviewSubmission {
   syncStatus: "pending" | "syncing" | "failed";
@@ -116,7 +116,7 @@ export function useReviewSubmissionQueue(): ReviewSubmissionQueue {
             return;
           }
           if (attempt < attempts - 1)
-            {await waitForRetry(retryDelays[attempt] ?? 4_000, controller.signal);}
+            {await waitForRetry(retryDelays[attempt] ?? 4000, controller.signal);}
         }
       }
 

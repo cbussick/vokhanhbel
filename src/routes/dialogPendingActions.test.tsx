@@ -128,7 +128,7 @@ describe("shared dialog chrome and pending actions", () => {
 
   it("gives the audio-only Tutor explanation the shared dialog chrome", async () => {
     const user = userEvent.setup();
-    const metadata = { durationMs: 1_000, contentType: "audio/wav", byteSize: 8_044 };
+    const metadata = { durationMs: 1000, contentType: "audio/wav", byteSize: 8044 };
     mockServer.use(
       http.get("/api/cards", () =>
         HttpResponse.json([

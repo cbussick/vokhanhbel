@@ -2,10 +2,10 @@ import { z } from "zod";
 import { boxSchema } from "../domain/review.js";
 import { createNormalizedTextSchema, utcTimestampSchema, uuidSchema } from "./common.js";
 
-export const maximumCardTextLength = 1_000;
+export const maximumCardTextLength = 1000;
 
 /** What any clip on a Card face has to fit in, however it was produced. */
-export const maximumAudioDurationMs = 7_000;
+export const maximumAudioDurationMs = 7000;
 export const maximumAudioBytes = 2_000_000;
 
 export const audioMetadataSchema = z.object({

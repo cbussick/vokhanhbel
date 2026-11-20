@@ -357,7 +357,7 @@ export function CardFormDialog({
                       id="card-front"
                       aria-labelledby="front-face-label front-text-label"
                       aria-describedby="front-media-hint"
-                      maxLength={1_000}
+                      maxLength={1000}
                       value={front}
                       onChange={(event) => setFront(event.target.value)}
                     />
@@ -401,7 +401,7 @@ export function CardFormDialog({
                       id="card-back"
                       aria-labelledby="back-face-label back-text-label"
                       aria-describedby="back-media-hint"
-                      maxLength={1_000}
+                      maxLength={1000}
                       value={back}
                       onChange={(event) => setBack(event.target.value)}
                     />

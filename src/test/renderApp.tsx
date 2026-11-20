@@ -8,7 +8,7 @@ import { AuthProvider } from "../state/AuthContext";
 import { ReviewSubmissionProvider } from "../state/ReviewSubmissionContext";
 import { SessionLifecycleProvider } from "../state/SessionLifecycleProvider";
 
-const readyTimeoutMs = 5_000;
+const readyTimeoutMs = 5000;
 
 export async function renderApp(path: string) {
   const queryClient = new QueryClient({

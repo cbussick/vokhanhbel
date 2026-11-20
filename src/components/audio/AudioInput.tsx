@@ -82,13 +82,13 @@ function StopIcon() {
 async function readDuration(source: string): Promise<number> {
   return new Promise((resolve, reject) => {
     const audio = new Audio();
-    const timeout = window.setTimeout(() => reject(new Error("metadata-timeout")), 8_000);
+    const timeout = window.setTimeout(() => reject(new Error("metadata-timeout")), 8000);
     const finish = () => window.clearTimeout(timeout);
 
     audio.preload = "metadata";
     audio.onloadedmetadata = () => {
       finish();
-      const duration = Math.round(audio.duration * 1_000);
+      const duration = Math.round(audio.duration * 1000);
 
       if (!Number.isFinite(duration) || duration <= 0) {reject(new Error("invalid-duration"));}
       else {resolve(duration);}
@@ -359,7 +359,7 @@ export function AudioInput({
             {isRecording ? (
               <>
                 <span className={styles.recordingDot} />
-                {t("audio.recording", { seconds: (remainingMs / 1_000).toFixed(1) })}
+                {t("audio.recording", { seconds: (remainingMs / 1000).toFixed(1) })}
               </>
             ) : null}
           </span>

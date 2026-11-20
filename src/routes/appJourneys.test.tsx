@@ -554,9 +554,9 @@ describe("rendered app journeys", () => {
   it("says what a stored clip says when a Card is reopened, and nothing about the recording beside it", async () => {
     const storedAudio = (id: string, synthesizedText: string | null) => ({
       id,
-      durationMs: 1_000,
+      durationMs: 1000,
       contentType: "audio/wav",
-      byteSize: 8_044,
+      byteSize: 8044,
       synthesizedText,
     });
     const savedCard = {
@@ -1122,7 +1122,7 @@ describe("rendered app journeys", () => {
   it("keeps the resolved multiple-choice Tutor explanation local when the subject Card's front is audio-only", async () => {
     const user = userEvent.setup();
     const audioId = "88888888-8888-4888-8888-888888888887";
-    const metadata = { durationMs: 1_000, contentType: "audio/wav" as const, byteSize: 8_044 };
+    const metadata = { durationMs: 1000, contentType: "audio/wav" as const, byteSize: 8044 };
     const audioFrontCards = multipleChoiceCards.map((exerciseCard, index) =>
       index === 0
         ? { ...exerciseCard, front: { text: null, audio: { ...metadata, id: audioId } } }
@@ -1641,7 +1641,7 @@ describe("rendered app journeys", () => {
 
   it("offers audio options for a Card with a recorded back, blocks grading while one fails to load, and offers Skip Card", async () => {
     const user = userEvent.setup();
-    const metadata = { durationMs: 1_000, contentType: "audio/wav" as const, byteSize: 8_044 };
+    const metadata = { durationMs: 1000, contentType: "audio/wav" as const, byteSize: 8044 };
     const audioCard = (id: string, audioId: string, due: boolean) => ({
       ...testCards[0]!,
       id,
@@ -1717,7 +1717,7 @@ describe("rendered app journeys", () => {
       ...testCards[0]!,
       front: {
         text: null,
-        audio: { id: audioId, durationMs: 1_000, contentType: "audio/wav", byteSize: 8_044 },
+        audio: { id: audioId, durationMs: 1000, contentType: "audio/wav", byteSize: 8044 },
       },
       back: { text: "Antwort", audio: null },
     };
@@ -1760,7 +1760,7 @@ describe("rendered app journeys", () => {
   it("keeps the local mixed audio-only Tutor explanation available offline without a provider request", async () => {
     const user = userEvent.setup();
     const frontAudioId = "88888888-8888-4888-8888-888888888881";
-    const metadata = { durationMs: 1_000, contentType: "audio/wav", byteSize: 8_044 };
+    const metadata = { durationMs: 1000, contentType: "audio/wav", byteSize: 8044 };
     const audioCard = {
       ...testCards[0]!,
       front: { text: null, audio: { ...metadata, id: frontAudioId } },
@@ -1795,7 +1795,7 @@ describe("rendered app journeys", () => {
 
   it("keeps text-backed faces gradable after optional audio failure but blocks a failed audio-only back", async () => {
     const user = userEvent.setup();
-    const metadata = { durationMs: 1_000, contentType: "audio/wav", byteSize: 8_044 };
+    const metadata = { durationMs: 1000, contentType: "audio/wav", byteSize: 8044 };
     const first = {
       ...testCards[0]!,
       front: {

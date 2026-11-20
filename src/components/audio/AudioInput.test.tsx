@@ -212,7 +212,7 @@ describe("AudioInput microphone gate", () => {
     expect(screen.getByRole("button", { name: "Aufnahme stoppen" })).toBeVisible();
     await act(async () => vi.advanceTimersByTime(100));
     expect(screen.getByText(/6\.9 s/)).toBeVisible();
-    await act(async () => vi.advanceTimersByTime(6_900));
+    await act(async () => vi.advanceTimersByTime(6900));
     await act(async () => Promise.resolve());
     expect(onDraftChange).toHaveBeenCalledOnce();
     expect(stopTrack).toHaveBeenCalledOnce();

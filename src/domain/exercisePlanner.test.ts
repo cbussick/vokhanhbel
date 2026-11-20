@@ -39,9 +39,9 @@ function audio(id: string) {
     text: null,
     audio: {
       id,
-      durationMs: 1_000,
+      durationMs: 1000,
       contentType: "audio/wav" as const,
-      byteSize: 8_044,
+      byteSize: 8044,
       synthesizedText: null,
     },
   };
@@ -402,9 +402,9 @@ describe("planExercises", () => {
           text: null,
           audio: {
             id: "audio-1",
-            durationMs: 1_000,
+            durationMs: 1000,
             contentType: "audio/wav",
-            byteSize: 8_044,
+            byteSize: 8044,
             synthesizedText: null,
           },
           correct: true,

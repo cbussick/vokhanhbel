@@ -9,7 +9,7 @@ import { getDatabase, getPool } from "../database/client.js";
 import { audioAssets, audioCleanupJobs, cards } from "../database/schema.js";
 import { AppProblem } from "../http/problem.js";
 
-const stagedLifetimeMilliseconds = 60 * 60 * 1_000;
+const stagedLifetimeMilliseconds = 60 * 60 * 1000;
 
 function operationLog(
   operation: string,

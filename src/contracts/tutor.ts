@@ -7,7 +7,7 @@ import { problemTypes } from "./problem.js";
 export const tutorLimits = {
   messageCharacters: 500,
   conversationMessageCeiling: 16,
-  conversationMessageCharacters: 4_000,
+  conversationMessageCharacters: 4000,
   /** Wave one Exercises hold one Card; this leaves headroom for a grouped Exercise (VOK-18). */
   exerciseCardCeiling: 8,
 } as const;

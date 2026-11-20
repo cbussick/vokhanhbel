@@ -8,7 +8,7 @@ import { beginPlayback, endPlayback } from "./playbackCoordinator";
 import styles from "./AudioPlayer.module.css";
 
 export function formatAudioDuration(durationMs: number): string {
-  const seconds = Math.max(0, Math.ceil(durationMs / 1_000));
+  const seconds = Math.max(0, Math.ceil(durationMs / 1000));
 
   return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`;
 }
@@ -170,7 +170,7 @@ export function AudioPlayer({
             onAvailabilityChange?.(true);
           }}
           onPause={() => setState((value) => (value === "ended" ? value : "paused"))}
-          onTimeUpdate={(event) => setCurrentTime(event.currentTarget.currentTime * 1_000)}
+          onTimeUpdate={(event) => setCurrentTime(event.currentTarget.currentTime * 1000)}
           onEnded={() => {
             setState("ended");
             endPlayback(participantRef.current);
