@@ -253,9 +253,11 @@ function toReviewSessionView(
         : undefined;
     };
     const toEntries = (order: Array<string>, face: "front" | "back") =>
-      order
-        .map((cardId) => toEntry(cardId, face))
-        .filter((entry): entry is MatchingEntryView => entry !== undefined);
+      order.flatMap((cardId) => {
+        const entry = toEntry(cardId, face);
+
+        return entry === undefined ? [] : [entry];
+      });
 
     return {
       kind: "matching",

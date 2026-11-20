@@ -35,8 +35,11 @@ export function useOnlineStatus(): boolean {
 export function useDueTime(dueTimes: Array<string>): number {
   const [now, setNow] = useState(Date.now);
   const nextBoundary = dueTimes
-    .map((dueAt) => new Date(dueAt).getTime())
-    .filter((dueAt) => dueAt > now)
+    .flatMap((dueAt) => {
+      const timestamp = new Date(dueAt).getTime();
+
+      return timestamp > now ? [timestamp] : [];
+    })
     .toSorted((left, right) => left - right)[0];
 
   useEffect(() => {

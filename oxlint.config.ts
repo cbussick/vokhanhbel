@@ -233,7 +233,6 @@ export default defineConfig({
       files: ["**/*.{ts,tsx,mts,cts}"],
       rules: {
         "@nkzw/no-instanceof": "off",
-        "quality/no-array-filter-map": "off",
         "quality/no-chained-type-assertions": "off",
         "quality/no-conditional-empty-object-spread": "off",
         "quality/no-known-value-widening": "off",
