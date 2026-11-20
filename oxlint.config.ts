@@ -235,7 +235,6 @@ export default defineConfig({
         "quality/no-chained-type-assertions": "off",
         "typescript/no-non-null-assertion": "off",
         "typescript/no-unsafe-type-assertion": "off",
-        "vitest/require-to-throw-message": "off",
       },
     },
   ],

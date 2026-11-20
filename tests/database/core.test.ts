@@ -231,7 +231,7 @@ describe("PostgreSQL application behavior", () => {
       getPool().query(
         `INSERT INTO collections (name, normalized_name, front_language) VALUES ('Bare', 'Bare', 'vi')`,
       ),
-    ).rejects.toThrow();
+    ).rejects.toThrow(/collections_front_language_length/);
   });
 
   it("rejects Collection names that bypass stored normalization", async () => {
@@ -239,10 +239,10 @@ describe("PostgreSQL application behavior", () => {
       getPool().query(
         `INSERT INTO collections (name, normalized_name) VALUES ('  Englisch  ', '  Englisch  ')`,
       ),
-    ).rejects.toThrow();
+    ).rejects.toThrow(/collections_name_normalized/);
     await expect(
       getPool().query(`INSERT INTO collections (name, normalized_name) VALUES ('a', 'b')`),
-    ).rejects.toThrow();
+    ).rejects.toThrow(/collections_normalized_name_matches/);
   });
 
   it("deletes a Collection and all of its Cards while preserving their Reviews", async () => {
@@ -509,36 +509,36 @@ describe("PostgreSQL application behavior", () => {
   it("rejects Card text that bypasses stored normalization", async () => {
     await expect(
       getPool().query(
-        `INSERT INTO cards (front_text, normalized_front, back_text) VALUES ('  spaced  ', '  spaced  ', 'valid')`,
+        `INSERT INTO cards (collection_id, front_text, normalized_front, back_text) VALUES ('00000000-0000-4000-8000-000000000001', '  spaced  ', '  spaced  ', 'valid')`,
       ),
-    ).rejects.toThrow();
+    ).rejects.toThrow(/cards_front_normalized/);
     await expect(
       getPool().query(
-        `INSERT INTO cards (front_text, normalized_front, back_text) VALUES ('valid', 'different', 'valid')`,
+        `INSERT INTO cards (collection_id, front_text, normalized_front, back_text) VALUES ('00000000-0000-4000-8000-000000000001', 'valid', 'different', 'valid')`,
       ),
-    ).rejects.toThrow();
+    ).rejects.toThrow(/cards_normalized_front_matches/);
     await expect(
       getPool().query(
-        `INSERT INTO cards (front_text, normalized_front, back_text) VALUES ('Café', 'Café', 'valid')`,
+        `INSERT INTO cards (collection_id, front_text, normalized_front, back_text) VALUES ('00000000-0000-4000-8000-000000000001', 'Café', 'Café', 'valid')`,
       ),
-    ).rejects.toThrow();
+    ).rejects.toThrow(/cards_front_normalized/);
     await expect(
       getPool().query(
-        `INSERT INTO cards (front_text, normalized_front, back_text) VALUES ($1, $1, 'valid')`,
+        `INSERT INTO cards (collection_id, front_text, normalized_front, back_text) VALUES ('00000000-0000-4000-8000-000000000001', $1, $1, 'valid')`,
         ["multi\u00a0space"],
       ),
-    ).rejects.toThrow();
+    ).rejects.toThrow(/cards_front_normalized/);
     await expect(
       getPool().query(
-        `INSERT INTO cards (front_text, normalized_front, back_text) VALUES ($1, $1, 'valid')`,
+        `INSERT INTO cards (collection_id, front_text, normalized_front, back_text) VALUES ('00000000-0000-4000-8000-000000000001', $1, $1, 'valid')`,
         ["wide\u2003space"],
       ),
-    ).rejects.toThrow();
+    ).rejects.toThrow(/cards_front_normalized/);
     await expect(
       getPool().query(
-        `INSERT INTO cards (front_text, normalized_front, back_text) VALUES (E'\\nvalid\\n', E'\\nvalid\\n', 'valid')`,
+        `INSERT INTO cards (collection_id, front_text, normalized_front, back_text) VALUES ('00000000-0000-4000-8000-000000000001', E'\\nvalid\\n', E'\\nvalid\\n', 'valid')`,
       ),
-    ).rejects.toThrow();
+    ).rejects.toThrow(/cards_front_normalized/);
   });
 
   it("keeps legacy Card columns synchronized without repairing normalized text", async () => {
