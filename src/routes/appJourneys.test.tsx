@@ -2318,18 +2318,17 @@ describe("rendered app journeys", () => {
 
     expect(screen.queryByText(/Du kannst noch .* Nachrichten senden\./)).not.toBeInTheDocument();
 
-    for (let exchange = 1; exchange <= 8; exchange += 1) {
+    const sendMessage = async (exchange: number) => {
       await user.type(screen.getByLabelText("Deine Nachricht"), `Nachricht ${exchange}`);
       await user.click(screen.getByRole("button", { name: "Senden" }));
       await screen.findByText(`Antwort ${exchange}`);
+    };
 
-      if (exchange === 4)
-        {expect(
-          screen.queryByText(/Du kannst noch .* Nachrichten senden\./),
-        ).not.toBeInTheDocument();}
-      if (exchange === 5)
-        {expect(screen.getByText("Du kannst noch 3 Nachrichten senden.")).toBeVisible();}
-    }
+    for (let exchange = 1; exchange <= 4; exchange += 1) {await sendMessage(exchange);}
+    expect(screen.queryByText(/Du kannst noch .* Nachrichten senden\./)).not.toBeInTheDocument();
+    await sendMessage(5);
+    expect(screen.getByText("Du kannst noch 3 Nachrichten senden.")).toBeVisible();
+    for (let exchange = 6; exchange <= 8; exchange += 1) {await sendMessage(exchange);}
 
     expect(requests).toHaveLength(8);
     expect(requests[7]).toEqual({
