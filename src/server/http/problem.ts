@@ -1,4 +1,4 @@
-export class AppProblem extends Error {
+export class AppProblemError extends Error {
   constructor(
     public readonly status: number,
     public readonly type: string,
@@ -21,7 +21,7 @@ interface ProblemBody {
   errors?: Array<{ pointer: string; code: string }>;
 }
 
-export function problemResponse(problem: AppProblem, requestId: string): Response {
+export function problemResponse(problem: AppProblemError, requestId: string): Response {
   const body: ProblemBody = {
     type: problem.type,
     title: problem.title,

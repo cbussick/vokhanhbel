@@ -9,7 +9,7 @@ import type { AudioProvenance } from "../audio/audioProvenance.js";
 import { inspectAudio } from "../audio/inspectAudio.js";
 import { getDatabase, getPool } from "../database/client.js";
 import { audioAssets, audioCleanupJobs, cards } from "../database/schema.js";
-import { AppProblem } from "../http/problem.js";
+import { AppProblemError } from "../http/problem.js";
 
 const stagedLifetimeMilliseconds = 60 * 60 * 1000;
 
@@ -126,12 +126,12 @@ function parseRange(rangeHeader: string | null, totalSize: number): AudioObjectR
   if (!rangeHeader) {return undefined;}
   const match = /^bytes=(\d+)-(\d*)$/u.exec(rangeHeader.trim());
 
-  if (!match) {throw new AppProblem(416, problemTypes.invalidAudioRange, "Audiobereich ungültig");}
+  if (!match) {throw new AppProblemError(416, problemTypes.invalidAudioRange, "Audiobereich ungültig");}
   const start = Number(match[1]);
   const end = match[2] ? Number(match[2]) : undefined;
 
   if (start >= totalSize || (end !== undefined && (end < start || end >= totalSize)))
-    {throw new AppProblem(416, problemTypes.invalidAudioRange, "Audiobereich ungültig");}
+    {throw new AppProblemError(416, problemTypes.invalidAudioRange, "Audiobereich ungültig");}
 
   const range: AudioObjectRange = { start };
 
@@ -159,11 +159,11 @@ export async function playAudio(
   const isAudible =
     audio && (audio.claimedCardId !== null || audio.ownerSessionHash === sessionHash);
 
-  if (!isAudible) {throw new AppProblem(404, problemTypes.audioNotFound, "Audio nicht gefunden");}
+  if (!isAudible) {throw new AppProblemError(404, problemTypes.audioNotFound, "Audio nicht gefunden");}
   const range = parseRange(rangeHeader, audio.byteSize);
   const stored = await getAudioObjectStore().read(audio.objectKey, range);
 
-  if (!stored) {throw new AppProblem(404, problemTypes.audioNotFound, "Audio nicht gefunden");}
+  if (!stored) {throw new AppProblemError(404, problemTypes.audioNotFound, "Audio nicht gefunden");}
   operationLog("range-read", audio.id, range ? "partial" : "complete", requestId);
   const headers = new Headers({
     "Content-Type": audio.contentType,
@@ -197,7 +197,7 @@ export async function discardStagedAudio(
     )
     .returning({ id: audioAssets.id, objectKey: audioAssets.objectKey });
 
-  if (!rows[0]) {throw new AppProblem(404, problemTypes.audioNotFound, "Audio nicht gefunden");}
+  if (!rows[0]) {throw new AppProblemError(404, problemTypes.audioNotFound, "Audio nicht gefunden");}
   await deleteAudioObject(rows[0], "discarded-stage", requestId);
 }
 
@@ -220,7 +220,7 @@ export async function enforceAudioUploadRateLimit(sessionHash: string): Promise<
     const count = z.object({ count: z.coerce.number().int().nonnegative() }).parse(result.rows[0]);
 
     if (count.count >= 30)
-      {throw new AppProblem(
+      {throw new AppProblemError(
         429,
         problemTypes.audioUploadRateLimit,
         "Zu viele Audio-Uploads. Versuch es später erneut.",
@@ -258,7 +258,7 @@ export async function enforceAudioPlaybackRateLimit(sessionHash: string): Promis
     const count = z.object({ count: z.coerce.number().int().nonnegative() }).parse(result.rows[0]);
 
     if (count.count >= 300)
-      {throw new AppProblem(
+      {throw new AppProblemError(
         429,
         problemTypes.audioPlaybackRateLimit,
         "Zu viele Audio-Anfragen. Versuch es später erneut.",

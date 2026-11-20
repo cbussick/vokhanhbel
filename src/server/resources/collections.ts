@@ -5,12 +5,12 @@ import { problemTypes } from "../../contracts/problem.js";
 import { getDatabase, getPool } from "../database/client.js";
 import { isUniqueViolation } from "../database/errors.js";
 import { collections } from "../database/schema.js";
-import { AppProblem } from "../http/problem.js";
+import { AppProblemError } from "../http/problem.js";
 import { deleteAudioObject } from "./audio.js";
 import { mapCollection } from "./collectionMapper.js";
 
 function throwNameConflict(): never {
-  throw new AppProblem(
+  throw new AppProblemError(
     409,
     problemTypes.collectionNameConflict,
     "Diese Sammlung gibt es schon",
@@ -66,7 +66,7 @@ export async function updateCollection(collectionId: string, input: CollectionIn
       .returning();
 
     if (!rows[0])
-      {throw new AppProblem(404, problemTypes.collectionNotFound, "Sammlung nicht gefunden");}
+      {throw new AppProblemError(404, problemTypes.collectionNotFound, "Sammlung nicht gefunden");}
 
     return mapCollection(rows[0]);
   } catch (error) {
@@ -87,7 +87,7 @@ export async function deleteCollection(collectionId: string): Promise<void> {
     );
 
     if (!selected.rows[0])
-      {throw new AppProblem(404, problemTypes.collectionNotFound, "Sammlung nicht gefunden");}
+      {throw new AppProblemError(404, problemTypes.collectionNotFound, "Sammlung nicht gefunden");}
 
     const audio = await client.query(
       `SELECT audio_assets.id, audio_assets.object_key

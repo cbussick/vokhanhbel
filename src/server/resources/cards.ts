@@ -7,7 +7,7 @@ import { problemTypes } from "../../contracts/problem.js";
 import { getDatabase, getPool } from "../database/client.js";
 import { isForeignKeyViolation, isUniqueViolation } from "../database/errors.js";
 import { audioAssets, cardTopics, cards, topics } from "../database/schema.js";
-import { AppProblem } from "../http/problem.js";
+import { AppProblemError } from "../http/problem.js";
 import { deleteAudioObject } from "./audio.js";
 import { mapCard } from "./cardMapper.js";
 
@@ -28,9 +28,9 @@ const lockedCardSchema = z.object({
 const claimedAudioSchema = z.object({ id: z.uuid(), object_key: z.string() });
 
 function throwCardWriteProblem(error: unknown): never {
-  if (error instanceof AppProblem) {throw error;}
+  if (error instanceof AppProblemError) {throw error;}
   if (isUniqueViolation(error))
-    {throw new AppProblem(
+    {throw new AppProblemError(
       409,
       problemTypes.cardFrontConflict,
       "Diese Vorderseite gibt es schon",
@@ -38,7 +38,7 @@ function throwCardWriteProblem(error: unknown): never {
       [{ pointer: "/front/text", code: "not_unique" }],
     );}
   if (isForeignKeyViolation(error))
-    {throw new AppProblem(404, problemTypes.collectionNotFound, "Sammlung nicht gefunden");}
+    {throw new AppProblemError(404, problemTypes.collectionNotFound, "Sammlung nicht gefunden");}
   throw error;
 }
 
@@ -125,7 +125,7 @@ async function uniqueTopicIdsForCollection(
   );
 
   if (result.rows.length !== unique.length)
-    {throw new AppProblem(404, problemTypes.topicNotFound, "Thema nicht gefunden");}
+    {throw new AppProblemError(404, problemTypes.topicNotFound, "Thema nicht gefunden");}
 
   return unique;
 }
@@ -157,7 +157,7 @@ export async function getCard(cardId: string) {
     .where(and(eq(cards.id, cardId), isNull(cards.deletedAt)))
     .limit(1);
 
-  if (!rows[0]) {throw new AppProblem(404, problemTypes.cardNotFound, "Karte nicht gefunden");}
+  if (!rows[0]) {throw new AppProblemError(404, problemTypes.cardNotFound, "Karte nicht gefunden");}
   const memberships = await topicIdsByCard([cardId]);
 
   return mapCard(rows[0], memberships.get(cardId) ?? []);
@@ -170,7 +170,7 @@ async function lockStagedAudio(
 ): Promise<void> {
   if (!audioId) {return;}
   if (!sessionHash)
-    {throw new AppProblem(409, problemTypes.audioNotOwned, "Audio gehört nicht zu dieser Sitzung");}
+    {throw new AppProblemError(409, problemTypes.audioNotOwned, "Audio gehört nicht zu dieser Sitzung");}
   const result = await client.query(
     `SELECT id FROM audio_assets
      WHERE id=$1 AND owner_session_hash=$2 AND claimed_card_id IS NULL
@@ -180,7 +180,7 @@ async function lockStagedAudio(
   );
 
   if (!result.rows[0])
-    {throw new AppProblem(409, problemTypes.audioNotOwned, "Audio gehört nicht zu dieser Sitzung");}
+    {throw new AppProblemError(409, problemTypes.audioNotOwned, "Audio gehört nicht zu dieser Sitzung");}
 }
 
 async function claimAudio(
@@ -204,7 +204,7 @@ export async function createCard(
   const input = structuredInput(inputValue);
 
   if (input.front.audioId && input.front.audioId === input.back.audioId)
-    {throw new AppProblem(
+    {throw new AppProblemError(
       422,
       problemTypes.invalidRequest,
       "Jede Kartenseite braucht eigenes Audio",
@@ -266,7 +266,7 @@ export async function updateCard(
     );
     const current = selected.rows[0] ? lockedCardSchema.parse(selected.rows[0]) : undefined;
 
-    if (!current) {throw new AppProblem(404, problemTypes.cardNotFound, "Karte nicht gefunden");}
+    if (!current) {throw new AppProblemError(404, problemTypes.cardNotFound, "Karte nicht gefunden");}
     const collectionId = input.collectionId ?? current.collection_id;
     const frontText = input.front?.text === undefined ? current.front_text : input.front.text;
     const backText = input.back?.text === undefined ? current.back_text : input.back.text;
@@ -276,11 +276,11 @@ export async function updateCard(
       input.back?.audioId === undefined ? current.back_audio_id : input.back.audioId;
 
     if (!frontText && !frontAudioId)
-      {throw new AppProblem(422, problemTypes.invalidRequest, "Vorderseite darf nicht leer sein");}
+      {throw new AppProblemError(422, problemTypes.invalidRequest, "Vorderseite darf nicht leer sein");}
     if (!backText && !backAudioId)
-      {throw new AppProblem(422, problemTypes.invalidRequest, "Rückseite darf nicht leer sein");}
+      {throw new AppProblemError(422, problemTypes.invalidRequest, "Rückseite darf nicht leer sein");}
     if (frontAudioId && frontAudioId === backAudioId)
-      {throw new AppProblem(
+      {throw new AppProblemError(
         422,
         problemTypes.invalidRequest,
         "Jede Kartenseite braucht eigenes Audio",

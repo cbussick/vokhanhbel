@@ -7,7 +7,7 @@ import { boxSchema, getBoxAfterGrade, getIntervalDays, getPointsForGrade, gradeS
 import type { Box } from '../../domain/review.js';
 import { berlinTimeZone } from "../../domain/time.js";
 import { getPool } from "../database/client.js";
-import { AppProblem } from "../http/problem.js";
+import { AppProblemError } from "../http/problem.js";
 import { audioRowSchema, mapCard } from "./cardMapper.js";
 
 const reviewRowSchema = z.object({
@@ -117,7 +117,7 @@ export async function recordReview(input: ReviewSubmissionInput): Promise<Review
         original.grade !== input.grade ||
         original.reviewed_at.toISOString() !== input.reviewedAt
       ) {
-        throw new AppProblem(
+        throw new AppProblemError(
           409,
           problemTypes.reviewReplayConflict,
           "Review muss neu geladen werden",
@@ -137,14 +137,14 @@ export async function recordReview(input: ReviewSubmissionInput): Promise<Review
     const card = cardResult.rows[0] ? databaseCardRowSchema.parse(cardResult.rows[0]) : undefined;
 
     if (!card || card.deleted_at)
-      {throw new AppProblem(404, problemTypes.cardNotFound, "Karte nicht gefunden");}
+      {throw new AppProblemError(404, problemTypes.cardNotFound, "Karte nicht gefunden");}
     const reviewedAt = new Date(input.reviewedAt);
     const now = new Date();
 
     if (reviewedAt.getTime() < now.getTime() - maximumReviewAgeMilliseconds)
-      {throw new AppProblem(422, problemTypes.reviewTooOld, "Review ist zu alt");}
+      {throw new AppProblemError(422, problemTypes.reviewTooOld, "Review ist zu alt");}
     if (reviewedAt.getTime() > now.getTime() + maximumClockSkewMilliseconds)
-      {throw new AppProblem(422, problemTypes.deviceClockAhead, "Gerätezeit prüfen");}
+      {throw new AppProblemError(422, problemTypes.deviceClockAhead, "Gerätezeit prüfen");}
 
     // SAFETY: the cards.box column carries the `cards_box_range` CHECK constraint restricting it
     // to 0-5, so a stored value is always within the Box union.

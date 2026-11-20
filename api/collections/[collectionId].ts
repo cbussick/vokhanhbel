@@ -2,7 +2,7 @@ import { z } from "zod";
 import { collectionInputSchema } from "../../src/contracts/collection.js";
 import { problemTypes } from "../../src/contracts/problem.js";
 import { handleRequest } from "../../src/server/http/handler.js";
-import { AppProblem } from "../../src/server/http/problem.js";
+import { AppProblemError } from "../../src/server/http/problem.js";
 import { deleteCollection, updateCollection } from "../../src/server/resources/collections.js";
 
 function getCollectionId(request: Request): string {
@@ -10,7 +10,7 @@ function getCollectionId(request: Request): string {
   const result = z.uuid().safeParse(value);
 
   if (!result.success)
-    {throw new AppProblem(404, problemTypes.collectionNotFound, "Sammlung nicht gefunden");}
+    {throw new AppProblemError(404, problemTypes.collectionNotFound, "Sammlung nicht gefunden");}
 
   return result.data;
 }

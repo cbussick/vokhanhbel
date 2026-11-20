@@ -4,7 +4,7 @@ import type { TutorExerciseCard, TutorInput } from "../../contracts/tutor.js";
 import { berlinTimeZone } from "../../domain/time.js";
 import type { AiProvider, TutorProviderRequest } from "../ai/aiProvider.js";
 import { getPool } from "../database/client.js";
-import { AppProblem } from "../http/problem.js";
+import { AppProblemError } from "../http/problem.js";
 import { getCard } from "./cards.js";
 
 const allowanceCountSchema = z.object({
@@ -44,7 +44,7 @@ export async function consumeTutorAllowance(sessionHash: string): Promise<void> 
     const count = allowanceCountSchema.parse(counts.rows[0]);
 
     if (Number(count.session_count) >= sessionRequestLimit)
-      {throw new AppProblem(
+      {throw new AppProblemError(
         429,
         problemTypes.tutorSessionLimit,
         "Tutopher braucht eine Pause",
@@ -53,7 +53,7 @@ export async function consumeTutorAllowance(sessionHash: string): Promise<void> 
         Number(count.session_retry),
       );}
     if (Number(count.daily_count) >= dailyRequestLimit)
-      {throw new AppProblem(
+      {throw new AppProblemError(
         429,
         problemTypes.tutorDailyLimit,
         "Tutopher hat für heute Feierabend",
@@ -92,7 +92,7 @@ export async function createTutorStream(
   const subjectCard = await getCard(exercise.subjectCardId);
 
   if (!subjectCard.front.text || !subjectCard.back.text)
-    {throw new AppProblem(
+    {throw new AppProblemError(
       422,
       problemTypes.tutorAudioUnsupported,
       "Tutopher kann Audio nicht anhören",

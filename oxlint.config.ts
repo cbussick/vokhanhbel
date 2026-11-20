@@ -232,7 +232,6 @@ export default defineConfig({
       // Temporary adoption baseline; removed rule by rule before completion.
       files: ["**/*.{ts,tsx,mts,cts}"],
       rules: {
-        "@nkzw/no-instanceof": "off",
         "quality/no-chained-type-assertions": "off",
         "typescript/no-non-null-assertion": "off",
         "typescript/no-unsafe-type-assertion": "off",

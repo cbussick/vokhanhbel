@@ -1,6 +1,6 @@
 import { maximumAudioBytes, maximumAudioDurationMs } from "../../contracts/card.js";
 import { problemTypes } from "../../contracts/problem.js";
-import { AppProblem } from "../http/problem.js";
+import { AppProblemError } from "../http/problem.js";
 
 export interface InspectedAudio {
   contentType: "audio/mpeg" | "audio/mp4" | "audio/webm" | "audio/ogg" | "audio/wav";
@@ -10,8 +10,8 @@ export interface InspectedAudio {
   checksum: string;
 }
 
-function audioProblem(detail: string): AppProblem {
-  return new AppProblem(422, problemTypes.invalidAudio, "Audiodatei prüfen", detail);
+function audioProblem(detail: string): AppProblemError {
+  return new AppProblemError(422, problemTypes.invalidAudio, "Audiodatei prüfen", detail);
 }
 
 function ascii(bytes: Uint8Array, start: number, length: number): string {
@@ -209,7 +209,7 @@ export async function inspectAudio(
 ): Promise<InspectedAudio> {
   if (bytes.byteLength === 0) {throw audioProblem("Die Audiodatei ist leer");}
   if (bytes.byteLength > maximumAudioBytes)
-    {throw new AppProblem(413, problemTypes.requestTooLarge, "Audiodatei ist zu groß");}
+    {throw new AppProblemError(413, problemTypes.requestTooLarge, "Audiodatei ist zu groß");}
   const detected =
     inspectWav(bytes) ??
     inspectMp4(bytes) ??

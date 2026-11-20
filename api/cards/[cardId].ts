@@ -2,14 +2,14 @@ import { z } from "zod";
 import { updateCardInputSchema } from "../../src/contracts/card.js";
 import { problemTypes } from "../../src/contracts/problem.js";
 import { handleRequest } from "../../src/server/http/handler.js";
-import { AppProblem } from "../../src/server/http/problem.js";
+import { AppProblemError } from "../../src/server/http/problem.js";
 import { deleteCard, getCard, updateCard } from "../../src/server/resources/cards.js";
 
 function getCardId(request: Request): string {
   const value = new URL(request.url).pathname.split("/").filter(Boolean).at(-1);
   const result = z.uuid().safeParse(value);
 
-  if (!result.success) {throw new AppProblem(404, problemTypes.cardNotFound, "Karte nicht gefunden");}
+  if (!result.success) {throw new AppProblemError(404, problemTypes.cardNotFound, "Karte nicht gefunden");}
 
   return result.data;
 }

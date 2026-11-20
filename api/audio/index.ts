@@ -2,7 +2,7 @@ import { maximumAudioBytes } from "../../src/contracts/card.js";
 import { problemTypes } from "../../src/contracts/problem.js";
 import { pronunciationInputSchema } from "../../src/contracts/pronunciation.js";
 import { handleRequest } from "../../src/server/http/handler.js";
-import { AppProblem } from "../../src/server/http/problem.js";
+import { AppProblemError } from "../../src/server/http/problem.js";
 import {
   cleanupExpiredAudio,
   enforceAudioUploadRateLimit,
@@ -21,7 +21,7 @@ async function readLimitedBody(request: Request): Promise<Uint8Array> {
   for await (const value of chunkStream) {
     byteLength += value.byteLength;
     if (byteLength > maximumAudioBytes) {
-      throw new AppProblem(413, problemTypes.requestTooLarge, "Audiodatei ist zu groß");
+      throw new AppProblemError(413, problemTypes.requestTooLarge, "Audiodatei ist zu groß");
     }
     chunks.push(value);
   }
@@ -44,7 +44,7 @@ function uploadRecording(request: Request): Promise<Response> {
       const contentLength = Number(request.headers.get("content-length") ?? 0);
 
       if (contentLength > maximumAudioBytes)
-        {throw new AppProblem(413, problemTypes.requestTooLarge, "Audiodatei ist zu groß");}
+        {throw new AppProblemError(413, problemTypes.requestTooLarge, "Audiodatei ist zu groß");}
       await enforceAudioUploadRateLimit(sessionHash!);
       const bytes = await readLimitedBody(request);
       await cleanupExpiredAudio();

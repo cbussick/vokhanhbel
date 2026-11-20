@@ -172,6 +172,7 @@ async function sha256(value: Uint8Array | string): Promise<string> {
 }
 
 async function hmac(key: ArrayBuffer | Uint8Array, value: string): Promise<ArrayBuffer> {
+  // eslint-disable-next-line @nkzw/no-instanceof -- Native typed-array identity selects a byte copy for WebCrypto; ArrayBuffer inputs must remain raw buffers.
   const keyBytes = key instanceof Uint8Array ? Uint8Array.from(key) : key;
   const cryptoKey = await crypto.subtle.importKey(
     "raw",

@@ -6,7 +6,7 @@ import { verifyPassword } from "../auth/password.js";
 import { createSessionIdentifier, hashSessionIdentifier } from "../auth/sessionIdentifier.js";
 import { getServerEnvironment } from "../config/environment.js";
 import { getPool } from "../database/client.js";
-import { AppProblem } from "../http/problem.js";
+import { AppProblemError } from "../http/problem.js";
 
 type LoginInput = z.infer<typeof loginInputSchema>;
 const loginWindowMilliseconds = 15 * 60 * 1000;
@@ -55,7 +55,7 @@ export async function login(request: Request, input: LoginInput): Promise<string
           )
         : Math.ceil(loginWindowMilliseconds / 1000);
 
-      throw new AppProblem(
+      throw new AppProblemError(
         429,
         problemTypes.loginRateLimit,
         "Zu viele Versuche",
@@ -67,7 +67,7 @@ export async function login(request: Request, input: LoginInput): Promise<string
     if (!(await verifyPassword(input.password, getServerEnvironment().APP_PASSWORD_HASH))) {
       await client.query("INSERT INTO login_attempts (ip_hash) VALUES ($1)", [ipHash]);
       await client.query("COMMIT");
-      throw new AppProblem(401, problemTypes.wrongPassword, "Passwort stimmt nicht");
+      throw new AppProblemError(401, problemTypes.wrongPassword, "Passwort stimmt nicht");
     }
 
     await client.query("DELETE FROM login_attempts WHERE ip_hash=$1", [ipHash]);
@@ -82,7 +82,7 @@ export async function login(request: Request, input: LoginInput): Promise<string
 
     return identifier;
   } catch (error) {
-    if (!(error instanceof AppProblem && error.type === problemTypes.wrongPassword)) {
+    if (!(error instanceof AppProblemError && error.type === problemTypes.wrongPassword)) {
       await client.query("ROLLBACK");
     }
 

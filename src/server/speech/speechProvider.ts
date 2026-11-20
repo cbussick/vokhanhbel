@@ -4,7 +4,7 @@ import { problemTypes } from "../../contracts/problem.js";
 import type { PronunciationInput } from "../../contracts/pronunciation.js";
 import type { GeneratedAudioProvenance } from "../audio/audioProvenance.js";
 import { getGoogleSpeechEnvironment } from "../config/environment.js";
-import { AppProblem } from "../http/problem.js";
+import { AppProblemError } from "../http/problem.js";
 
 export interface SpeechRequest {
   text: string;
@@ -57,7 +57,7 @@ export async function synthesizePronunciation(
   try {
     speech = await provider.synthesize({ text, language, voice });
   } catch {
-    throw new AppProblem(
+    throw new AppProblemError(
       502,
       problemTypes.pronunciationFailed,
       "Aussprache konnte nicht erzeugt werden",

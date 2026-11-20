@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { problemTypes } from "../../src/contracts/problem.js";
 import { handleRequest } from "../../src/server/http/handler.js";
-import { AppProblem } from "../../src/server/http/problem.js";
+import { AppProblemError } from "../../src/server/http/problem.js";
 import {
   discardStagedAudio,
   enforceAudioPlaybackRateLimit,
@@ -13,7 +13,7 @@ function getAudioId(request: Request): string {
   const result = z.uuid().safeParse(segment);
 
   if (!result.success)
-    {throw new AppProblem(404, problemTypes.audioNotFound, "Audio nicht gefunden");}
+    {throw new AppProblemError(404, problemTypes.audioNotFound, "Audio nicht gefunden");}
 
   return result.data;
 }

@@ -92,6 +92,7 @@ export function SwipeExercise({
     // retargets the eventual click to the Card in Chromium, so an AudioPlayer never receives it.
     if (
       !interactive ||
+      // eslint-disable-next-line @nkzw/no-instanceof -- Native event targets need Element identity before invoking closest; arbitrary EventTargets have no DOM traversal API.
       (event.target instanceof Element &&
         event.target.closest("button, input, select, textarea, a"))
     )
