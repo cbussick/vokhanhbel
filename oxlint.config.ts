@@ -235,7 +235,6 @@ export default defineConfig({
         "@nkzw/no-instanceof": "off",
         "quality/no-chained-type-assertions": "off",
         "quality/no-known-value-widening": "off",
-        "quality/no-unsafe-dictionary-type": "off",
         "typescript/no-non-null-assertion": "off",
         "typescript/no-unsafe-type-assertion": "off",
         "typescript/return-await": "off",
