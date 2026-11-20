@@ -21,6 +21,7 @@ export class AppErrorBoundary extends Component<AppErrorBoundaryProps, AppErrorB
   }
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+    // eslint-disable-next-line no-console -- Native React error boundary retains browser error diagnostics and component stack.
     console.error("Uncaught application error", error, errorInfo.componentStack);
   }
 

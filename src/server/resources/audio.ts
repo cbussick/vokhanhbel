@@ -19,6 +19,7 @@ function operationLog(
   outcome: string,
   requestId?: string,
 ): void {
+  // eslint-disable-next-line no-console -- Structured audio-storage observability boundary; retain platform log severity and JSON format.
   console.info(
     JSON.stringify({
       area: "audio-storage",

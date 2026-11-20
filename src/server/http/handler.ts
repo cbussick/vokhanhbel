@@ -129,6 +129,7 @@ export async function handleRequest<TBody = undefined>(
 
     return applyHeaders(response, requestId, "no-store");
   } finally {
+    // eslint-disable-next-line no-console -- Native server request-log boundary preserves correlation IDs, severity, and structured platform diagnostics.
     console.info(
       JSON.stringify({
         requestId,

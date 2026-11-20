@@ -132,8 +132,11 @@ async function runApplication(project: string, databaseUrl: string): Promise<num
 
   const port = await availableApplicationPort();
   const applicationUrl = `http://127.0.0.1:${port}`;
+  // eslint-disable-next-line no-console -- Native CLI boundary prints the allocated local application URL.
   console.log(`\nApplication: ${applicationUrl}`);
+  // eslint-disable-next-line no-console -- Native CLI boundary prints the isolated database identity.
   console.log(`Database: project=${project}, host=127.0.0.1, port=${new URL(databaseUrl).port}`);
+  // eslint-disable-next-line no-console -- Native CLI boundary prints the persistent volume identity.
   console.log(`Data volume: ${project}_vokhanhbel-postgres-data-v1\n`);
 
   const vercel = resolve(repositoryRoot, "node_modules/vercel/dist/index.js");
@@ -161,6 +164,7 @@ async function main(): Promise<void> {
     return;
   }
   if (command === "inspect") {
+    // eslint-disable-next-line no-console -- Native CLI inspect boundary prints the selected Compose project.
     console.log(`Compose project: ${project}`);
     process.stdout.write(runDocker(project, "ps"));
 
@@ -168,6 +172,7 @@ async function main(): Promise<void> {
   }
 
   const databaseUrl = startDatabase(project);
+  // eslint-disable-next-line no-console -- Native CLI startup boundary prints the isolated database identity.
   console.log(`Database: project=${project}, host=127.0.0.1, port=${new URL(databaseUrl).port}`);
 
   if (command === "up") {return;}
@@ -186,6 +191,7 @@ if (basename(process.argv[1] ?? "") === "localDevelopment.ts") {
   try {
     await main();
   } catch (error) {
+    // eslint-disable-next-line no-console -- Native CLI failure boundary preserves stderr diagnostics and console inspection of non-Error failures.
     console.error(error instanceof Error ? error.message : error);
     process.exitCode = 1;
   }
