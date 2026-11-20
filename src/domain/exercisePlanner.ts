@@ -305,8 +305,8 @@ function limitRepeatedKind(exercises: Array<PlannedExercise>): Array<PlannedExer
   for (const exercise of exercises) {
     const wouldRunThree =
       limited.length >= 2 &&
-      limited[limited.length - 1]!.kind === exercise.kind &&
-      limited[limited.length - 2]!.kind === exercise.kind;
+      limited.at(-1)!.kind === exercise.kind &&
+      limited.at(-2)!.kind === exercise.kind;
 
     limited.push(
       wouldRunThree && exercise.kind === "multipleChoice"

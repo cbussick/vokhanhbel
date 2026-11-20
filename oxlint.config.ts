@@ -249,7 +249,6 @@ export default defineConfig({
         "unicorn/no-array-sort": "off",
         "unicorn/no-useless-promise-resolve-reject": "off",
         "unicorn/prefer-add-event-listener": "off",
-        "unicorn/prefer-at": "off",
         "unicorn/prefer-string-raw": "off",
         "unicorn/prefer-top-level-await": "off",
         "vitest/no-conditional-expect": "off",
