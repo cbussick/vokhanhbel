@@ -1,5 +1,6 @@
 import { useEffect, useId, useRef, useState } from "react";
-import { nextTypeAheadState, type TypeAheadState } from "../../lib/typeAhead";
+import { nextTypeAheadState } from '../../lib/typeAhead';
+import type { TypeAheadState } from '../../lib/typeAhead';
 
 interface TypeAheadOptions {
   /**

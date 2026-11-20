@@ -1,9 +1,8 @@
-import { createContext, type ReactNode, useContext } from "react";
+import { createContext, useContext } from 'react';
+import type { ReactNode } from 'react';
 import type { ReviewSubmission } from "./review/reviewSubmission";
-import {
-  useReviewSubmissionQueue,
-  type ReviewSubmissionRejectedHandler,
-} from "./review/useReviewSubmissionQueue";
+import { useReviewSubmissionQueue } from './review/useReviewSubmissionQueue';
+import type { ReviewSubmissionRejectedHandler } from './review/useReviewSubmissionQueue';
 
 interface ReviewSubmissionSync {
   optimisticPoints: number;

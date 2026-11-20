@@ -1,4 +1,5 @@
-import { useEffect, type ReactNode, type RefObject } from "react";
+import { useEffect } from 'react';
+import type { ReactNode, RefObject } from 'react';
 import { useTranslation } from "react-i18next";
 import styles from "./Dialog.module.css";
 

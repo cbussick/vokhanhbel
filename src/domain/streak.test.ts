@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { calculateStreak, type StreakCard, type StreakReview } from "./streak.js";
+import { calculateStreak } from './streak.js';
+import type { StreakCard, StreakReview } from './streak.js';
 
 // A fixed "now" mid-day Berlin time, well clear of any calendar-day boundary.
 const now = new Date("2026-08-25T10:00:00.000Z");

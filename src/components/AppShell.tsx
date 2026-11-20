@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import { type ReactNode, useRef, useSyncExternalStore } from "react";
+import { useRef, useSyncExternalStore } from 'react';
+import type { ReactNode } from 'react';
 import { useTranslation } from "react-i18next";
 import { statsQuery } from "../lib/queries";
 import { useReviewSubmissions } from "../state/ReviewSubmissionContext";

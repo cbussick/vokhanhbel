@@ -1,5 +1,6 @@
 import { z } from "zod";
-import { topicSchema, type Topic } from "../../contracts/topic.js";
+import { topicSchema } from '../../contracts/topic.js';
+import type { Topic } from '../../contracts/topic.js';
 
 const topicRowSchema = z.object({
   id: z.uuid(),

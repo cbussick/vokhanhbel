@@ -1,12 +1,7 @@
 import { defineRule } from "@oxlint/plugins";
 
-import {
-	classifyWideningTarget,
-	createTypeEnvironment,
-	isKnownEvidenceExpression,
-	type TypeEnvironment,
-	type WideningTarget,
-} from "../shared/dictionary-types.ts";
+import type { TypeEnvironment, WideningTarget } from "../shared/dictionary-types.ts";
+import { classifyWideningTarget, createTypeEnvironment, isKnownEvidenceExpression } from "../shared/dictionary-types.ts";
 
 import type { ESTree, Scope, SourceCode, Variable } from "@oxlint/plugins";
 

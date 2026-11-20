@@ -1,4 +1,5 @@
-import { useRef, useState, type PointerEvent } from "react";
+import { useRef, useState } from 'react';
+import type { PointerEvent } from 'react';
 import { useTranslation } from "react-i18next";
 import { issueBlocksInput } from "../../state/review/reviewSessionReducer";
 import type { SwipeExerciseView } from "../../state/ReviewSessionContext";
@@ -6,7 +7,8 @@ import { useReviewSession } from "../../state/ReviewSessionContext";
 import { CardFace } from "../audio/CardFace";
 import { TutorDialog } from "../TutorDialog";
 import { ExerciseScreen } from "./ExerciseScreen";
-import { OptionOutcome, optionModifierClassName, type OptionVerdict } from "./optionAppearance";
+import { OptionOutcome, optionModifierClassName } from './optionAppearance';
+import type { OptionVerdict } from './optionAppearance';
 import { ResolutionFooter } from "./ResolutionFooter";
 import styles from "./reviewSession.module.css";
 

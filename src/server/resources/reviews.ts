@@ -1,20 +1,10 @@
 import { z } from "zod";
 import { cardSchema } from "../../contracts/card.js";
 import { problemTypes } from "../../contracts/problem.js";
-import {
-  reviewResultSchema,
-  reviewSchema,
-  type ReviewResult,
-  type ReviewSubmissionInput,
-} from "../../contracts/review.js";
-import {
-  boxSchema,
-  getBoxAfterGrade,
-  getIntervalDays,
-  getPointsForGrade,
-  gradeSchema,
-  type Box,
-} from "../../domain/review.js";
+import { reviewResultSchema, reviewSchema } from '../../contracts/review.js';
+import type { ReviewResult, ReviewSubmissionInput } from '../../contracts/review.js';
+import { boxSchema, getBoxAfterGrade, getIntervalDays, getPointsForGrade, gradeSchema } from '../../domain/review.js';
+import type { Box } from '../../domain/review.js';
 import { berlinTimeZone } from "../../domain/time.js";
 import { getPool } from "../database/client.js";
 import { AppProblem } from "../http/problem.js";

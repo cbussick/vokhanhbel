@@ -233,7 +233,6 @@ export default defineConfig({
       files: ["**/*.{ts,tsx,mts,cts}"],
       rules: {
         "@nkzw/no-instanceof": "off",
-        "import/consistent-type-specifier-style": "off",
         "import/no-namespace": "off",
         "no-console": "off",
         "no-promise-executor-return": "off",

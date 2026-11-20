@@ -1,6 +1,8 @@
 import { apiPaths } from "../../contracts/apiPaths";
-import { audioMetadataSchema, type AudioMetadata } from "../../contracts/card";
-import { pronunciationInputSchema, type PronunciationInput } from "../../contracts/pronunciation";
+import { audioMetadataSchema } from '../../contracts/card';
+import type { AudioMetadata } from '../../contracts/card';
+import { pronunciationInputSchema } from '../../contracts/pronunciation';
+import type { PronunciationInput } from '../../contracts/pronunciation';
 import { apiRequest, throwApiError } from "../../lib/apiClient";
 
 export async function stageAudioDraft(blob: Blob): Promise<AudioMetadata> {

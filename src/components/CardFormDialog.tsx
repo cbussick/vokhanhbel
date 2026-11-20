@@ -2,12 +2,8 @@ import { useIsMutating, useMutation, useQuery, useQueryClient } from "@tanstack/
 import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { apiPaths } from "../contracts/apiPaths";
-import {
-  cardSchema,
-  createCardInputSchema,
-  updateCardInputSchema,
-  type Card,
-} from "../contracts/card";
+import { cardSchema, createCardInputSchema, updateCardInputSchema } from '../contracts/card';
+import type { Card } from '../contracts/card';
 import { offeredCollectionLanguage } from "../contracts/collection";
 import { problemTypes } from "../contracts/problem";
 import { ApiError, apiRequest } from "../lib/apiClient";
@@ -15,7 +11,8 @@ import { useOnlineStatus } from "../lib/browserState";
 import { collectionsQuery, topicsQuery } from "../lib/queries";
 import { mutationKeys, queryKeys } from "../lib/queryKeys";
 import { stageAudioDraft } from "./audio/audioApi";
-import { AudioInput, releaseAudioDraft, type AudioDraft } from "./audio/AudioInput";
+import { AudioInput, releaseAudioDraft } from './audio/AudioInput';
+import type { AudioDraft } from './audio/AudioInput';
 import { CollectionFormDialog } from "./CollectionFormDialog";
 import { CollectionSelect } from "./CollectionSelect";
 import { Dialog } from "./Dialog";

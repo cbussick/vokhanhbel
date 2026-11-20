@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState, type CSSProperties } from "react";
+import { useEffect, useRef, useState } from 'react';
+import type { CSSProperties } from 'react';
 import { useTranslation } from "react-i18next";
 import type { SummaryView } from "../../state/ReviewSessionContext";
 import { AppShell } from "../AppShell";

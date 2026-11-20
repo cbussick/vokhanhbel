@@ -3,15 +3,8 @@ import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { apiPaths } from "../contracts/apiPaths";
 import { problemTypes } from "../contracts/problem";
-import {
-  createTopicInputSchema,
-  defaultTopicIcon,
-  topicIconKeys,
-  topicInputSchema,
-  topicSchema,
-  type Topic,
-  type TopicIconKey,
-} from "../contracts/topic";
+import { createTopicInputSchema, defaultTopicIcon, topicIconKeys, topicInputSchema, topicSchema } from '../contracts/topic';
+import type { Topic, TopicIconKey } from '../contracts/topic';
 import { apiRequest, ApiError } from "../lib/apiClient";
 import { useOnlineStatus } from "../lib/browserState";
 import { queryKeys } from "../lib/queryKeys";

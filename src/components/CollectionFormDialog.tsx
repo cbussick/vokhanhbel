@@ -2,14 +2,8 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { apiPaths } from "../contracts/apiPaths";
-import {
-  collectionIconKeys,
-  collectionInputSchema,
-  collectionSchema,
-  defaultCollectionIcon,
-  type Collection,
-  type CollectionIconKey,
-} from "../contracts/collection";
+import { collectionIconKeys, collectionInputSchema, collectionSchema, defaultCollectionIcon } from '../contracts/collection';
+import type { Collection, CollectionIconKey } from '../contracts/collection';
 import { problemTypes } from "../contracts/problem";
 import { apiRequest, ApiError } from "../lib/apiClient";
 import { useOnlineStatus } from "../lib/browserState";

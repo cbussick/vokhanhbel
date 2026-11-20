@@ -1,10 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import {
-  maximumAudioBytes,
-  maximumAudioDurationMs,
-  type AudioMetadata,
-} from "../../contracts/card";
+import { maximumAudioBytes, maximumAudioDurationMs } from '../../contracts/card';
+import type { AudioMetadata } from '../../contracts/card';
 import type { CollectionLanguage } from "../../contracts/collection";
 import { AudioPlayer } from "./AudioPlayer";
 import { stopApplicationPlayback } from "./playbackCoordinator";

@@ -1,5 +1,6 @@
 import { apiPaths } from "../contracts/apiPaths";
-import { problemSchema, problemTypes, type Problem } from "../contracts/problem";
+import { problemSchema, problemTypes } from '../contracts/problem';
+import type { Problem } from '../contracts/problem';
 import { publishSessionExpired } from "./sessionEvents";
 
 export class ApiError extends Error {

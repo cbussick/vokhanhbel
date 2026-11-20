@@ -1,4 +1,5 @@
-import { drizzle, type NodePgDatabase } from "drizzle-orm/node-postgres";
+import { drizzle } from 'drizzle-orm/node-postgres';
+import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { Pool } from "pg";
 import { getServerEnvironment } from "../config/environment.js";
 import * as schema from "./schema.js";

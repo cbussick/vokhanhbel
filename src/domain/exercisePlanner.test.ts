@@ -1,12 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { Card } from "../contracts/card.js";
-import {
-  leadingGroupedExerciseKind,
-  planExercises,
-  type MatchingExercise,
-  type MultipleChoiceExercise,
-  type SwipeExercise,
-} from "./exercisePlanner.js";
+import { leadingGroupedExerciseKind, planExercises } from './exercisePlanner.js';
+import type { MatchingExercise, MultipleChoiceExercise, SwipeExercise } from './exercisePlanner.js';
 
 const collectionA = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
 const collectionB = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";

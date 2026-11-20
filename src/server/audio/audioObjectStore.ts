@@ -1,11 +1,8 @@
 import { mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import { dirname, resolve, sep } from "node:path";
 import { z } from "zod";
-import {
-  getR2Environment,
-  getServerEnvironment,
-  type R2Environment,
-} from "../config/environment.js";
+import { getR2Environment, getServerEnvironment } from '../config/environment.js';
+import type { R2Environment } from '../config/environment.js';
 
 export interface AudioObjectRange {
   start: number;

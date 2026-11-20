@@ -1,10 +1,6 @@
 import { z } from "zod";
-import {
-  audioMetadataSchema,
-  cardSchema,
-  type AudioMetadata,
-  type Card,
-} from "../../contracts/card.js";
+import { audioMetadataSchema, cardSchema } from '../../contracts/card.js';
+import type { AudioMetadata, Card } from '../../contracts/card.js';
 import { boxSchema } from "../../domain/review.js";
 
 /**

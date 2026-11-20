@@ -13,11 +13,8 @@ import { TopicIcon } from "../components/TopicIcon";
 import type { Card } from "../contracts/card";
 import { useDueTime } from "../lib/browserState";
 import { cardsQuery, collectionsQuery, topicsQuery } from "../lib/queries";
-import {
-  ReviewSessionProvider,
-  type ReviewScope,
-  useReviewSession,
-} from "../state/ReviewSessionContext";
+import { ReviewSessionProvider, useReviewSession } from '../state/ReviewSessionContext';
+import type { ReviewScope } from '../state/ReviewSessionContext';
 import styles from "./review.module.css";
 
 export const Route = createFileRoute("/review")({ component: ReviewRouteProvider });

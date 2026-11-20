@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useRef, type ReactNode } from "react";
+import { useCallback, useEffect, useRef } from 'react';
+import type { ReactNode } from 'react';
 
 export function ListboxRoot({
   rootRef,
