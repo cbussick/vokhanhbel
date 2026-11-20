@@ -234,7 +234,6 @@ export default defineConfig({
       rules: {
         "@nkzw/no-instanceof": "off",
         "quality/no-chained-type-assertions": "off",
-        "quality/no-conditional-empty-object-spread": "off",
         "quality/no-known-value-widening": "off",
         "quality/no-unsafe-dictionary-type": "off",
         "typescript/no-non-null-assertion": "off",

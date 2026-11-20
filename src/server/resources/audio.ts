@@ -13,22 +13,26 @@ import { AppProblem } from "../http/problem.js";
 
 const stagedLifetimeMilliseconds = 60 * 60 * 1000;
 
+interface AudioOperationLog {
+  area: "audio-storage";
+  operation: string;
+  audioId: string;
+  outcome: string;
+  requestId?: string;
+}
+
 function operationLog(
   operation: string,
   audioId: string,
   outcome: string,
   requestId?: string,
 ): void {
+  const entry: AudioOperationLog = { area: "audio-storage", operation, audioId, outcome };
+
+  if (requestId) {entry.requestId = requestId;}
+
   // eslint-disable-next-line no-console -- Structured audio-storage observability boundary; retain platform log severity and JSON format.
-  console.info(
-    JSON.stringify({
-      area: "audio-storage",
-      operation,
-      audioId,
-      outcome,
-      ...(requestId ? { requestId } : {}),
-    }),
-  );
+  console.info(JSON.stringify(entry));
 }
 
 async function recordCleanupFailure(
@@ -129,7 +133,11 @@ function parseRange(rangeHeader: string | null, totalSize: number): AudioObjectR
   if (start >= totalSize || (end !== undefined && (end < start || end >= totalSize)))
     {throw new AppProblem(416, problemTypes.invalidAudioRange, "Audiobereich ungültig");}
 
-  return { start, ...(end === undefined ? {} : { end }) };
+  const range: AudioObjectRange = { start };
+
+  if (end !== undefined) {range.end = end;}
+
+  return range;
 }
 
 export async function playAudio(

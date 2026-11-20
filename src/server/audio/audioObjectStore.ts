@@ -234,11 +234,11 @@ export class R2AudioObjectStore implements AudioObjectStore {
       `AWS4-HMAC-SHA256 Credential=${this.configuration.accessKeyId}/${scope}, SignedHeaders=${signedHeaders}, Signature=${signature}`,
     );
 
-    return fetch(`${this.configuration.endpoint}${path}`, {
-      method,
-      headers,
-      ...(body ? { body: new Blob([Uint8Array.from(body)]) } : {}),
-    });
+    const request: RequestInit = { method, headers };
+
+    if (body) {request.body = new Blob([Uint8Array.from(body)]);}
+
+    return fetch(`${this.configuration.endpoint}${path}`, request);
   }
 
   async put(objectKey: string, bytes: Uint8Array, contentType: string): Promise<void> {
@@ -276,11 +276,11 @@ export class R2AudioObjectStore implements AudioObjectStore {
       {throw new Error("R2 returned an unexpected content range");}
     const totalSize = contentRange?.totalSize ?? contentLength;
 
-    return {
-      bytes,
-      totalSize,
-      ...(contentRange ? { contentRange: contentRange.value } : {}),
-    };
+    const stored: StoredAudioObject = { bytes, totalSize };
+
+    if (contentRange) {stored.contentRange = contentRange.value;}
+
+    return stored;
   }
 
   async delete(objectKey: string): Promise<void> {
