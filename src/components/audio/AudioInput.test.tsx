@@ -3,9 +3,10 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import "../../i18n/config";
 import { AudioInput } from "./AudioInput";
+import type { AudioDraft } from "./AudioInput";
 import { beginPlayback, endPlayback } from "./playbackCoordinator";
 
-const revokeObjectUrl = vi.fn();
+const revokeObjectUrl = vi.fn<typeof URL.revokeObjectURL>();
 
 class RecorderStub {
   static instances: Array<RecorderStub> = [];
@@ -42,7 +43,7 @@ describe("AudioInput microphone gate", () => {
     RecorderStub.supportedTypes = new Set(["audio/webm;codecs=opus"]);
     vi.stubGlobal("MediaRecorder", RecorderStub);
     Object.defineProperties(URL, {
-      createObjectURL: { configurable: true, value: vi.fn(() => "blob:recording") },
+      createObjectURL: { configurable: true, value: vi.fn<typeof URL.createObjectURL>(() => "blob:recording") },
       revokeObjectURL: { configurable: true, value: revokeObjectUrl },
     });
   });
@@ -55,7 +56,7 @@ describe("AudioInput microphone gate", () => {
 
   it("requests the default microphone only after Record and keeps file import available on denial", async () => {
     const user = userEvent.setup();
-    const getUserMedia = vi.fn().mockRejectedValue(new DOMException("denied", "NotAllowedError"));
+    const getUserMedia = vi.fn<typeof navigator.mediaDevices.getUserMedia>().mockRejectedValue(new DOMException("denied", "NotAllowedError"));
 
     Object.defineProperty(navigator, "mediaDevices", {
       configurable: true,
@@ -139,16 +140,16 @@ describe("AudioInput microphone gate", () => {
   });
 
   it("selects Opus output, stops manually, releases tracks, and offers Record Again", async () => {
-    const stopTracks = [vi.fn(), vi.fn()];
+    const stopTracks = [vi.fn<() => void>(), vi.fn<() => void>()];
     const getUserMedia = vi
-      .fn()
+      .fn<() => Promise<{ getTracks: () => Array<{ stop: () => void }> }>>()
       .mockResolvedValue({ getTracks: () => stopTracks.map((stop) => ({ stop })) });
     Object.defineProperty(navigator, "mediaDevices", {
       configurable: true,
       value: { getUserMedia },
     });
-    const onDraftChange = vi.fn();
-    const playbackParticipant = { stop: vi.fn() };
+    const onDraftChange = vi.fn<(draft: AudioDraft | null) => void>();
+    const playbackParticipant = { stop: vi.fn<() => void>() };
     beginPlayback(playbackParticipant);
     const view = render(
       <AudioInput
@@ -188,14 +189,14 @@ describe("AudioInput microphone gate", () => {
 
   it("stops automatically at seven seconds and cleans up an active recording on unmount", async () => {
     vi.useFakeTimers();
-    const stopTrack = vi.fn();
+    const stopTrack = vi.fn<() => void>();
     Object.defineProperty(navigator, "mediaDevices", {
       configurable: true,
       value: {
-        getUserMedia: vi.fn().mockResolvedValue({ getTracks: () => [{ stop: stopTrack }] }),
+        getUserMedia: vi.fn<() => Promise<{ getTracks: () => Array<{ stop: () => void }> }>>().mockResolvedValue({ getTracks: () => [{ stop: stopTrack }] }),
       },
     });
-    const onDraftChange = vi.fn();
+    const onDraftChange = vi.fn<(draft: AudioDraft | null) => void>();
     const view = render(
       <AudioInput
         face="back"
@@ -238,7 +239,7 @@ describe("AudioInput microphone gate", () => {
     RecorderStub.supportedTypes = new Set(["audio/mp4;codecs=mp4a.40.2"]);
     Object.defineProperty(navigator, "mediaDevices", {
       configurable: true,
-      value: { getUserMedia: vi.fn().mockResolvedValue({ getTracks: () => [] }) },
+      value: { getUserMedia: vi.fn<() => Promise<{ getTracks: () => Array<never> }>>().mockResolvedValue({ getTracks: () => [] }) },
     });
     render(
       <AudioInput

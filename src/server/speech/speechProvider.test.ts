@@ -4,7 +4,9 @@ import { resetServerEnvironmentForTests } from "../config/environment.js";
 import { createGoogleSpeechProvider, synthesizePronunciation } from "./speechProvider.js";
 import { RecordingSpeechProvider } from "./speechProvider.test-helper.js";
 
-const { synthesizeSpeech } = vi.hoisted(() => ({ synthesizeSpeech: vi.fn() }));
+const { synthesizeSpeech } = vi.hoisted(() => ({
+  synthesizeSpeech: vi.fn<(request: { input: { text: string }; voice: { languageCode: string; name: string }; audioConfig: { audioEncoding: string } }) => Promise<[{ audioContent: Uint8Array | string | null }]>>(),
+}));
 
 // These tests cover the Google adapter itself, which constructs the client. Injecting a seam here
 // would only move the boundary and leave the adapter untested. Consumers use SpeechProvider.

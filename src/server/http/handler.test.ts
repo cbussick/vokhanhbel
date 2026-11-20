@@ -9,7 +9,7 @@ afterEach(() => vi.restoreAllMocks());
 describe("public HTTP envelope", () => {
   it("rejects an unsafe cross-site request before invoking its handler", async () => {
     vi.spyOn(console, "info").mockImplementation(() => undefined);
-    const callback = vi.fn(async () => Response.json({ ok: true }));
+    const callback = vi.fn<() => Promise<Response>>(async () => Response.json({ ok: true }));
     const request = new Request("https://cards.example/api/session", {
       method: "POST",
       headers: {
@@ -33,7 +33,7 @@ describe("public HTTP envelope", () => {
 
   it("returns stable problems for wrong content type, oversized JSON, and bad fields", async () => {
     vi.spyOn(console, "info").mockImplementation(() => undefined);
-    const callback = vi.fn(async () => Response.json({ ok: true }));
+    const callback = vi.fn<() => Promise<Response>>(async () => Response.json({ ok: true }));
     const createRequest = (headers: Record<string, string>, body: string) =>
       new Request("https://cards.example/api/test", {
         method: "POST",
