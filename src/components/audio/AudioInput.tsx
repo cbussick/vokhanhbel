@@ -83,17 +83,17 @@ async function readDuration(source: string): Promise<number> {
     const finish = () => window.clearTimeout(timeout);
 
     audio.preload = "metadata";
-    audio.onloadedmetadata = () => {
+    audio.addEventListener("loadedmetadata", () => {
       finish();
       const duration = Math.round(audio.duration * 1000);
 
       if (!Number.isFinite(duration) || duration <= 0) {reject(new Error("invalid-duration"));}
       else {resolve(duration);}
-    };
-    audio.onerror = () => {
+    }, { once: true });
+    audio.addEventListener("error", () => {
       finish();
       reject(new Error("invalid-audio"));
-    };
+    }, { once: true });
     audio.src = source;
   });
 }

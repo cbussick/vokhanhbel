@@ -237,7 +237,6 @@ export default defineConfig({
         "typescript/no-unsafe-type-assertion": "off",
         "typescript/return-await": "off",
         "unicorn/consistent-function-scoping": "off",
-        "unicorn/prefer-add-event-listener": "off",
         "vitest/require-mock-type-parameters": "off",
         "vitest/require-to-throw-message": "off",
       },
