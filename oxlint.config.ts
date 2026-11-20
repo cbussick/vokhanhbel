@@ -1,8 +1,11 @@
+import cloudflare from "@cloudflare/oxlint-config";
 import { defineConfig } from "oxlint";
 
 export default defineConfig({
-  plugins: ["typescript", "jsx-a11y", "react", "import"],
+  ...cloudflare,
+  plugins: [...cloudflare.plugins],
   jsPlugins: [
+    ...cloudflare.jsPlugins,
     {
       name: "stylistic",
       specifier: "@stylistic/eslint-plugin",
@@ -17,9 +20,11 @@ export default defineConfig({
     suspicious: "error",
   },
   options: {
+    ...cloudflare.options,
     typeAware: true,
   },
   env: {
+    ...cloudflare.env,
     builtin: true,
     browser: true,
     node: true,
@@ -43,13 +48,9 @@ export default defineConfig({
     ".windsurf/**",
   ],
   rules: {
+    ...cloudflare.rules,
     "no-case-declarations": "error",
-    "no-empty": [
-      "error",
-      {
-        allowEmptyCatch: true,
-      },
-    ],
+    "no-empty": "error",
     "no-fallthrough": "error",
     "no-prototype-builtins": "error",
     "no-unexpected-multiline": "error",
@@ -80,7 +81,6 @@ export default defineConfig({
       },
     ],
     "typescript/consistent-return": "off",
-    "typescript/no-unsafe-type-assertion": "off",
     "anti-slop/no-chained-type-assertions": "error",
     "anti-slop/no-known-value-widening": "error",
     "anti-slop/no-module-mocking": "error",
@@ -94,6 +94,7 @@ export default defineConfig({
     "anti-slop/require-safety-comment-for-type-assertion": "error",
   },
   overrides: [
+    ...cloudflare.overrides,
     {
       files: ["**/*.ts", "**/*.tsx", "**/*.mts", "**/*.cts"],
       rules: {
@@ -202,8 +203,7 @@ export default defineConfig({
           },
         ],
         "react/rules-of-hooks": "error",
-        "react/unsupported-syntax": "warn",
-        "typescript/consistent-type-definitions": ["error", "interface"],
+        "react/unsupported-syntax": "error",
         "typescript/no-misused-promises": [
           "error",
           {
@@ -212,8 +212,8 @@ export default defineConfig({
             },
           },
         ],
-        "react/exhaustive-deps": "warn",
-        "react/incompatible-library": "warn",
+        "react/exhaustive-deps": "error",
+        "react/incompatible-library": "error",
       },
     },
     {
@@ -226,6 +226,41 @@ export default defineConfig({
         "anti-slop/require-safety-comment-for-type-assertion": "off",
         "anti-slop/no-chained-type-assertions": "off",
         "anti-slop/no-known-value-widening": "off",
+      },
+    },
+    {
+      // Temporary adoption baseline; removed rule by rule before completion.
+      files: ["**/*.{ts,tsx,mts,cts}"],
+      rules: {
+        "@nkzw/no-instanceof": "off",
+        "curly": "off",
+        "import/consistent-type-specifier-style": "off",
+        "import/no-namespace": "off",
+        "no-console": "off",
+        "no-promise-executor-return": "off",
+        "quality/no-array-filter-map": "off",
+        "quality/no-chained-type-assertions": "off",
+        "quality/no-conditional-empty-object-spread": "off",
+        "quality/no-known-value-widening": "off",
+        "quality/no-unsafe-dictionary-type": "off",
+        "react/button-has-type": "off",
+        "typescript/array-type": "off",
+        "typescript/no-non-null-assertion": "off",
+        "typescript/no-unsafe-type-assertion": "off",
+        "typescript/return-await": "off",
+        "unicorn/catch-error-name": "off",
+        "unicorn/consistent-function-scoping": "off",
+        "unicorn/no-array-sort": "off",
+        "unicorn/no-useless-promise-resolve-reject": "off",
+        "unicorn/numeric-separators-style": "off",
+        "unicorn/prefer-add-event-listener": "off",
+        "unicorn/prefer-at": "off",
+        "unicorn/prefer-string-raw": "off",
+        "unicorn/prefer-string-replace-all": "off",
+        "unicorn/prefer-top-level-await": "off",
+        "vitest/no-conditional-expect": "off",
+        "vitest/require-mock-type-parameters": "off",
+        "vitest/require-to-throw-message": "off",
       },
     },
   ],
