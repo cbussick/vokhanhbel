@@ -183,8 +183,10 @@ async function main(): Promise<void> {
 }
 
 if (basename(process.argv[1] ?? "") === "localDevelopment.ts") {
-  main().catch((error: unknown) => {
+  try {
+    await main();
+  } catch (error) {
     console.error(error instanceof Error ? error.message : error);
     process.exitCode = 1;
-  });
+  }
 }

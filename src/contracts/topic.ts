@@ -16,6 +16,7 @@ export const topicSchema = z.object({
   id: uuidSchema,
   collectionId: uuidSchema,
   name: z.string().min(1).max(60),
+  // eslint-disable-next-line unicorn/prefer-top-level-await -- Zod catch supplies a synchronous schema fallback, not a Promise rejection handler.
   icon: topicIconSchema.catch(defaultTopicIcon),
   createdAt: utcTimestampSchema,
   updatedAt: utcTimestampSchema,

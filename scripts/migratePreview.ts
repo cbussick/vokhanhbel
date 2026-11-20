@@ -95,9 +95,11 @@ export async function main(): Promise<void> {
 const scriptPath = process.argv[1];
 
 if (scriptPath && import.meta.url === pathToFileURL(scriptPath).href) {
-  main().catch((error: unknown) => {
+  try {
+    await main();
+  } catch (error) {
     const message = error instanceof Error ? error.message : "Preview migration failed.";
     process.stderr.write(`${message}\n`);
     process.exitCode = 1;
-  });
+  }
 }
