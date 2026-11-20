@@ -23,8 +23,9 @@ full audit has 45 findings and the original production-only CI audit gate is res
   migration credentials. The config is instead a statically read normal entry;
   its schema is also reachable through runtime database imports. Neither audit
   needs credentials or runs migrations.
-- The sole dependency exception is `vercel`: `scripts/localDevelopment.ts`
-  invokes its CLI through an absolute path, which Knip does not infer.
+- Dependency exceptions cover two dynamically invoked tools that Knip does not infer:
+  `vercel`, whose CLI `scripts/localDevelopment.ts` invokes through an absolute path,
+  and `tsrs`, which Oxlint automatically discovers as its type-aware backend.
 - `ignoreExportsUsedInFile` retains schemas and helpers with same-file callers.
   There are no nested packages/workspaces or externally published library APIs.
 

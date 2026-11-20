@@ -20,7 +20,8 @@
   // Read the config statically: importing it requires migration credentials.
   // Its schema is already reachable through production database consumers.
   "drizzle": false,
-  // localDevelopment.ts spawns this exact package's CLI through an absolute path.
-  "ignoreDependencies": ["vercel"],
+  // localDevelopment.ts spawns Vercel's CLI through an absolute path.
+  // Oxlint discovers tsrs automatically as its type-aware backend, without an import.
+  "ignoreDependencies": ["vercel", "tsrs"],
   "ignoreExportsUsedInFile": true,
 }
