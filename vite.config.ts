@@ -26,7 +26,7 @@ export default defineConfig({
     tanstackRouter({
       target: "react",
       autoCodeSplitting: true,
-      routeFileIgnorePattern: "\\.test\\.",
+      routeFileIgnorePattern: String.raw`\.test\.`,
     }),
     react(),
     babel({ presets: [reactCompilerPreset()] }),

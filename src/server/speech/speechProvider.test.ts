@@ -64,7 +64,7 @@ describe("Google Text-to-Speech adapter", () => {
       RATE_LIMIT_HMAC_SECRET: "test-only-secret-at-least-thirty-two-characters",
       GOOGLE_TTS_PROJECT_ID: "test-project",
       GOOGLE_TTS_CLIENT_EMAIL: "tts@test-project.iam.gserviceaccount.com",
-      GOOGLE_TTS_PRIVATE_KEY: "-----BEGIN PRIVATE KEY-----\\ntest\\n-----END PRIVATE KEY-----\\n",
+      GOOGLE_TTS_PRIVATE_KEY: String.raw`-----BEGIN PRIVATE KEY-----\ntest\n-----END PRIVATE KEY-----\n`,
     });
     resetServerEnvironmentForTests();
     synthesizeSpeech.mockReset();
