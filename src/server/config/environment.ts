@@ -48,22 +48,15 @@ export interface R2Environment {
 
 export function getR2Environment(): R2Environment {
   const environment = getServerEnvironment();
-  const required = [
-    environment.R2_ENVIRONMENT,
-    environment.R2_ACCOUNT_ID,
-    environment.R2_BUCKET,
-    environment.R2_ACCESS_KEY_ID,
-    environment.R2_SECRET_ACCESS_KEY,
-  ];
-
-  if (required.some((value) => !value)) {throw new Error("R2 configuration is incomplete");}
+  const { R2_ENVIRONMENT, R2_ACCOUNT_ID, R2_BUCKET, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY } = environment;
+  if (!R2_ENVIRONMENT || !R2_ACCOUNT_ID || !R2_BUCKET || !R2_ACCESS_KEY_ID || !R2_SECRET_ACCESS_KEY) {throw new Error("R2 configuration is incomplete");}
 
   return {
-    environment: environment.R2_ENVIRONMENT!,
-    endpoint: `https://${environment.R2_ACCOUNT_ID}.eu.r2.cloudflarestorage.com`,
-    bucket: environment.R2_BUCKET!,
-    accessKeyId: environment.R2_ACCESS_KEY_ID!,
-    secretAccessKey: environment.R2_SECRET_ACCESS_KEY!,
+    environment: R2_ENVIRONMENT,
+    endpoint: `https://${R2_ACCOUNT_ID}.eu.r2.cloudflarestorage.com`,
+    bucket: R2_BUCKET,
+    accessKeyId: R2_ACCESS_KEY_ID,
+    secretAccessKey: R2_SECRET_ACCESS_KEY,
   };
 }
 
@@ -76,19 +69,15 @@ export interface GoogleSpeechEnvironment {
 
 export function getGoogleSpeechEnvironment(): GoogleSpeechEnvironment {
   const environment = getServerEnvironment();
-  const required = [
-    environment.GOOGLE_TTS_PROJECT_ID,
-    environment.GOOGLE_TTS_CLIENT_EMAIL,
-    environment.GOOGLE_TTS_PRIVATE_KEY,
-  ];
+  const { GOOGLE_TTS_PROJECT_ID, GOOGLE_TTS_CLIENT_EMAIL, GOOGLE_TTS_PRIVATE_KEY } = environment;
 
-  if (required.some((value) => !value))
+  if (!GOOGLE_TTS_PROJECT_ID || !GOOGLE_TTS_CLIENT_EMAIL || !GOOGLE_TTS_PRIVATE_KEY)
     {throw new Error("Google Text-to-Speech configuration is incomplete");}
 
   return {
-    projectId: environment.GOOGLE_TTS_PROJECT_ID!,
-    clientEmail: environment.GOOGLE_TTS_CLIENT_EMAIL!,
+    projectId: GOOGLE_TTS_PROJECT_ID,
+    clientEmail: GOOGLE_TTS_CLIENT_EMAIL,
     // A deployment stores the key on one line, so its PEM line breaks arrive escaped.
-    privateKey: environment.GOOGLE_TTS_PRIVATE_KEY!.replaceAll(String.raw`\n`, "\n"),
+    privateKey: GOOGLE_TTS_PRIVATE_KEY.replaceAll(String.raw`\n`, "\n"),
   };
 }
