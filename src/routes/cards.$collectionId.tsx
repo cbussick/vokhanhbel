@@ -77,25 +77,25 @@ function CollectionCardsRoute() {
 
   let content;
 
-  if (cards.isPending || collections.isPending) content = <DelayedSkeleton />;
+  if (cards.isPending || collections.isPending) {content = <DelayedSkeleton />;}
   else if (!collection)
-    content = (
+    {content = (
       <div className={styles.center}>
         <p>{t("collections.notFound")}</p>
         <Link to="/cards">{t("collections.backToAll")}</Link>
       </div>
-    );
+    );}
   else if (cards.isError && !cards.data)
-    content = (
+    {content = (
       <div className={styles.center}>
         <p>{t("errors.load")}</p>
         <button type="button" onClick={() => void cards.refetch()}>
           {t("common.retry")}
         </button>
       </div>
-    );
+    );}
   else
-    content = (
+    {content = (
       <>
         <div className={styles.toolbar}>
           <section className={styles.topicSection} aria-labelledby="collection-topics-heading">
@@ -268,13 +268,13 @@ function CollectionCardsRoute() {
             topic={topicBeingEdited}
             onClose={() => setEditingTopicId(null)}
             onDeleted={() => {
-              if (topicFilter === topicBeingEdited.id) setTopicFilter(null);
+              if (topicFilter === topicBeingEdited.id) {setTopicFilter(null);}
             }}
           />
         )}
         <Outlet />
       </>
-    );
+    );}
 
   return (
     <AppShell

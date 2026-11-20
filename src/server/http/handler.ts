@@ -48,11 +48,11 @@ async function parseBody<TBody>(request: Request, schema: ZodType<TBody>): Promi
   const contentLength = Number(request.headers.get("content-length") ?? 0);
 
   if (contentLength > maximumJsonBodyBytes)
-    throw new AppProblem(413, problemTypes.requestTooLarge, "Anfrage zu groß");
+    {throw new AppProblem(413, problemTypes.requestTooLarge, "Anfrage zu groß");}
   const bytes = await request.arrayBuffer();
 
   if (bytes.byteLength > maximumJsonBodyBytes)
-    throw new AppProblem(413, problemTypes.requestTooLarge, "Anfrage zu groß");
+    {throw new AppProblem(413, problemTypes.requestTooLarge, "Anfrage zu groß");}
   let value: unknown;
 
   try {
@@ -100,7 +100,7 @@ export async function handleRequest<TBody = undefined>(
     const sessionHash = options.protected ? await getAuthenticatedSessionHash(request) : undefined;
 
     if (options.protected && !sessionHash)
-      throw new AppProblem(401, problemTypes.unauthenticated, "Anmeldung erforderlich");
+      {throw new AppProblem(401, problemTypes.unauthenticated, "Anmeldung erforderlich");}
 
     // SAFETY: the false branch runs only when no bodySchema was supplied, and TBody is inferred as
     // undefined for those routes.
@@ -125,7 +125,7 @@ export async function handleRequest<TBody = undefined>(
     const response = problemResponse(problem, requestId);
 
     if (problem.status === 429 && problem.retryAfter !== undefined)
-      response.headers.set("Retry-After", String(Math.max(1, Math.ceil(problem.retryAfter))));
+      {response.headers.set("Retry-After", String(Math.max(1, Math.ceil(problem.retryAfter))));}
 
     return applyHeaders(response, requestId, "no-store");
   } finally {

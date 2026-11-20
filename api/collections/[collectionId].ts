@@ -10,7 +10,7 @@ function getCollectionId(request: Request): string {
   const result = z.uuid().safeParse(value);
 
   if (!result.success)
-    throw new AppProblem(404, problemTypes.collectionNotFound, "Sammlung nicht gefunden");
+    {throw new AppProblem(404, problemTypes.collectionNotFound, "Sammlung nicht gefunden");}
 
   return result.data;
 }

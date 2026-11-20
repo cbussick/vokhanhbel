@@ -149,11 +149,11 @@ function findDistractors(
   const distractors: Card[] = [];
 
   for (const candidate of candidates) {
-    if (distractors.length === requiredDistractorCount) break;
+    if (distractors.length === requiredDistractorCount) {break;}
 
     const back = backIdentity(candidate, modality);
 
-    if (seenBacks.has(back)) continue;
+    if (seenBacks.has(back)) {continue;}
 
     seenBacks.add(back);
     distractors.push(candidate);
@@ -193,19 +193,19 @@ function selectMatchingGroup(dueCards: Card[]): Card[] | undefined {
   const seenBacks = new Set<string>();
 
   for (const card of dueCards) {
-    if (!card.front.text || !card.back.text) continue;
-    if (chosen.length > 0 && card.collectionId !== chosen[0]!.collectionId) continue;
+    if (!card.front.text || !card.back.text) {continue;}
+    if (chosen.length > 0 && card.collectionId !== chosen[0]!.collectionId) {continue;}
 
     const front = normalizeCardText(card.front.text);
     const back = normalizeCardText(card.back.text);
 
-    if (seenFronts.has(front) || seenBacks.has(back)) continue;
+    if (seenFronts.has(front) || seenBacks.has(back)) {continue;}
 
     chosen.push(card);
     seenFronts.add(front);
     seenBacks.add(back);
 
-    if (chosen.length === matchingGroupSize) return chosen;
+    if (chosen.length === matchingGroupSize) {return chosen;}
   }
 
   return undefined;
@@ -236,13 +236,13 @@ function selectSwipeExercise(
   leading: boolean,
 ): SwipeExercise | undefined {
   for (const card of dueCards) {
-    if (!hasBack(card, "text")) continue;
+    if (!hasBack(card, "text")) {continue;}
 
     const distractors = findDistractors(card, pool, random, "text");
     const distractor = distractors[0];
 
-    if (!distractor) continue;
-    if (!leading && distractors.length >= requiredDistractorCount) continue;
+    if (!distractor) {continue;}
+    if (!leading && distractors.length >= requiredDistractorCount) {continue;}
 
     const correctOption: SwipeOption = { cardId: card.id, correct: true, text: card.back.text! };
     const distractorOption: SwipeOption = {
@@ -379,10 +379,10 @@ export function planExercises(
   for (const [index, kind] of order.entries()) {
     if (kind === "matching") {
       matchingGroup = selectMatchingGroup(dueCards);
-      if (matchingGroup) break;
+      if (matchingGroup) {break;}
     } else {
       swipeExercise = selectSwipeExercise(dueCards, pool, random, index === 0);
-      if (swipeExercise) break;
+      if (swipeExercise) {break;}
     }
   }
 
@@ -393,7 +393,7 @@ export function planExercises(
 
   const planned = dueCards.flatMap((card): PlannedExercise[] => {
     if (matchingCardIds.has(card.id)) {
-      if (matchingPlanned) return [];
+      if (matchingPlanned) {return [];}
 
       matchingPlanned = true;
 
@@ -401,7 +401,7 @@ export function planExercises(
     }
 
     if (swipeCardIds.has(card.id)) {
-      if (swipePlanned) return [];
+      if (swipePlanned) {return [];}
 
       swipePlanned = true;
 
@@ -414,11 +414,11 @@ export function planExercises(
         ? "audio"
         : undefined;
 
-    if (!modality) return [toFlipExercise(card)];
+    if (!modality) {return [toFlipExercise(card)];}
 
     const distractors = findDistractors(card, pool, random, modality);
 
-    if (distractors.length < requiredDistractorCount) return [toFlipExercise(card)];
+    if (distractors.length < requiredDistractorCount) {return [toFlipExercise(card)];}
 
     return [toMultipleChoiceExercise(card, distractors, random, modality)];
   });

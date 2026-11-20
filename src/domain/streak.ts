@@ -24,12 +24,12 @@ function groupReviewsByCard(reviews: readonly StreakReview[]): Map<string, Strea
   for (const review of reviews) {
     const forCard = byCard.get(review.cardId);
 
-    if (forCard) forCard.push(review);
-    else byCard.set(review.cardId, [review]);
+    if (forCard) {forCard.push(review);}
+    else {byCard.set(review.cardId, [review]);}
   }
 
   for (const forCard of byCard.values())
-    forCard.sort((a, b) => a.reviewedAt.getTime() - b.reviewedAt.getTime());
+    {forCard.sort((a, b) => a.reviewedAt.getTime() - b.reviewedAt.getTime());}
 
   return byCard;
 }
@@ -48,7 +48,7 @@ function dueDayForCard(
   for (const review of reviewHistory) {
     const reviewedDay = toBerlinDay(review.reviewedAt);
 
-    if (reviewedDay > day) break;
+    if (reviewedDay > day) {break;}
     dueDay = shiftCalendarDay(reviewedDay, getIntervalDays(review.boxAfter));
   }
 
@@ -60,8 +60,8 @@ function isCardDueOnDay(
   reviewHistory: readonly StreakReview[],
   day: string,
 ): boolean {
-  if (toBerlinDay(card.createdAt) > day) return false; // created after day: drops out
-  if (card.deletedAt && toBerlinDay(card.deletedAt) < day) return false; // deleted before day: drops out
+  if (toBerlinDay(card.createdAt) > day) {return false;} // created after day: drops out
+  if (card.deletedAt && toBerlinDay(card.deletedAt) < day) {return false;} // deleted before day: drops out
 
   return dueDayForCard(card, reviewHistory, day) <= day;
 }
@@ -88,7 +88,7 @@ export function calculateStreak(
   reviews: readonly StreakReview[],
   now: Date,
 ): number {
-  if (cards.length === 0) return 0;
+  if (cards.length === 0) {return 0;}
 
   const reviewedDays = new Set(reviews.map((review) => toBerlinDay(review.reviewedAt)));
   const reviewsByCard = groupReviewsByCard(reviews);
@@ -104,8 +104,8 @@ export function calculateStreak(
   let isCurrentDay = true;
 
   while (day >= earliestDay) {
-    if (reviewedDays.has(day)) streak += 1;
-    else if (!isCurrentDay && anyCardDueOnDay(cards, reviewsByCard, day)) break;
+    if (reviewedDays.has(day)) {streak += 1;}
+    else if (!isCurrentDay && anyCardDueOnDay(cards, reviewsByCard, day)) {break;}
 
     isCurrentDay = false;
     day = shiftCalendarDay(day, -1);

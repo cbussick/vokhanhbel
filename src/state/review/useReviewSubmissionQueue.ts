@@ -69,7 +69,7 @@ export function useReviewSubmissionQueue(): ReviewSubmissionQueue {
   ) => {
     updateQueuedSubmissions((submissions) =>
       submissions.flatMap((submission) => {
-        if (submission.input.id !== id) return [submission];
+        if (submission.input.id !== id) {return [submission];}
         const updated = update(submission);
 
         return updated ? [updated] : [];
@@ -78,7 +78,7 @@ export function useReviewSubmissionQueue(): ReviewSubmissionQueue {
   };
 
   const sendReviewSubmission = async (submission: QueuedReviewSubmission, automatic = true) => {
-    if (!navigator.onLine || controllers.current.has(submission.input.id)) return;
+    if (!navigator.onLine || controllers.current.has(submission.input.id)) {return;}
 
     const controller = new AbortController();
     const requestGeneration = generation.current;
@@ -99,7 +99,7 @@ export function useReviewSubmissionQueue(): ReviewSubmissionQueue {
             body: JSON.stringify(submission.input),
             signal: controller.signal,
           });
-          if (controller.signal.aborted || requestGeneration !== generation.current) return;
+          if (controller.signal.aborted || requestGeneration !== generation.current) {return;}
           updateQueuedSubmission(submission.input.id, () => undefined);
           await Promise.all([
             queryClient.invalidateQueries({ queryKey: queryKeys.cards }),
@@ -108,7 +108,7 @@ export function useReviewSubmissionQueue(): ReviewSubmissionQueue {
 
           return;
         } catch (error) {
-          if (controller.signal.aborted || requestGeneration !== generation.current) return;
+          if (controller.signal.aborted || requestGeneration !== generation.current) {return;}
           if (!isTemporaryError(error)) {
             updateQueuedSubmission(submission.input.id, () => undefined);
             submission.onRejected(submission, error);
@@ -116,7 +116,7 @@ export function useReviewSubmissionQueue(): ReviewSubmissionQueue {
             return;
           }
           if (attempt < attempts - 1)
-            await waitForRetry(retryDelays[attempt] ?? 4_000, controller.signal);
+            {await waitForRetry(retryDelays[attempt] ?? 4_000, controller.signal);}
         }
       }
 
@@ -126,13 +126,13 @@ export function useReviewSubmissionQueue(): ReviewSubmissionQueue {
       }));
     } finally {
       if (controllers.current.get(submission.input.id) === controller)
-        controllers.current.delete(submission.input.id);
+        {controllers.current.delete(submission.input.id);}
     }
   };
 
   const handleReconnect = useEffectEvent(() => {
     for (const submission of queuedSubmissionsRef.current)
-      if (submission.syncStatus !== "syncing") void sendReviewSubmission(submission);
+      {if (submission.syncStatus !== "syncing") {void sendReviewSubmission(submission);}}
   });
 
   useEffect(() => {
@@ -143,7 +143,7 @@ export function useReviewSubmissionQueue(): ReviewSubmissionQueue {
 
   useEffect(() => {
     const warn = (event: BeforeUnloadEvent) => {
-      if (queuedSubmissionsRef.current.length > 0) event.preventDefault();
+      if (queuedSubmissionsRef.current.length > 0) {event.preventDefault();}
     };
 
     window.addEventListener("beforeunload", warn);
@@ -167,13 +167,13 @@ export function useReviewSubmissionQueue(): ReviewSubmissionQueue {
 
   const retryFailedSubmissions = () => {
     for (const submission of queuedSubmissionsRef.current)
-      if (submission.syncStatus === "failed" || submission.syncStatus === "pending")
-        void sendReviewSubmission(submission, false);
+      {if (submission.syncStatus === "failed" || submission.syncStatus === "pending")
+        {void sendReviewSubmission(submission, false);}}
   };
 
   const discardAllSubmissions = () => {
     generation.current += 1;
-    for (const controller of controllers.current.values()) controller.abort();
+    for (const controller of controllers.current.values()) {controller.abort();}
     controllers.current.clear();
     updateQueuedSubmissions(() => []);
   };

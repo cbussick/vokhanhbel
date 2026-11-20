@@ -10,7 +10,7 @@ const authenticatedSessionSchema = z.object({ identifierHash: z.string().min(1) 
 export async function getAuthenticatedSessionHash(request: Request): Promise<string | undefined> {
   const identifier = readCookie(request, sessionCookieName);
 
-  if (!identifier) return undefined;
+  if (!identifier) {return undefined;}
 
   const identifierHash = hashSessionIdentifier(identifier);
   const now = new Date();
@@ -29,7 +29,7 @@ export async function getAuthenticatedSessionHash(request: Request): Promise<str
 export async function revokeCurrentSession(request: Request): Promise<void> {
   const identifier = readCookie(request, sessionCookieName);
 
-  if (!identifier) return;
+  if (!identifier) {return;}
 
   await getDatabase()
     .delete(sessions)

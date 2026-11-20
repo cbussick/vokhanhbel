@@ -41,7 +41,7 @@ export function SessionLifecycleProvider({ children }: { children: ReactNode }) 
 export function useSessionLifecycle(): SessionLifecycleState {
   const value = useContext(SessionLifecycleContext);
 
-  if (!value) throw new Error("SessionLifecycleProvider missing");
+  if (!value) {throw new Error("SessionLifecycleProvider missing");}
 
   return value;
 }

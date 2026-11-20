@@ -5,7 +5,7 @@ export function createWavFixture(durationMs = 1_000): Uint8Array {
   const view = new DataView(bytes.buffer);
   const write = (offset: number, value: string) => {
     for (let index = 0; index < value.length; index += 1)
-      bytes[offset + index] = value.charCodeAt(index);
+      {bytes[offset + index] = value.charCodeAt(index);}
   };
 
   write(0, "RIFF");

@@ -11,7 +11,7 @@ export async function stageAudioDraft(blob: Blob): Promise<AudioMetadata> {
     credentials: "same-origin",
   });
 
-  if (!response.ok) await throwApiError(response);
+  if (!response.ok) {await throwApiError(response);}
 
   return audioMetadataSchema.parse(await response.json());
 }

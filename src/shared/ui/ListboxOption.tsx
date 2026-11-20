@@ -30,10 +30,10 @@ export function ListboxOption({
       aria-selected={selected}
       data-active={active || undefined}
       onPointerDown={(event) => {
-        if (event.pointerType === "mouse") event.preventDefault();
+        if (event.pointerType === "mouse") {event.preventDefault();}
       }}
       onPointerMove={(event) => {
-        if (event.pointerType === "mouse") onActive();
+        if (event.pointerType === "mouse") {onActive();}
       }}
       onClick={onActivate}
     >

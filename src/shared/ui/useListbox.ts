@@ -50,12 +50,12 @@ export function useListbox({
   const [activeIndex, setActiveIndex] = useState(firstIndex);
 
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen) {return;}
 
     const closeOnOutsidePointer = (event: PointerEvent) => {
       // SAFETY: a pointerdown dispatched on the document always targets a DOM element, so target
       // is a Node. contains() also accepts null, so a null target would still be handled.
-      if (!rootElement.current?.contains(event.target as Node)) setIsExpanded(false);
+      if (!rootElement.current?.contains(event.target as Node)) {setIsExpanded(false);}
     };
 
     document.addEventListener("pointerdown", closeOnOutsidePointer);
@@ -64,7 +64,7 @@ export function useListbox({
   }, [isOpen]);
 
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen) {return;}
 
     optionElements.current[activeIndex]?.scrollIntoView?.({ block: "nearest" });
   }, [activeIndex, isOpen]);
@@ -77,13 +77,13 @@ export function useListbox({
   const close = () => setIsExpanded(false);
 
   const moveActive = (offset: number) => {
-    if (optionCount === 0) return;
+    if (optionCount === 0) {return;}
 
     setActiveIndex((current) => Math.min(Math.max(current + offset, 0), lastIndex));
   };
 
   const matchTypeAhead = (key: string) => {
-    if (!typeAhead || typeAhead.count === 0) return;
+    if (!typeAhead || typeAhead.count === 0) {return;}
 
     typeAheadState.current = nextTypeAheadState(typeAheadState.current, key);
     const { count, labelAt } = typeAhead;
@@ -95,7 +95,7 @@ export function useListbox({
         .startsWith(query),
     ).findIndex(Boolean);
 
-    if (matchOffset < 0) return;
+    if (matchOffset < 0) {return;}
 
     setActiveIndex((startIndex + matchOffset + 1) % count);
     setIsExpanded(true);
@@ -105,39 +105,39 @@ export function useListbox({
     switch (event.key) {
       case "ArrowDown":
         event.preventDefault();
-        if (isOpen) moveActive(1);
-        else open();
+        if (isOpen) {moveActive(1);}
+        else {open();}
         break;
       case "ArrowUp":
         event.preventDefault();
-        if (isOpen) moveActive(-1);
-        else open(selectedIndex >= 0 ? selectedIndex : lastIndex);
+        if (isOpen) {moveActive(-1);}
+        else {open(selectedIndex >= 0 ? selectedIndex : lastIndex);}
         break;
       case "Home":
         event.preventDefault();
-        if (isOpen) setActiveIndex(0);
-        else open(0);
+        if (isOpen) {setActiveIndex(0);}
+        else {open(0);}
         break;
       case "End":
         event.preventDefault();
-        if (isOpen) setActiveIndex(lastIndex);
-        else open(lastIndex);
+        if (isOpen) {setActiveIndex(lastIndex);}
+        else {open(lastIndex);}
         break;
       case "Enter":
       case " ":
         event.preventDefault();
-        if (isOpen) onActivate(activeIndex);
-        else open();
+        if (isOpen) {onActivate(activeIndex);}
+        else {open();}
         break;
       case "Escape":
-        if (!isOpen) break;
+        if (!isOpen) {break;}
         event.preventDefault();
         close();
         break;
       case "Tab":
-        if (!isOpen) break;
-        if (commitOnTab) onActivate(activeIndex);
-        else close();
+        if (!isOpen) {break;}
+        if (commitOnTab) {onActivate(activeIndex);}
+        else {close();}
         break;
       default:
         if (event.key.length === 1 && !event.ctrlKey && !event.metaKey && !event.altKey) {

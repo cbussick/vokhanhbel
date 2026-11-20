@@ -23,7 +23,7 @@ const approved = new Set(policy.approved);
 const failures: string[] = [];
 
 for (const [path, entry] of Object.entries(lock.packages)) {
-  if (!path.startsWith("node_modules/")) continue;
+  if (!path.startsWith("node_modules/")) {continue;}
   const name = path.slice("node_modules/".length);
   let license = policy.overrides?.[name] ?? entry.license;
 
@@ -33,7 +33,7 @@ for (const [path, entry] of Object.entries(lock.packages)) {
     const manifest = JSON.parse(await readFile(`${path}/package.json`, "utf8")) as PackageEntry;
     license = manifest.license ?? manifest.licenses?.map((item) => item.type).join(" OR ");
   }
-  if (!license || !approved.has(license)) failures.push(`${name}: ${license ?? "missing"}`);
+  if (!license || !approved.has(license)) {failures.push(`${name}: ${license ?? "missing"}`);}
 }
 
 if (failures.length > 0) {

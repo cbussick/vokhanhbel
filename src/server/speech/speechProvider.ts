@@ -96,7 +96,7 @@ export function createGoogleSpeechProvider(): SpeechProvider {
       });
       const content = response.audioContent;
 
-      if (!content) throw new Error("Google Text-to-Speech returned no audio");
+      if (!content) {throw new Error("Google Text-to-Speech returned no audio");}
 
       return {
         bytes:

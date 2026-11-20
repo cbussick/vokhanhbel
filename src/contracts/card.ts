@@ -61,7 +61,7 @@ const structuredCardSchema = z.object({
 });
 
 export const cardSchema = z.preprocess((value) => {
-  if (!value || typeof value !== "object") return value;
+  if (!value || typeof value !== "object") {return value;}
   // This preprocessor is the boundary parser itself, so the payload has no contract yet;
   // cardSchema imposes one below.
   // SAFETY: the guard above established that value is a non-null object, so indexing it by string

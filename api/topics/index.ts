@@ -21,11 +21,11 @@ function topicIdFrom(request: Request): string | undefined {
     url.searchParams.get("topicId") ??
     (lastSegment && lastSegment !== "topics" ? lastSegment : undefined);
 
-  if (!raw) return undefined;
+  if (!raw) {return undefined;}
   const result = z.uuid().safeParse(raw);
 
   if (!result.success)
-    throw new AppProblem(404, problemTypes.topicNotFound, "Thema nicht gefunden");
+    {throw new AppProblem(404, problemTypes.topicNotFound, "Thema nicht gefunden");}
 
   return result.data;
 }
@@ -33,7 +33,7 @@ function topicIdFrom(request: Request): string | undefined {
 function requireTopicId(request: Request): string {
   const topicId = topicIdFrom(request);
 
-  if (!topicId) throw new AppProblem(404, problemTypes.topicNotFound, "Thema nicht gefunden");
+  if (!topicId) {throw new AppProblem(404, problemTypes.topicNotFound, "Thema nicht gefunden");}
 
   return topicId;
 }
@@ -44,7 +44,7 @@ export async function GET(request: Request): Promise<Response> {
     { protected: true, cacheControl: "private, no-cache" },
     async () => {
       if (topicIdFrom(request))
-        throw new AppProblem(404, problemTypes.topicNotFound, "Thema nicht gefunden");
+        {throw new AppProblem(404, problemTypes.topicNotFound, "Thema nicht gefunden");}
 
       return Response.json(await listTopics());
     },
@@ -57,7 +57,7 @@ export async function POST(request: Request): Promise<Response> {
     { unsafe: true, protected: true, bodySchema: createTopicInputSchema },
     async ({ body }) => {
       if (topicIdFrom(request))
-        throw new AppProblem(404, problemTypes.topicNotFound, "Thema nicht gefunden");
+        {throw new AppProblem(404, problemTypes.topicNotFound, "Thema nicht gefunden");}
 
       return Response.json(await createTopic(body), { status: 201 });
     },

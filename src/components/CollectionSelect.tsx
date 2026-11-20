@@ -47,7 +47,7 @@ export function CollectionSelect({
 
     const collection = collections[index];
 
-    if (!collection) return;
+    if (!collection) {return;}
 
     onChange(collection.id);
     listbox.setActiveIndex(index);

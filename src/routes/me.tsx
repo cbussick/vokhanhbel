@@ -31,7 +31,7 @@ function MeRoute() {
       submissionSync.outstandingCount > 0 &&
       !window.confirm(t("shell.logoutPending", { count: submissionSync.outstandingCount }))
     )
-      return;
+      {return;}
 
     await sessionLifecycle.logout();
     await navigate({ to: "/login" });
@@ -39,16 +39,16 @@ function MeRoute() {
 
   let content;
 
-  if (stats.isPending) content = <DelayedSkeleton />;
+  if (stats.isPending) {content = <DelayedSkeleton />;}
   else if (stats.isError && !stats.data)
-    content = (
+    {content = (
       <div className={styles.error}>
         <p>{t("errors.load")}</p>
         <button type="button" onClick={() => void stats.refetch()}>
           {t("common.retry")}
         </button>
       </div>
-    );
+    );}
   else {
     const data = stats.data;
     const formatDate = (date: string) =>

@@ -46,8 +46,8 @@ export function TopicFormDialog({
   const [error, setError] = useState<string>();
 
   const describeError = (value: unknown, fallback: string) => {
-    if (!(value instanceof ApiError)) return fallback;
-    if (value.problem.type === problemTypes.topicNameConflict) return t("topics.nameConflict");
+    if (!(value instanceof ApiError)) {return fallback;}
+    if (value.problem.type === problemTypes.topicNameConflict) {return t("topics.nameConflict");}
 
     return fallback;
   };
@@ -70,7 +70,7 @@ export function TopicFormDialog({
     },
     onSuccess: async (saved) => {
       await queryClient.invalidateQueries({ queryKey: queryKeys.topics });
-      if (!topic) onCreated?.(saved);
+      if (!topic) {onCreated?.(saved);}
 
       dialogRef.current?.close();
       onClose();
@@ -97,7 +97,7 @@ export function TopicFormDialog({
   const isPending = save.isPending || remove.isPending;
 
   const close = () => {
-    if (isPending) return;
+    if (isPending) {return;}
 
     dialogRef.current?.close();
     onClose();
@@ -106,7 +106,7 @@ export function TopicFormDialog({
   const submit = (event: React.FormEvent) => {
     event.preventDefault();
 
-    if (isPending) return;
+    if (isPending) {return;}
 
     setError(undefined);
 
@@ -148,7 +148,7 @@ export function TopicFormDialog({
               aria-busy={remove.isPending}
               aria-disabled={remove.isPending}
               onClick={() => {
-                if (!remove.isPending) remove.mutate();
+                if (!remove.isPending) {remove.mutate();}
               }}
             >
               <PendingActionContent

@@ -29,7 +29,7 @@ class RecorderStub {
   }
 
   stop() {
-    if (this.state !== "recording") return;
+    if (this.state !== "recording") {return;}
     this.state = "inactive";
     this.ondataavailable?.({ data: new Blob(["recording"], { type: this.mimeType }) } as BlobEvent);
     this.onstop?.();

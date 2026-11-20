@@ -94,7 +94,7 @@ export function AudioPlayer({
   const previousSourceRef = useRef(resolvedSource);
 
   useEffect(() => {
-    if (previousSourceRef.current === resolvedSource) return;
+    if (previousSourceRef.current === resolvedSource) {return;}
     previousSourceRef.current = resolvedSource;
     const element = elementRef.current;
 
@@ -123,14 +123,14 @@ export function AudioPlayer({
   const play = async (reload = false) => {
     const element = elementRef.current;
 
-    if (!element) return;
+    if (!element) {return;}
     beginPlayback(participantRef.current);
     if (!loadedSource || reload) {
       setLoadedSource(resolvedSource);
       element.src = resolvedSource;
       element.load();
     }
-    if (state === "ended") element.currentTime = 0;
+    if (state === "ended") {element.currentTime = 0;}
     setState("loading");
 
     try {

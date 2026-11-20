@@ -113,7 +113,7 @@ async function installMockApi(page: Page, authenticated = true) {
     const pathname = new URL(request.url()).pathname;
 
     if (pathname === "/api/session" && request.method() === "GET")
-      return json(route, { authenticated: state.authenticated });
+      {return json(route, { authenticated: state.authenticated });}
     if (pathname === "/api/session" && request.method() === "POST") {
       state.authenticated = true;
 
@@ -125,7 +125,7 @@ async function installMockApi(page: Page, authenticated = true) {
       return route.fulfill({ status: 204 });
     }
     if (pathname === "/api/collections" && request.method() === "GET")
-      return json(route, state.collections);
+      {return json(route, state.collections);}
     if (pathname === `/api/collections/${mockCollection.id}` && request.method() === "DELETE") {
       state.collections = state.collections.filter(
         (collection) => collection.id !== mockCollection.id,
@@ -134,8 +134,8 @@ async function installMockApi(page: Page, authenticated = true) {
 
       return route.fulfill({ status: 204 });
     }
-    if (pathname === "/api/topics" && request.method() === "GET") return json(route, state.topics);
-    if (pathname === "/api/cards" && request.method() === "GET") return json(route, state.cards);
+    if (pathname === "/api/topics" && request.method() === "GET") {return json(route, state.topics);}
+    if (pathname === "/api/cards" && request.method() === "GET") {return json(route, state.cards);}
     if (pathname === "/api/cards" && request.method() === "POST") {
       const input = request.postDataJSON() as {
         front: { text: string | null; audioId: string | null };
@@ -150,7 +150,7 @@ async function installMockApi(page: Page, authenticated = true) {
       return json(route, card, 201);
     }
     if (pathname.startsWith("/api/audio/") && request.method() === "GET")
-      return route.fulfill({ status: 200, contentType: "audio/wav", body: "mock audio" });
+      {return route.fulfill({ status: 200, contentType: "audio/wav", body: "mock audio" });}
     if (pathname === "/api/reviews" && request.method() === "POST") {
       const input = request.postDataJSON() as { id: string; cardId: string; grade: string };
 
@@ -169,20 +169,20 @@ async function installMockApi(page: Page, authenticated = true) {
       });
     }
     if (pathname === "/api/stats")
-      return json(route, {
+      {return json(route, {
         totalPoints: 35,
         activeCardCount: state.cards.length,
         reviewsThisWeek: 4,
         currentStreak: 3,
         bestDay: { date: "2026-07-14", reviewCount: 4 },
         dailyRecap: { period: "today", date: "2026-07-14", reviewCount: 4, knewItCount: 3 },
-      });
+      });}
     if (pathname.endsWith("/tutor-replies"))
-      return route.fulfill({
+      {return route.fulfill({
         status: 200,
         contentType: "text/event-stream",
         body: 'event: delta\ndata: {"text":"Ein Apfel ist eine Frucht."}\n\nevent: done\ndata: {"truncated":false}\n\n',
-      });
+      });}
 
     return route.fulfill({ status: 404 });
   });
@@ -263,7 +263,7 @@ async function fullyVisibleListboxOption(listbox: Locator) {
       optionBox.y >= listboxBox!.y &&
       optionBox.y + optionBox.height <= listboxBox!.y + listboxBox!.height
     )
-      return option;
+      {return option;}
   }
 
   throw new Error("The listbox has no fully visible option");
@@ -447,7 +447,7 @@ test("keeps the Card dialog locked while Save is pending", async ({ page }) => {
   });
   await installMockApi(page);
   await page.route("**/api/cards", async (route) => {
-    if (route.request().method() !== "POST") return route.fallback();
+    if (route.request().method() !== "POST") {return route.fallback();}
     saveRequests += 1;
 
     const input = route.request().postDataJSON() as {
@@ -566,7 +566,7 @@ test("keeps the Card audio rail stable while dragging and recording", async ({ p
   await expect(dropCopy).toBeVisible();
   const dropStyles = await dropCopy.evaluate((element) => {
     const dropZone = element.parentElement;
-    if (!dropZone) throw new Error("Audio drop zone not found");
+    if (!dropZone) {throw new Error("Audio drop zone not found");}
     const browser = globalThis as unknown as {
       getComputedStyle: (target: unknown) => { borderRadius: string; cursor: string };
     };
@@ -691,10 +691,10 @@ test("completes Review, Tutor, repeat-ready summary, and Me", async ({ page }) =
   const preloadErrors: string[] = [];
   page.on("console", (message) => {
     if (message.type() === "error" && message.text().includes("_nonReactive"))
-      preloadErrors.push(message.text());
+      {preloadErrors.push(message.text());}
   });
   page.on("pageerror", (error) => {
-    if (error.message.includes("_nonReactive")) preloadErrors.push(error.message);
+    if (error.message.includes("_nonReactive")) {preloadErrors.push(error.message);}
   });
 
   await installMockApi(page);
@@ -1531,7 +1531,7 @@ for (const viewport of [
         state: "visible",
       }),
     ]);
-    if (!(await weiter.isVisible())) await option(2).click();
+    if (!(await weiter.isVisible())) {await option(2).click();}
     await expect(weiter).toBeVisible();
     await expectNoSeriousAxeViolations(page);
     await expect(page).toHaveScreenshot(

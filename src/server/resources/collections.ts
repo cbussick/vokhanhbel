@@ -44,7 +44,7 @@ export async function createCollection(input: CollectionInput) {
 
     return mapCollection(rows[0]!);
   } catch (error) {
-    if (isUniqueViolation(error)) throwNameConflict();
+    if (isUniqueViolation(error)) {throwNameConflict();}
     throw error;
   }
 }
@@ -66,11 +66,11 @@ export async function updateCollection(collectionId: string, input: CollectionIn
       .returning();
 
     if (!rows[0])
-      throw new AppProblem(404, problemTypes.collectionNotFound, "Sammlung nicht gefunden");
+      {throw new AppProblem(404, problemTypes.collectionNotFound, "Sammlung nicht gefunden");}
 
     return mapCollection(rows[0]);
   } catch (error) {
-    if (isUniqueViolation(error)) throwNameConflict();
+    if (isUniqueViolation(error)) {throwNameConflict();}
     throw error;
   }
 }
@@ -87,7 +87,7 @@ export async function deleteCollection(collectionId: string): Promise<void> {
     );
 
     if (!selected.rows[0])
-      throw new AppProblem(404, problemTypes.collectionNotFound, "Sammlung nicht gefunden");
+      {throw new AppProblem(404, problemTypes.collectionNotFound, "Sammlung nicht gefunden");}
 
     const audio = await client.query(
       `SELECT audio_assets.id, audio_assets.object_key

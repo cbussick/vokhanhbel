@@ -12,7 +12,7 @@ export async function setupEnvironment(directory = process.cwd()): Promise<"crea
 
     return "created";
   } catch (error) {
-    if (error instanceof Error && "code" in error && error.code === "EEXIST") return "exists";
+    if (error instanceof Error && "code" in error && error.code === "EEXIST") {return "exists";}
     throw error;
   }
 }

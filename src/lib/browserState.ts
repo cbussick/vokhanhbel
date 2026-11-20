@@ -50,7 +50,7 @@ export function useDueTime(dueTimes: string[]): number {
     document.addEventListener("visibilitychange", update);
 
     return () => {
-      if (timer !== undefined) window.clearTimeout(timer);
+      if (timer !== undefined) {window.clearTimeout(timer);}
       window.removeEventListener("focus", update);
       document.removeEventListener("visibilitychange", update);
     };

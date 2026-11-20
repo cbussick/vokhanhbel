@@ -28,7 +28,7 @@ function storedBytesInRange(bytes: Uint8Array, range?: AudioObjectRange): Stored
   const start = range?.start ?? 0;
   const end = Math.min(range?.end ?? bytes.byteLength - 1, bytes.byteLength - 1);
 
-  if (start < 0 || start >= bytes.byteLength || end < start) return null;
+  if (start < 0 || start >= bytes.byteLength || end < start) {return null;}
 
   return {
     bytes: bytes.slice(start, end + 1),
@@ -49,7 +49,7 @@ export class InMemoryAudioObjectStore implements AudioObjectStore {
   read(objectKey: string, range?: AudioObjectRange): Promise<StoredAudioObject | null> {
     const object = this.objects.get(objectKey);
 
-    if (!object) return Promise.resolve(null);
+    if (!object) {return Promise.resolve(null);}
 
     return Promise.resolve(storedBytesInRange(object.bytes, range));
   }
@@ -72,7 +72,7 @@ export class LocalAudioObjectStore implements AudioObjectStore {
     const path = resolve(this.root, objectKey);
 
     if (!path.startsWith(`${this.root}${sep}`))
-      throw new Error("Audio object key escapes local store");
+      {throw new Error("Audio object key escapes local store");}
 
     return path;
   }
@@ -92,7 +92,7 @@ export class LocalAudioObjectStore implements AudioObjectStore {
     try {
       bytes = Uint8Array.from(await readFile(this.pathFor(objectKey)));
     } catch (error) {
-      if (error instanceof Error && "code" in error && error.code === "ENOENT") return null;
+      if (error instanceof Error && "code" in error && error.code === "ENOENT") {return null;}
       throw error;
     }
 
@@ -114,7 +114,7 @@ export class FailingAudioObjectStore implements AudioObjectStore {
   }
 
   private rejectWhenConfigured(operation: keyof AudioObjectStore): void {
-    if (this.failures.has(operation)) throw new Error(`Injected audio ${operation} failure`);
+    if (this.failures.has(operation)) {throw new Error(`Injected audio ${operation} failure`);}
   }
 
   async put(objectKey: string, bytes: Uint8Array, contentType: string): Promise<void> {
@@ -247,17 +247,17 @@ export class R2AudioObjectStore implements AudioObjectStore {
   async put(objectKey: string, bytes: Uint8Array, contentType: string): Promise<void> {
     const response = await this.request("PUT", objectKey, bytes, { "content-type": contentType });
 
-    if (!response.ok) throw new Error(`R2 upload failed (${response.status})`);
+    if (!response.ok) {throw new Error(`R2 upload failed (${response.status})`);}
   }
 
   async read(objectKey: string, range?: AudioObjectRange): Promise<StoredAudioObject | null> {
     const extraHeaders: Record<string, string> = {};
 
-    if (range) extraHeaders.range = `bytes=${range.start}-${range.end ?? ""}`;
+    if (range) {extraHeaders.range = `bytes=${range.start}-${range.end ?? ""}`;}
     const response = await this.request("GET", objectKey, undefined, extraHeaders);
 
-    if (response.status === 404) return null;
-    if (!response.ok) throw new Error(`R2 read failed (${response.status})`);
+    if (response.status === 404) {return null;}
+    if (!response.ok) {throw new Error(`R2 read failed (${response.status})`);}
 
     const bytes = new Uint8Array(await response.arrayBuffer());
     const contentRangeHeader = response.headers.get("content-range");
@@ -269,14 +269,14 @@ export class R2AudioObjectStore implements AudioObjectStore {
     );
 
     if (contentLength !== bytes.byteLength)
-      throw new Error("R2 returned an invalid content length");
+      {throw new Error("R2 returned an invalid content length");}
     if (
       contentRange &&
       (contentRange.end - contentRange.start + 1 !== bytes.byteLength ||
         contentRange.start !== range?.start ||
         (range?.end !== undefined && contentRange.end > range.end))
     )
-      throw new Error("R2 returned an unexpected content range");
+      {throw new Error("R2 returned an unexpected content range");}
     const totalSize = contentRange?.totalSize ?? contentLength;
 
     return {
@@ -290,7 +290,7 @@ export class R2AudioObjectStore implements AudioObjectStore {
     const response = await this.request("DELETE", objectKey);
 
     if (!response.ok && response.status !== 404)
-      throw new Error(`R2 deletion failed (${response.status})`);
+      {throw new Error(`R2 deletion failed (${response.status})`);}
   }
 }
 
@@ -301,7 +301,7 @@ export function getAudioObjectStore(): AudioObjectStore {
   const localDirectory = environment.AUDIO_OBJECT_DIRECTORY;
 
   if (localDirectory && environment.R2_ENVIRONMENT)
-    throw new Error("Local audio storage cannot be combined with deployed R2 configuration");
+    {throw new Error("Local audio storage cannot be combined with deployed R2 configuration");}
 
   audioObjectStore ??= localDirectory
     ? new LocalAudioObjectStore(localDirectory)

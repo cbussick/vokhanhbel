@@ -28,7 +28,7 @@ async function runLauncher(checkout: string, command: "up" | "clean"): Promise<s
 
 function connectionFromOutput(output: string): { project: string; url: string } {
   const match = /Database: project=([^,]+), host=127\.0\.0\.1, port=(\d+)/.exec(output);
-  if (!match) throw new Error(`Launcher did not print the expected database identity:\n${output}`);
+  if (!match) {throw new Error(`Launcher did not print the expected database identity:\n${output}`);}
 
   return {
     project: match[1]!,

@@ -75,8 +75,8 @@ export function CardFormDialog({
       // A generated clip is staged already, so only a clip recorded or picked here is uploaded —
       // and only that upload is undone below, leaving a generated clip to expire on its own.
       const claimAudio = async (draft: AudioDraft | null) => {
-        if (!draft) return undefined;
-        if (draft.origin === "staged") return draft.metadata.id;
+        if (!draft) {return undefined;}
+        if (draft.origin === "staged") {return draft.metadata.id;}
         const staged = await stageAudioDraft(draft.blob);
 
         uploadedIds.push(staged.id);
@@ -153,7 +153,7 @@ export function CardFormDialog({
   const isGeneratingPronunciation = useIsMutating({ mutationKey: mutationKeys.pronunciation }) > 0;
 
   const close = () => {
-    if (isPending) return;
+    if (isPending) {return;}
 
     releaseAudioDraft(frontDraft);
     releaseAudioDraft(backDraft);
@@ -164,7 +164,7 @@ export function CardFormDialog({
   const submit = (event: React.FormEvent) => {
     event.preventDefault();
 
-    if (isPending) return;
+    if (isPending) {return;}
 
     setError(undefined);
 
@@ -271,7 +271,7 @@ export function CardFormDialog({
                 aria-busy={remove.isPending}
                 aria-disabled={remove.isPending}
                 onClick={() => {
-                  if (!remove.isPending) remove.mutate();
+                  if (!remove.isPending) {remove.mutate();}
                 }}
               >
                 <PendingActionContent

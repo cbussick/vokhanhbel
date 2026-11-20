@@ -147,14 +147,14 @@ export async function recordReview(input: ReviewSubmissionInput): Promise<Review
     const card = cardResult.rows[0] ? databaseCardRowSchema.parse(cardResult.rows[0]) : undefined;
 
     if (!card || card.deleted_at)
-      throw new AppProblem(404, problemTypes.cardNotFound, "Karte nicht gefunden");
+      {throw new AppProblem(404, problemTypes.cardNotFound, "Karte nicht gefunden");}
     const reviewedAt = new Date(input.reviewedAt);
     const now = new Date();
 
     if (reviewedAt.getTime() < now.getTime() - maximumReviewAgeMilliseconds)
-      throw new AppProblem(422, problemTypes.reviewTooOld, "Review ist zu alt");
+      {throw new AppProblem(422, problemTypes.reviewTooOld, "Review ist zu alt");}
     if (reviewedAt.getTime() > now.getTime() + maximumClockSkewMilliseconds)
-      throw new AppProblem(422, problemTypes.deviceClockAhead, "Gerätezeit prüfen");
+      {throw new AppProblem(422, problemTypes.deviceClockAhead, "Gerätezeit prüfen");}
 
     // SAFETY: the cards.box column carries the `cards_box_range` CHECK constraint restricting it
     // to 0-5, so a stored value is always within the Box union.

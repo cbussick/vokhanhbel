@@ -107,7 +107,7 @@ export function PronunciationGenerator({
         // available even when the form around it is not.
         {...(isBlocked ? { "aria-disabled": true } : {})}
         onClick={() => {
-          if (isBlocked) return;
+          if (isBlocked) {return;}
 
           setError(undefined);
           generate.mutate();

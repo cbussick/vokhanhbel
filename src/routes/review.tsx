@@ -103,20 +103,20 @@ function ReviewRoute() {
     window.setTimeout(() => void navigate({ to: "/review/session" }), 0);
   };
 
-  if (pathname === "/review/session") return <Outlet />;
+  if (pathname === "/review/session") {return <Outlet />;}
 
   let content;
 
-  if (cards.isPending || collections.isPending || topics.isPending) content = <DelayedSkeleton />;
+  if (cards.isPending || collections.isPending || topics.isPending) {content = <DelayedSkeleton />;}
   else if (cards.isError && !cards.data)
-    content = (
+    {content = (
       <div className={styles.landing}>
         <p>{t("errors.load")}</p>
         <button type="button" onClick={() => void cards.refetch()}>
           {t("common.retry")}
         </button>
       </div>
-    );
+    );}
   else {
     const active = cards.data ?? [];
     const collectionList = collections.data ?? [];

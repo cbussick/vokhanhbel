@@ -3,11 +3,11 @@ export const sessionCookieName = "__Host-session";
 export function readCookie(request: Request, name: string): string | undefined {
   const cookieHeader = request.headers.get("cookie");
 
-  if (!cookieHeader) return undefined;
+  if (!cookieHeader) {return undefined;}
   for (const item of cookieHeader.split(";")) {
     const [key, ...valueParts] = item.trim().split("=");
 
-    if (key === name) return decodeURIComponent(valueParts.join("="));
+    if (key === name) {return decodeURIComponent(valueParts.join("="));}
   }
 
   return undefined;

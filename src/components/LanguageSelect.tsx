@@ -47,7 +47,7 @@ export function LanguageSelect({
   });
 
   const label = (language: string | null) => {
-    if (language === null) return t("collections.noLanguage");
+    if (language === null) {return t("collections.noLanguage");}
 
     const offered = offeredCollectionLanguage(language);
 
@@ -58,7 +58,7 @@ export function LanguageSelect({
   const select = (index: number) => {
     const option = options[index];
 
-    if (option === undefined) return;
+    if (option === undefined) {return;}
 
     onChange(option);
     listbox.setActiveIndex(index);
@@ -68,7 +68,7 @@ export function LanguageSelect({
   useLayoutEffect(() => {
     const menu = listboxRef.current;
     const trigger = triggerRef.current;
-    if (!listbox.isOpen || !floatsListbox || !menu || !trigger || !menu.showPopover) return;
+    if (!listbox.isOpen || !floatsListbox || !menu || !trigger || !menu.showPopover) {return;}
 
     const position = () => {
       const triggerBox = trigger.getBoundingClientRect();
@@ -93,7 +93,7 @@ export function LanguageSelect({
     return () => {
       window.removeEventListener("resize", position);
       dialog?.removeEventListener("scroll", position, { capture: true });
-      if (menu.matches(":popover-open")) menu.hidePopover();
+      if (menu.matches(":popover-open")) {menu.hidePopover();}
     };
   }, [floatsListbox, listbox.isOpen]);
 

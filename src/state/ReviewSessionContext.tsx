@@ -182,9 +182,9 @@ const ReviewSessionContext = createContext<ReviewSessionContextValue | undefined
 function getReviewSubmissionIssue(error: unknown): ReviewSubmissionIssue {
   const type = error instanceof ApiError ? error.problem.type : "";
 
-  if (type === problemTypes.reviewTooOld) return "too-old";
-  if (type === problemTypes.deviceClockAhead) return "clock";
-  if (type === problemTypes.cardNotFound) return "deleted";
+  if (type === problemTypes.reviewTooOld) {return "too-old";}
+  if (type === problemTypes.deviceClockAhead) {return "clock";}
+  if (type === problemTypes.cardNotFound) {return "deleted";}
 
   return "conflict";
 }
@@ -194,7 +194,7 @@ function getRequestId(error: unknown): string | undefined {
 }
 
 function getExerciseAttemptKey(state: ReviewSessionState): string | undefined {
-  if (state.status !== "reviewing") return undefined;
+  if (state.status !== "reviewing") {return undefined;}
 
   return `${state.reviewSession.id}:${state.reviewSession.exerciseAttemptNumber}`;
 }
@@ -204,7 +204,7 @@ function toReviewSessionView(
   tutorConversation: { attemptKey: string; messages: TutorConversationMessage[] },
   scope: ReviewScope,
 ): ReviewSessionView {
-  if (state.status === "idle") return { kind: "idle" };
+  if (state.status === "idle") {return { kind: "idle" };}
   if (state.status === "summary") {
     return {
       kind: "summary",
@@ -221,7 +221,7 @@ function toReviewSessionView(
   const exercise = state.reviewSession.exercises[state.currentIndex];
   const currentCard = exercise?.cards[0];
 
-  if (!exercise || !currentCard) return { kind: "idle" };
+  if (!exercise || !currentCard) {return { kind: "idle" };}
 
   const position = state.currentIndex + 1;
   const total = state.reviewSession.exercises.length;
@@ -371,7 +371,7 @@ export function ReviewSessionProvider({ children }: { children: ReactNode }) {
   const startReviewSession = (dueCards: Card[], requestedScope: ReviewScope = { kind: "all" }) => {
     const initialQueue = dueCards.slice(0, reviewSessionSize);
 
-    if (initialQueue.length === 0) return;
+    if (initialQueue.length === 0) {return;}
 
     setScope(requestedScope);
 
@@ -422,15 +422,15 @@ export function ReviewSessionProvider({ children }: { children: ReactNode }) {
       state.issue === "clock" ||
       state.issue === "conflict"
     )
-      return;
+      {return;}
 
     const exercise = state.reviewSession.exercises[state.currentIndex];
 
-    if (!exercise || exercise.kind !== "flip") return;
+    if (!exercise || exercise.kind !== "flip") {return;}
 
     const card = exercise.cards[0];
 
-    if (!card) return;
+    if (!card) {return;}
 
     const points = getPointsForGrade(grade);
     const input = {
@@ -454,20 +454,20 @@ export function ReviewSessionProvider({ children }: { children: ReactNode }) {
 
   const chooseOption = (optionId: string) => {
     if (state.status !== "reviewing" || state.issue === "clock" || state.issue === "conflict")
-      return;
+      {return;}
 
     const exercise = state.reviewSession.exercises[state.currentIndex];
 
-    if (!exercise || exercise.kind !== "multipleChoice") return;
+    if (!exercise || exercise.kind !== "multipleChoice") {return;}
 
     const deadOptionIds = state.multipleChoice?.deadOptionIds ?? [];
 
-    if (state.multipleChoice?.resolvedSubmission || deadOptionIds.includes(optionId)) return;
+    if (state.multipleChoice?.resolvedSubmission || deadOptionIds.includes(optionId)) {return;}
 
     const option = exercise.options.find((candidate) => candidate.cardId === optionId);
     const card = exercise.cards[0];
 
-    if (!option || !card) return;
+    if (!option || !card) {return;}
 
     // A first wrong pick just knocks the option out and re-asks; the Exercise stays open.
     if (!option.correct && deadOptionIds.length === 0) {
@@ -503,15 +503,15 @@ export function ReviewSessionProvider({ children }: { children: ReactNode }) {
 
   const attemptMatchingPair = (frontCardId: string, backCardId: string) => {
     if (state.status !== "reviewing" || state.issue === "clock" || state.issue === "conflict")
-      return;
+      {return;}
 
     const exercise = state.reviewSession.exercises[state.currentIndex];
 
-    if (!exercise || exercise.kind !== "matching") return;
+    if (!exercise || exercise.kind !== "matching") {return;}
 
     const resolvedCardIds = state.matching?.resolvedCardIds ?? [];
 
-    if (resolvedCardIds.includes(frontCardId) || resolvedCardIds.includes(backCardId)) return;
+    if (resolvedCardIds.includes(frontCardId) || resolvedCardIds.includes(backCardId)) {return;}
 
     // Front and back entries both carry the id of the Card they belong to, so a pair is correct
     // exactly when the two tapped ids are the same Card's — no text comparison needed.
@@ -523,7 +523,7 @@ export function ReviewSessionProvider({ children }: { children: ReactNode }) {
 
     const card = exercise.cards.find((candidate) => candidate.id === frontCardId);
 
-    if (!card) return;
+    if (!card) {return;}
 
     const taintedCardIds = state.matching?.taintedCardIds ?? [];
     const grade: Grade = taintedCardIds.includes(frontCardId) ? "almost" : "knew_it";
@@ -549,19 +549,19 @@ export function ReviewSessionProvider({ children }: { children: ReactNode }) {
 
   const chooseSwipeOption = (optionCardId: string) => {
     if (state.status !== "reviewing" || state.issue === "clock" || state.issue === "conflict")
-      return;
+      {return;}
 
     const exercise = state.reviewSession.exercises[state.currentIndex];
 
-    if (!exercise || exercise.kind !== "swipe") return;
+    if (!exercise || exercise.kind !== "swipe") {return;}
 
     // The resolution is still on screen — Swipe has no retry, so nothing more can be committed.
-    if (state.swipe) return;
+    if (state.swipe) {return;}
 
     const option = exercise.options.find((candidate) => candidate.cardId === optionCardId);
     const card = exercise.cards[0];
 
-    if (!option || !card) return;
+    if (!option || !card) {return;}
 
     // Two options mean no meaningful retry, so Swipe is the one binary Exercise (ADR-0014).
     const grade: Grade = option.correct ? "knew_it" : "forgot";
@@ -597,7 +597,7 @@ export function ReviewSessionProvider({ children }: { children: ReactNode }) {
   ) => {
     const attemptKey = getExerciseAttemptKey(state);
 
-    if (!attemptKey) return;
+    if (!attemptKey) {return;}
 
     setTutorConversation((current) => ({
       attemptKey,
@@ -626,7 +626,7 @@ export function ReviewSessionProvider({ children }: { children: ReactNode }) {
 export function useReviewSession(): ReviewSessionContextValue {
   const value = useContext(ReviewSessionContext);
 
-  if (!value) throw new Error("ReviewSessionProvider missing");
+  if (!value) {throw new Error("ReviewSessionProvider missing");}
 
   return value;
 }

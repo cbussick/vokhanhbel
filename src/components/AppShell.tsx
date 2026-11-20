@@ -104,7 +104,7 @@ export function AppShell({
   const focusMainContent = () => {
     const main = mainRef.current;
 
-    if (!main) return;
+    if (!main) {return;}
 
     main.tabIndex = -1;
     main.focus();

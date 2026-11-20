@@ -9,11 +9,11 @@ const restoreUrl = process.env.RESTORE_DATABASE_URL;
 const productionUrl = process.env.DATABASE_URL_UNPOOLED;
 
 if (!encryptedBackup || !identity || !restoreUrl)
-  throw new Error(
+  {throw new Error(
     "Usage: npm run db:restore:verify -- backup.dump.age (with AGE_IDENTITY_FILE and RESTORE_DATABASE_URL)",
-  );
+  );}
 if (productionUrl && restoreUrl === productionUrl)
-  throw new Error("RESTORE_DATABASE_URL must not be the production database");
+  {throw new Error("RESTORE_DATABASE_URL must not be the production database");}
 
 const temporaryDirectory = await mkdtemp(resolve(tmpdir(), "vokhanhbel-restore-"));
 const plainBackup = resolve(temporaryDirectory, "backup.dump");

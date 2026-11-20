@@ -82,9 +82,9 @@ export function CollectionFormDialog({
   const [error, setError] = useState<string>();
 
   const describeError = (value: unknown, fallback: string) => {
-    if (!(value instanceof ApiError)) return fallback;
+    if (!(value instanceof ApiError)) {return fallback;}
     if (value.problem.type === problemTypes.collectionNameConflict)
-      return t("collections.nameConflict");
+      {return t("collections.nameConflict");}
 
     return fallback;
   };
@@ -115,7 +115,7 @@ export function CollectionFormDialog({
     },
     onSuccess: async (saved) => {
       await queryClient.invalidateQueries({ queryKey: queryKeys.collections });
-      if (!collection) onCreated?.(saved);
+      if (!collection) {onCreated?.(saved);}
 
       dialogRef.current?.close();
       onClose();
@@ -146,7 +146,7 @@ export function CollectionFormDialog({
   const isPending = save.isPending || remove.isPending;
 
   const close = () => {
-    if (isPending) return;
+    if (isPending) {return;}
 
     dialogRef.current?.close();
     onClose();
@@ -155,7 +155,7 @@ export function CollectionFormDialog({
   const submit = (event: React.FormEvent) => {
     event.preventDefault();
 
-    if (isPending) return;
+    if (isPending) {return;}
 
     setError(undefined);
 
@@ -200,7 +200,7 @@ export function CollectionFormDialog({
               aria-busy={remove.isPending}
               aria-disabled={remove.isPending}
               onClick={() => {
-                if (!remove.isPending) remove.mutate();
+                if (!remove.isPending) {remove.mutate();}
               }}
             >
               <PendingActionContent

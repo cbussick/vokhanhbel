@@ -15,11 +15,11 @@ export class ApiError extends Error {
 export async function apiRequest<T>(path: string, init?: RequestInit): Promise<T> {
   const headers = new Headers(init?.headers);
 
-  if (init?.body) headers.set("content-type", "application/json");
+  if (init?.body) {headers.set("content-type", "application/json");}
   const response = await fetch(path, { ...init, headers, credentials: "same-origin" });
 
-  if (response.status === 401 && path !== apiPaths.session) publishSessionExpired();
-  if (!response.ok) await throwApiError(response);
+  if (response.status === 401 && path !== apiPaths.session) {publishSessionExpired();}
+  if (!response.ok) {await throwApiError(response);}
   if (response.status === 204) {
     // SAFETY: 204 means the endpoint has no body by definition, and every caller of a 204 endpoint
     // declares T as void or undefined.

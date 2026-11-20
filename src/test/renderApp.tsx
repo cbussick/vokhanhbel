@@ -35,19 +35,19 @@ export async function renderApp(path: string) {
   // loads enough modules and queries that a cold first visit can miss the 1s default.
   await waitFor(
     () => {
-      if (router.state.isLoading) throw new Error("router is still loading");
+      if (router.state.isLoading) {throw new Error("router is still loading");}
 
       const session = queryClient.getQueryState(queryKeys.session);
 
       if (session?.fetchStatus !== "idle" || session.status === "pending")
-        throw new Error("session is still checking");
+        {throw new Error("session is still checking");}
 
       const authenticated = queryClient.getQueryData<{ authenticated: boolean }>(
         queryKeys.session,
       )?.authenticated;
 
-      if (!authenticated) return;
-      if (!document.getElementById("main-content")) throw new Error("app shell is not mounted");
+      if (!authenticated) {return;}
+      if (!document.getElementById("main-content")) {throw new Error("app shell is not mounted");}
 
       for (const key of [
         queryKeys.cards,
@@ -58,7 +58,7 @@ export async function renderApp(path: string) {
         const query = queryClient.getQueryState(key);
 
         if (query && (query.status === "pending" || query.fetchStatus === "fetching"))
-          throw new Error("app data is still loading");
+          {throw new Error("app data is still loading");}
       }
     },
     { timeout: readyTimeoutMs },

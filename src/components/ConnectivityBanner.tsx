@@ -17,22 +17,22 @@ export function ConnectivityBanner() {
   let message: string | undefined;
 
   if (!online && submissionSync.outstandingCount > 0)
-    message = t("connectivity.offlinePending", {
+    {message = t("connectivity.offlinePending", {
       count: submissionSync.outstandingCount,
-    });
-  else if (!online) message = t("connectivity.offline");
+    });}
+  else if (!online) {message = t("connectivity.offline");}
   else if (submissionSync.failedCount > 0)
-    message = t("connectivity.failed", { count: submissionSync.failedCount });
+    {message = t("connectivity.failed", { count: submissionSync.failedCount });}
 
   // `aria-live` rather than `role="status"`, matching the bar below: the two announce the same way,
   // and a second `status` role floating over every screen made `getByRole("status")` ambiguous for
   // any Exercise that has one of its own, whenever a sync happened to still be in flight.
   if (!message)
-    return submissionSync.syncing ? (
+    {return submissionSync.syncing ? (
       <p className={styles.toast} aria-live="polite">
         {t("connectivity.syncing")}
       </p>
-    ) : null;
+    ) : null;}
 
   return (
     <aside className={styles.banner} aria-live="polite">

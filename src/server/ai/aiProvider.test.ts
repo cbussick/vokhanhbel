@@ -24,7 +24,7 @@ async function drain(events: AsyncIterable<unknown>): Promise<void> {
   const iterator = events[Symbol.asyncIterator]();
   let step = await iterator.next();
 
-  while (!step.done) step = await iterator.next();
+  while (!step.done) {step = await iterator.next();}
 }
 
 async function collectProviderEvents(events: unknown[]) {

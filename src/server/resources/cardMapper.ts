@@ -41,7 +41,7 @@ const joinedCardRowSchema = z.object({
  * naming every other field, so a new audio field does not have to be copied out here as well.
  */
 function audioOnCard(row: z.infer<typeof audioRowSchema>): AudioMetadata | null {
-  if (!row || row.deletedAt) return null;
+  if (!row || row.deletedAt) {return null;}
 
   return audioMetadataSchema.parse(row);
 }

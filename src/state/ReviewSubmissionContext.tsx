@@ -55,7 +55,7 @@ export function ReviewSubmissionProvider({ children }: { children: ReactNode }) 
 export function useReviewSubmissions(): ReviewSubmissionState {
   const value = useContext(ReviewSubmissionContext);
 
-  if (!value) throw new Error("ReviewSubmissionProvider missing");
+  if (!value) {throw new Error("ReviewSubmissionProvider missing");}
 
   return value;
 }

@@ -2,8 +2,8 @@ const uniqueViolationCode = "23505";
 const foreignKeyViolationCode = "23503";
 
 function hasDatabaseErrorCode(error: unknown, code: string): boolean {
-  if (typeof error !== "object" || error === null) return false;
-  if ("code" in error && error.code === code) return true;
+  if (typeof error !== "object" || error === null) {return false;}
+  if ("code" in error && error.code === code) {return true;}
 
   return "cause" in error && hasDatabaseErrorCode(error.cause, code);
 }

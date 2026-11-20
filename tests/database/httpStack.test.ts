@@ -31,11 +31,11 @@ afterEach(() => {
 function request(path: string, method: "GET" | "POST", body?: unknown, cookie?: string): Request {
   const headers = new Headers({ origin, "sec-fetch-site": "same-origin" });
 
-  if (body !== undefined) headers.set("content-type", "application/json");
-  if (cookie) headers.set("cookie", cookie);
+  if (body !== undefined) {headers.set("content-type", "application/json");}
+  if (cookie) {headers.set("cookie", cookie);}
   const init: RequestInit = { method, headers };
 
-  if (body !== undefined) init.body = JSON.stringify(body);
+  if (body !== undefined) {init.body = JSON.stringify(body);}
 
   return new Request(`${origin}${path}`, init);
 }

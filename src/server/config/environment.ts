@@ -56,7 +56,7 @@ export function getR2Environment(): R2Environment {
     environment.R2_SECRET_ACCESS_KEY,
   ];
 
-  if (required.some((value) => !value)) throw new Error("R2 configuration is incomplete");
+  if (required.some((value) => !value)) {throw new Error("R2 configuration is incomplete");}
 
   return {
     environment: environment.R2_ENVIRONMENT!,
@@ -83,7 +83,7 @@ export function getGoogleSpeechEnvironment(): GoogleSpeechEnvironment {
   ];
 
   if (required.some((value) => !value))
-    throw new Error("Google Text-to-Speech configuration is incomplete");
+    {throw new Error("Google Text-to-Speech configuration is incomplete");}
 
   return {
     projectId: environment.GOOGLE_TTS_PROJECT_ID!,

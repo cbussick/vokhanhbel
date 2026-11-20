@@ -17,7 +17,7 @@ import {
 function dialogByHeading(name: string) {
   const dialog = screen.getByRole("heading", { name }).closest("dialog");
 
-  if (!dialog) throw new Error(`dialog ${name} missing`);
+  if (!dialog) {throw new Error(`dialog ${name} missing`);}
 
   return dialog;
 }
@@ -2323,11 +2323,11 @@ describe("rendered app journeys", () => {
       await screen.findByText(`Antwort ${exchange}`);
 
       if (exchange === 4)
-        expect(
+        {expect(
           screen.queryByText(/Du kannst noch .* Nachrichten senden\./),
-        ).not.toBeInTheDocument();
+        ).not.toBeInTheDocument();}
       if (exchange === 5)
-        expect(screen.getByText("Du kannst noch 3 Nachrichten senden.")).toBeVisible();
+        {expect(screen.getByText("Du kannst noch 3 Nachrichten senden.")).toBeVisible();}
     }
 
     expect(requests).toHaveLength(8);
@@ -2663,7 +2663,7 @@ describe("rendered app journeys", () => {
     expect(await screen.findByRole("heading", { name: "Khanhs Fortschritt" })).toBeVisible();
     const streakTile = screen.getByText("Streak", { exact: true }).closest("div");
 
-    if (!streakTile) throw new Error("Streak tile missing");
+    if (!streakTile) {throw new Error("Streak tile missing");}
     expect(within(streakTile).getByText("4")).toBeVisible();
     expect(
       within(screen.getByRole("banner")).queryByText("Streak", { exact: true }),
@@ -2688,7 +2688,7 @@ describe("rendered app journeys", () => {
     expect(await screen.findByRole("heading", { name: "Khanhs Fortschritt" })).toBeVisible();
     const streakTile = screen.getByText("Streak", { exact: true }).closest("div");
 
-    if (!streakTile) throw new Error("Streak tile missing");
+    if (!streakTile) {throw new Error("Streak tile missing");}
     expect(within(streakTile).getByText("0")).toBeVisible();
   });
 });

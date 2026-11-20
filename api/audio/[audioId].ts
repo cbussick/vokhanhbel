@@ -13,7 +13,7 @@ function getAudioId(request: Request): string {
   const result = z.uuid().safeParse(segment);
 
   if (!result.success)
-    throw new AppProblem(404, problemTypes.audioNotFound, "Audio nicht gefunden");
+    {throw new AppProblem(404, problemTypes.audioNotFound, "Audio nicht gefunden");}
 
   return result.data;
 }

@@ -8,7 +8,7 @@ function iosMp4Fixture(): Uint8Array {
   const view = new DataView(bytes.buffer);
   const write = (offset: number, value: string) => {
     for (let index = 0; index < value.length; index += 1)
-      bytes[offset + index] = value.charCodeAt(index);
+      {bytes[offset + index] = value.charCodeAt(index);}
   };
 
   view.setUint32(0, 20);

@@ -128,7 +128,7 @@ async function runApplication(project: string, databaseUrl: string): Promise<num
   const environment = developmentEnvironment(databaseUrl);
   const drizzle = resolve(repositoryRoot, "node_modules/drizzle-kit/bin.cjs");
   const migrationExit = await runNode(drizzle, ["migrate"], environment);
-  if (migrationExit !== 0) return migrationExit;
+  if (migrationExit !== 0) {return migrationExit;}
 
   const port = await availableApplicationPort();
   const applicationUrl = `http://127.0.0.1:${port}`;
@@ -170,14 +170,14 @@ async function main(): Promise<void> {
   const databaseUrl = startDatabase(project);
   console.log(`Database: project=${project}, host=127.0.0.1, port=${new URL(databaseUrl).port}`);
 
-  if (command === "up") return;
+  if (command === "up") {return;}
   if (command === "studio") {
     const drizzle = resolve(repositoryRoot, "node_modules/drizzle-kit/bin.cjs");
     process.exitCode = await runNode(drizzle, ["studio"], developmentEnvironment(databaseUrl));
 
     return;
   }
-  if (command !== "app") throw new Error(`Unknown local development command: ${command}`);
+  if (command !== "app") {throw new Error(`Unknown local development command: ${command}`);}
 
   process.exitCode = await runApplication(project, databaseUrl);
 }

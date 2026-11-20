@@ -38,7 +38,7 @@ switch (action) {
       await access(identityFile);
       throw new Error(".secrets/age-identity.txt already exists; refusing to overwrite it");
     } catch (error) {
-      if (error instanceof Error && !error.message.includes("ENOENT")) throw error;
+      if (error instanceof Error && !error.message.includes("ENOENT")) {throw error;}
     }
     await buildImage();
     await dockerRun(
@@ -65,17 +65,17 @@ switch (action) {
     const configuredBackupDirectory = process.env.BACKUP_DIRECTORY;
 
     if (!databaseUrl || !configuredBackupDirectory)
-      throw new Error("DATABASE_URL_UNPOOLED and BACKUP_DIRECTORY are required");
+      {throw new Error("DATABASE_URL_UNPOOLED and BACKUP_DIRECTORY are required");}
     if (!isAbsolute(configuredBackupDirectory))
-      throw new Error("BACKUP_DIRECTORY must be an absolute path");
+      {throw new Error("BACKUP_DIRECTORY must be an absolute path");}
 
     const parsedDatabaseUrl = new URL(databaseUrl);
     if (!["postgres:", "postgresql:"].includes(parsedDatabaseUrl.protocol))
-      throw new Error("The migration target must be PostgreSQL");
+      {throw new Error("The migration target must be PostgreSQL");}
 
     const backupDirectory = resolve(configuredBackupDirectory);
     if (backupDirectory === repository || backupDirectory.startsWith(`${repository}/`))
-      throw new Error("BACKUP_DIRECTORY must be outside the repository");
+      {throw new Error("BACKUP_DIRECTORY must be outside the repository");}
 
     await requireIdentity();
     await mkdir(backupDirectory, { recursive: true, mode: 0o700 });
@@ -99,10 +99,10 @@ switch (action) {
     const restoreUrl = process.env.RESTORE_DATABASE_URL;
 
     if (!encryptedBackup || !restoreUrl)
-      throw new Error(
+      {throw new Error(
         "Usage: RESTORE_DATABASE_URL=postgresql://... npm run db:restore:verify -- /absolute/backup.dump.age",
-      );
-    if (!isAbsolute(encryptedBackup)) throw new Error("The backup path must be absolute");
+      );}
+    if (!isAbsolute(encryptedBackup)) {throw new Error("The backup path must be absolute");}
 
     await access(encryptedBackup);
     await requireIdentity();
@@ -114,7 +114,7 @@ switch (action) {
       `AGE_IDENTITY_FILE=${containerIdentityFile}`,
     ];
     if (process.env.DATABASE_URL_UNPOOLED)
-      environmentArguments.push("--env", "DATABASE_URL_UNPOOLED");
+      {environmentArguments.push("--env", "DATABASE_URL_UNPOOLED");}
     await dockerRun(
       [
         ...environmentArguments,

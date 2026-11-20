@@ -116,15 +116,15 @@ export async function stageAudio(
 }
 
 function parseRange(rangeHeader: string | null, totalSize: number): AudioObjectRange | undefined {
-  if (!rangeHeader) return undefined;
+  if (!rangeHeader) {return undefined;}
   const match = /^bytes=(\d+)-(\d*)$/u.exec(rangeHeader.trim());
 
-  if (!match) throw new AppProblem(416, problemTypes.invalidAudioRange, "Audiobereich ungültig");
+  if (!match) {throw new AppProblem(416, problemTypes.invalidAudioRange, "Audiobereich ungültig");}
   const start = Number(match[1]);
   const end = match[2] ? Number(match[2]) : undefined;
 
   if (start >= totalSize || (end !== undefined && (end < start || end >= totalSize)))
-    throw new AppProblem(416, problemTypes.invalidAudioRange, "Audiobereich ungültig");
+    {throw new AppProblem(416, problemTypes.invalidAudioRange, "Audiobereich ungültig");}
 
   return { start, ...(end === undefined ? {} : { end }) };
 }
@@ -148,11 +148,11 @@ export async function playAudio(
   const isAudible =
     audio && (audio.claimedCardId !== null || audio.ownerSessionHash === sessionHash);
 
-  if (!isAudible) throw new AppProblem(404, problemTypes.audioNotFound, "Audio nicht gefunden");
+  if (!isAudible) {throw new AppProblem(404, problemTypes.audioNotFound, "Audio nicht gefunden");}
   const range = parseRange(rangeHeader, audio.byteSize);
   const stored = await getAudioObjectStore().read(audio.objectKey, range);
 
-  if (!stored) throw new AppProblem(404, problemTypes.audioNotFound, "Audio nicht gefunden");
+  if (!stored) {throw new AppProblem(404, problemTypes.audioNotFound, "Audio nicht gefunden");}
   operationLog("range-read", audio.id, range ? "partial" : "complete", requestId);
   const headers = new Headers({
     "Content-Type": audio.contentType,
@@ -160,7 +160,7 @@ export async function playAudio(
     "Accept-Ranges": "bytes",
   });
 
-  if (stored.contentRange) headers.set("Content-Range", stored.contentRange);
+  if (stored.contentRange) {headers.set("Content-Range", stored.contentRange);}
 
   return new Response(new Blob([Uint8Array.from(stored.bytes)]), {
     status: range ? 206 : 200,
@@ -186,7 +186,7 @@ export async function discardStagedAudio(
     )
     .returning({ id: audioAssets.id, objectKey: audioAssets.objectKey });
 
-  if (!rows[0]) throw new AppProblem(404, problemTypes.audioNotFound, "Audio nicht gefunden");
+  if (!rows[0]) {throw new AppProblem(404, problemTypes.audioNotFound, "Audio nicht gefunden");}
   await deleteAudioObject(rows[0], "discarded-stage", requestId);
 }
 
@@ -209,14 +209,14 @@ export async function enforceAudioUploadRateLimit(sessionHash: string): Promise<
     const count = z.object({ count: z.coerce.number().int().nonnegative() }).parse(result.rows[0]);
 
     if (count.count >= 30)
-      throw new AppProblem(
+      {throw new AppProblem(
         429,
         problemTypes.audioUploadRateLimit,
         "Zu viele Audio-Uploads. Versuch es später erneut.",
         undefined,
         undefined,
         60,
-      );
+      );}
     await client.query("INSERT INTO audio_upload_attempts (session_hash) VALUES ($1)", [
       sessionHash,
     ]);
@@ -247,14 +247,14 @@ export async function enforceAudioPlaybackRateLimit(sessionHash: string): Promis
     const count = z.object({ count: z.coerce.number().int().nonnegative() }).parse(result.rows[0]);
 
     if (count.count >= 300)
-      throw new AppProblem(
+      {throw new AppProblem(
         429,
         problemTypes.audioPlaybackRateLimit,
         "Zu viele Audio-Anfragen. Versuch es später erneut.",
         undefined,
         undefined,
         60,
-      );
+      );}
     await client.query("INSERT INTO audio_playback_attempts (session_hash) VALUES ($1)", [
       sessionHash,
     ]);
@@ -281,7 +281,7 @@ export async function cleanupExpiredAudio(now = new Date()): Promise<number> {
     .returning({ id: audioAssets.id, objectKey: audioAssets.objectKey });
 
   await Promise.all(expired.map((audio) => deleteAudioObject(audio, "expired-stage")));
-  if (expired.length) operationLog("expiry", "batch", String(expired.length));
+  if (expired.length) {operationLog("expiry", "batch", String(expired.length));}
 
   return expired.length;
 }
@@ -305,7 +305,7 @@ export async function retryAudioCleanup(): Promise<number> {
       )
       .limit(1);
 
-    if (referenced[0]) continue;
+    if (referenced[0]) {continue;}
 
     try {
       await getAudioObjectStore().delete(job.objectKey);

@@ -28,17 +28,17 @@ const lockedCardSchema = z.object({
 const claimedAudioSchema = z.object({ id: z.uuid(), object_key: z.string() });
 
 function throwCardWriteProblem(error: unknown): never {
-  if (error instanceof AppProblem) throw error;
+  if (error instanceof AppProblem) {throw error;}
   if (isUniqueViolation(error))
-    throw new AppProblem(
+    {throw new AppProblem(
       409,
       problemTypes.cardFrontConflict,
       "Diese Vorderseite gibt es schon",
       undefined,
       [{ pointer: "/front/text", code: "not_unique" }],
-    );
+    );}
   if (isForeignKeyViolation(error))
-    throw new AppProblem(404, problemTypes.collectionNotFound, "Sammlung nicht gefunden");
+    {throw new AppProblem(404, problemTypes.collectionNotFound, "Sammlung nicht gefunden");}
   throw error;
 }
 
@@ -92,7 +92,7 @@ function selectCards() {
 async function topicIdsByCard(cardIds: string[]): Promise<Map<string, string[]>> {
   const memberships = new Map<string, string[]>();
 
-  if (cardIds.length === 0) return memberships;
+  if (cardIds.length === 0) {return memberships;}
 
   const rows = await getDatabase()
     .select({ cardId: cardTopics.cardId, topicId: cardTopics.topicId })
@@ -116,7 +116,7 @@ async function uniqueTopicIdsForCollection(
 ): Promise<string[]> {
   const unique = [...new Set(topicIds)];
 
-  if (unique.length === 0) return unique;
+  if (unique.length === 0) {return unique;}
 
   const result = await client.query<{ id: string }>(
     `SELECT id FROM topics
@@ -125,7 +125,7 @@ async function uniqueTopicIdsForCollection(
   );
 
   if (result.rows.length !== unique.length)
-    throw new AppProblem(404, problemTypes.topicNotFound, "Thema nicht gefunden");
+    {throw new AppProblem(404, problemTypes.topicNotFound, "Thema nicht gefunden");}
 
   return unique;
 }
@@ -137,7 +137,7 @@ async function replaceCardTopics(
 ): Promise<void> {
   await client.query("DELETE FROM card_topics WHERE card_id=$1", [cardId]);
 
-  if (topicIds.length === 0) return;
+  if (topicIds.length === 0) {return;}
 
   await client.query("INSERT INTO card_topics (card_id, topic_id) SELECT $1, unnest($2::uuid[])", [
     cardId,
@@ -157,7 +157,7 @@ export async function getCard(cardId: string) {
     .where(and(eq(cards.id, cardId), isNull(cards.deletedAt)))
     .limit(1);
 
-  if (!rows[0]) throw new AppProblem(404, problemTypes.cardNotFound, "Karte nicht gefunden");
+  if (!rows[0]) {throw new AppProblem(404, problemTypes.cardNotFound, "Karte nicht gefunden");}
   const memberships = await topicIdsByCard([cardId]);
 
   return mapCard(rows[0], memberships.get(cardId) ?? []);
@@ -168,9 +168,9 @@ async function lockStagedAudio(
   audioId: string | null,
   sessionHash: string | undefined,
 ): Promise<void> {
-  if (!audioId) return;
+  if (!audioId) {return;}
   if (!sessionHash)
-    throw new AppProblem(409, problemTypes.audioNotOwned, "Audio gehört nicht zu dieser Sitzung");
+    {throw new AppProblem(409, problemTypes.audioNotOwned, "Audio gehört nicht zu dieser Sitzung");}
   const result = await client.query(
     `SELECT id FROM audio_assets
      WHERE id=$1 AND owner_session_hash=$2 AND claimed_card_id IS NULL
@@ -180,7 +180,7 @@ async function lockStagedAudio(
   );
 
   if (!result.rows[0])
-    throw new AppProblem(409, problemTypes.audioNotOwned, "Audio gehört nicht zu dieser Sitzung");
+    {throw new AppProblem(409, problemTypes.audioNotOwned, "Audio gehört nicht zu dieser Sitzung");}
 }
 
 async function claimAudio(
@@ -189,7 +189,7 @@ async function claimAudio(
   cardId: string,
   face: "front" | "back",
 ): Promise<void> {
-  if (!audioId) return;
+  if (!audioId) {return;}
   await client.query("UPDATE audio_assets SET claimed_card_id=$1, claimed_face=$2 WHERE id=$3", [
     cardId,
     face,
@@ -204,11 +204,11 @@ export async function createCard(
   const input = structuredInput(inputValue);
 
   if (input.front.audioId && input.front.audioId === input.back.audioId)
-    throw new AppProblem(
+    {throw new AppProblem(
       422,
       problemTypes.invalidRequest,
       "Jede Kartenseite braucht eigenes Audio",
-    );
+    );}
   const client = await getPool().connect();
   const cardId = crypto.randomUUID();
 
@@ -266,7 +266,7 @@ export async function updateCard(
     );
     const current = selected.rows[0] ? lockedCardSchema.parse(selected.rows[0]) : undefined;
 
-    if (!current) throw new AppProblem(404, problemTypes.cardNotFound, "Karte nicht gefunden");
+    if (!current) {throw new AppProblem(404, problemTypes.cardNotFound, "Karte nicht gefunden");}
     const collectionId = input.collectionId ?? current.collection_id;
     const frontText = input.front?.text === undefined ? current.front_text : input.front.text;
     const backText = input.back?.text === undefined ? current.back_text : input.back.text;
@@ -276,39 +276,39 @@ export async function updateCard(
       input.back?.audioId === undefined ? current.back_audio_id : input.back.audioId;
 
     if (!frontText && !frontAudioId)
-      throw new AppProblem(422, problemTypes.invalidRequest, "Vorderseite darf nicht leer sein");
+      {throw new AppProblem(422, problemTypes.invalidRequest, "Vorderseite darf nicht leer sein");}
     if (!backText && !backAudioId)
-      throw new AppProblem(422, problemTypes.invalidRequest, "Rückseite darf nicht leer sein");
+      {throw new AppProblem(422, problemTypes.invalidRequest, "Rückseite darf nicht leer sein");}
     if (frontAudioId && frontAudioId === backAudioId)
-      throw new AppProblem(
+      {throw new AppProblem(
         422,
         problemTypes.invalidRequest,
         "Jede Kartenseite braucht eigenes Audio",
-      );
+      );}
 
     if (frontAudioId !== current.front_audio_id)
-      await lockStagedAudio(client, frontAudioId, sessionHash);
+      {await lockStagedAudio(client, frontAudioId, sessionHash);}
     if (backAudioId !== current.back_audio_id)
-      await lockStagedAudio(client, backAudioId, sessionHash);
+      {await lockStagedAudio(client, backAudioId, sessionHash);}
     await client.query(
       `UPDATE cards SET collection_id=$1, front_text=$2, normalized_front=$2,
        front_audio_id=$3, back_text=$4, back_audio_id=$5, updated_at=now() WHERE id=$6`,
       [collectionId, frontText, frontAudioId, backText, backAudioId, cardId],
     );
     if (input.topicIds !== undefined)
-      await replaceCardTopics(
+      {await replaceCardTopics(
         client,
         cardId,
         await uniqueTopicIdsForCollection(client, collectionId, input.topicIds),
-      );
-    else if (collectionId !== current.collection_id) await replaceCardTopics(client, cardId, []);
+      );}
+    else if (collectionId !== current.collection_id) {await replaceCardTopics(client, cardId, []);}
     if (frontAudioId !== current.front_audio_id)
-      await claimAudio(client, frontAudioId, cardId, "front");
+      {await claimAudio(client, frontAudioId, cardId, "front");}
     if (backAudioId !== current.back_audio_id)
-      await claimAudio(client, backAudioId, cardId, "back");
+      {await claimAudio(client, backAudioId, cardId, "back");}
 
     for (const oldAudioId of [current.front_audio_id, current.back_audio_id]) {
-      if (!oldAudioId || oldAudioId === frontAudioId || oldAudioId === backAudioId) continue;
+      if (!oldAudioId || oldAudioId === frontAudioId || oldAudioId === backAudioId) {continue;}
       const released = await client.query(
         `UPDATE audio_assets SET deleted_at=now(), claimed_card_id=NULL, claimed_face=NULL
          WHERE id=$1 RETURNING id, object_key`,
@@ -361,7 +361,7 @@ export async function deleteCard(cardId: string, requestId?: string): Promise<vo
     await client.query("DELETE FROM card_topics WHERE card_id=$1", [cardId]);
 
     for (const audioId of [selectedCard.data.front_audio_id, selectedCard.data.back_audio_id]) {
-      if (!audioId) continue;
+      if (!audioId) {continue;}
       const released = await client.query(
         `UPDATE audio_assets SET deleted_at=now(), claimed_card_id=NULL, claimed_face=NULL
          WHERE id=$1 RETURNING id, object_key`,

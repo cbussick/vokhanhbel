@@ -93,7 +93,7 @@ export function SwipeExercise({
       (event.target instanceof Element &&
         event.target.closest("button, input, select, textarea, a"))
     )
-      return;
+      {return;}
 
     event.currentTarget.setPointerCapture(event.pointerId);
     setDragging(true);
@@ -102,13 +102,13 @@ export function SwipeExercise({
   };
 
   const handlePointerMove = (event: PointerEvent<HTMLDivElement>) => {
-    if (!dragging) return;
+    if (!dragging) {return;}
 
     const requested = { x: event.clientX - dragStart.x, y: (event.clientY - dragStart.y) * 0.15 };
     const arena = arenaRef.current?.getBoundingClientRect();
     const card = cardRef.current?.getBoundingClientRect();
 
-    if (!arena || !card) return;
+    if (!arena || !card) {return;}
 
     // `card` is measured mid-drag, so the offset already applied to it comes back off to recover the
     // resting rect the new offset is measured against.
@@ -139,7 +139,7 @@ export function SwipeExercise({
   };
 
   const handlePointerUp = () => {
-    if (!dragging) return;
+    if (!dragging) {return;}
 
     const side = armedSide;
     const optionCardId =
@@ -162,7 +162,7 @@ export function SwipeExercise({
   const renderBucket = (index: number, side: "left" | "right") => {
     const option = view.options[index];
 
-    if (!option) return null;
+    if (!option) {return null;}
 
     const verdict: OptionVerdict = {
       dead: !option.correct && view.resolved && !view.correct,

@@ -35,7 +35,7 @@ export async function createTopic(input: CreateTopicInput) {
     .limit(1);
 
   if (!collection)
-    throw new AppProblem(404, problemTypes.collectionNotFound, "Sammlung nicht gefunden");
+    {throw new AppProblem(404, problemTypes.collectionNotFound, "Sammlung nicht gefunden");}
 
   try {
     const rows = await getDatabase()
@@ -50,9 +50,9 @@ export async function createTopic(input: CreateTopicInput) {
 
     return mapTopic(rows[0]!);
   } catch (error) {
-    if (isUniqueViolation(error)) throwNameConflict();
+    if (isUniqueViolation(error)) {throwNameConflict();}
     if (isForeignKeyViolation(error))
-      throw new AppProblem(404, problemTypes.collectionNotFound, "Sammlung nicht gefunden");
+      {throw new AppProblem(404, problemTypes.collectionNotFound, "Sammlung nicht gefunden");}
     throw error;
   }
 }
@@ -70,11 +70,11 @@ export async function updateTopic(topicId: string, input: TopicInput) {
       .where(and(eq(topics.id, topicId), isNull(topics.deletedAt)))
       .returning();
 
-    if (!rows[0]) throw new AppProblem(404, problemTypes.topicNotFound, "Thema nicht gefunden");
+    if (!rows[0]) {throw new AppProblem(404, problemTypes.topicNotFound, "Thema nicht gefunden");}
 
     return mapTopic(rows[0]);
   } catch (error) {
-    if (isUniqueViolation(error)) throwNameConflict();
+    if (isUniqueViolation(error)) {throwNameConflict();}
     throw error;
   }
 }
@@ -87,7 +87,7 @@ export async function deleteTopic(topicId: string): Promise<void> {
     .where(and(eq(topics.id, topicId), isNull(topics.deletedAt)))
     .returning({ id: topics.id });
 
-  if (!rows[0]) throw new AppProblem(404, problemTypes.topicNotFound, "Thema nicht gefunden");
+  if (!rows[0]) {throw new AppProblem(404, problemTypes.topicNotFound, "Thema nicht gefunden");}
 
   await database.delete(cardTopics).where(eq(cardTopics.topicId, topicId));
 }

@@ -75,10 +75,10 @@ export function Dialog({
       )}
       onCancel={(event) => {
         // A nested dialog's cancel reaches this handler too; only the Learner's own Escape counts.
-        if (event.target !== event.currentTarget) return;
+        if (event.target !== event.currentTarget) {return;}
         event.preventDefault();
 
-        if (busy) return;
+        if (busy) {return;}
 
         if (isConfirming) {
           onDismissConfirmation?.();

@@ -18,7 +18,7 @@ export function ListboxRoot({
 
   useEffect(() => {
     const clearAfterMouseRelease = (event: PointerEvent) => {
-      if (event.pointerType === "mouse") clearPointerStart();
+      if (event.pointerType === "mouse") {clearPointerStart();}
     };
 
     window.addEventListener("pointerup", clearAfterMouseRelease, { passive: true });
@@ -42,7 +42,7 @@ export function ListboxRoot({
       }}
       onBlur={(event) => {
         if (!pointerStartedInside.current && !event.currentTarget.contains(event.relatedTarget))
-          onFocusLeave();
+          {onFocusLeave();}
       }}
     >
       {children}

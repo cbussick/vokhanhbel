@@ -21,8 +21,8 @@ export function getPointsForGrade(grade: Grade): number {
 }
 
 export function getBoxAfterGrade(box: Box, grade: Grade): Box {
-  if (grade === "forgot") return 0;
-  if (grade === "almost") return box;
+  if (grade === "forgot") {return 0;}
+  if (grade === "almost") {return box;}
 
   // SAFETY: box is already a Box (0-5), so box + 1 is 1-6 and Math.min caps it at 5. The result
   // is therefore always within the Box union.

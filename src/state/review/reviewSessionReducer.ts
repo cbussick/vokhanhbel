@@ -149,13 +149,13 @@ function shrinkMatchingExercise(
   const taintedCardIds = (matching?.taintedCardIds ?? []).filter((id) => id !== removedCardId);
   const unresolved = cards.filter((card) => !resolvedCardIds.includes(card.id));
 
-  if (unresolved.length === 0) return { replacement: undefined, matching: undefined };
+  if (unresolved.length === 0) {return { replacement: undefined, matching: undefined };}
 
   if (unresolved.length < matchingMinimumPairs)
-    return {
+    {return {
       replacement: { kind: "flip", id: unresolved[0]!.id, cards: [unresolved[0]!] },
       matching: undefined,
-    };
+    };}
 
   return {
     replacement: { ...exercise, cards },
@@ -191,7 +191,7 @@ export function reviewSessionReducer(
     case "answerRevealed":
       return state.status === "reviewing" ? { ...state, revealed: true } : state;
     case "cardGraded": {
-      if (state.status !== "reviewing") return state;
+      if (state.status !== "reviewing") {return state;}
       const reviewSession = {
         ...state.reviewSession,
         exerciseAttemptNumber: state.reviewSession.exerciseAttemptNumber + 1,
@@ -201,7 +201,7 @@ export function reviewSessionReducer(
       };
 
       if (state.currentIndex + 1 >= reviewSession.exercises.length)
-        return { status: "summary", reviewSession };
+        {return { status: "summary", reviewSession };}
 
       return {
         status: "reviewing",
@@ -216,7 +216,7 @@ export function reviewSessionReducer(
       };
     }
     case "multipleChoiceOptionMissed": {
-      if (state.status !== "reviewing") return state;
+      if (state.status !== "reviewing") {return state;}
 
       return {
         ...state,
@@ -228,7 +228,7 @@ export function reviewSessionReducer(
       };
     }
     case "multipleChoiceResolved": {
-      if (state.status !== "reviewing") return state;
+      if (state.status !== "reviewing") {return state;}
       const deadOptionIds = state.multipleChoice?.deadOptionIds ?? [];
       const reviewSession = {
         ...state.reviewSession,
@@ -248,7 +248,7 @@ export function reviewSessionReducer(
       };
     }
     case "matchingPairMismatched": {
-      if (state.status !== "reviewing") return state;
+      if (state.status !== "reviewing") {return state;}
       const taintedCardIds = new Set([
         ...(state.matching?.taintedCardIds ?? []),
         ...action.cardIds,
@@ -263,7 +263,7 @@ export function reviewSessionReducer(
       };
     }
     case "matchingPairResolved": {
-      if (state.status !== "reviewing") return state;
+      if (state.status !== "reviewing") {return state;}
       const reviewSession = {
         ...state.reviewSession,
         roundSubmissions: [...state.reviewSession.roundSubmissions, action.submission],
@@ -281,7 +281,7 @@ export function reviewSessionReducer(
       };
     }
     case "swipeCardResolved": {
-      if (state.status !== "reviewing") return state;
+      if (state.status !== "reviewing") {return state;}
       const reviewSession = {
         ...state.reviewSession,
         roundSubmissions: [...state.reviewSession.roundSubmissions, action.submission],
@@ -292,7 +292,7 @@ export function reviewSessionReducer(
       return { ...state, reviewSession, swipe: { correct: action.correct } };
     }
     case "exerciseAdvanced": {
-      if (state.status !== "reviewing") return state;
+      if (state.status !== "reviewing") {return state;}
       const exercise = state.reviewSession.exercises[state.currentIndex];
       const resolved =
         exercise?.kind === "multipleChoice"
@@ -303,9 +303,9 @@ export function reviewSessionReducer(
               ? state.swipe !== undefined
               : false;
 
-      if (!resolved) return state;
+      if (!resolved) {return state;}
       if (state.currentIndex + 1 >= state.reviewSession.exercises.length)
-        return { status: "summary", reviewSession: state.reviewSession };
+        {return { status: "summary", reviewSession: state.reviewSession };}
 
       return {
         status: "reviewing",
@@ -323,7 +323,7 @@ export function reviewSessionReducer(
       };
     }
     case "cardSkipped": {
-      if (state.status !== "reviewing") return state;
+      if (state.status !== "reviewing") {return state;}
       const exercises = state.reviewSession.exercises.filter(
         (_, index) => index !== state.currentIndex,
       );
@@ -334,7 +334,7 @@ export function reviewSessionReducer(
       };
 
       if (exercises.length === 0 || state.currentIndex >= exercises.length)
-        return { status: "summary", reviewSession };
+        {return { status: "summary", reviewSession };}
 
       return {
         status: "reviewing",
@@ -349,7 +349,7 @@ export function reviewSessionReducer(
       };
     }
     case "forgottenRepeated": {
-      if (state.status !== "summary") return state;
+      if (state.status !== "summary") {return state;}
       // Cards graded forgot repeat as flip Cards, never multiple choice — see ADR-0014.
       const forgotten = state.reviewSession.roundSubmissions
         .filter((submission) => submission.input.grade === "forgot")
@@ -359,7 +359,7 @@ export function reviewSessionReducer(
           cards: [submission.card],
         }));
 
-      if (forgotten.length === 0) return state;
+      if (forgotten.length === 0) {return state;}
 
       return {
         status: "reviewing",
@@ -383,7 +383,7 @@ export function reviewSessionReducer(
       return idleReviewSessionState;
     case "reviewSubmissionRejected": {
       if (state.status === "idle" || state.reviewSession.id !== action.submission.reviewSessionId)
-        return state;
+        {return state;}
       const roundSubmissions = state.reviewSession.roundSubmissions.filter(
         (submission) => submission.input.id !== action.submission.input.id,
       );
@@ -423,7 +423,7 @@ export function reviewSessionReducer(
         const currentIndex = findNextUngradedExercise(exercises, roundSubmissions);
 
         if (currentIndex < 0)
-          return { status: "summary", reviewSession: { ...reviewSession, exercises } };
+          {return { status: "summary", reviewSession: { ...reviewSession, exercises } };}
 
         const replaced =
           shrunk.replacement !== undefined && exercises[currentIndex] === shrunk.replacement;
@@ -469,7 +469,7 @@ export function reviewSessionReducer(
         const currentIndex = findNextUngradedExercise(exercises, roundSubmissions);
 
         if (currentIndex < 0)
-          return { status: "summary", reviewSession: { ...reviewSession, exercises } };
+          {return { status: "summary", reviewSession: { ...reviewSession, exercises } };}
 
         return {
           status: "reviewing",
