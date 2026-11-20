@@ -157,7 +157,7 @@ export function AudioPlayer({
 
   // One playback control is rendered per state; what every one of them carries belongs here, so a
   // shared attribute is added once instead of in four places.
-  const controlProps = { type: "button", "aria-describedby": describedBy } as const;
+  const controlProps = { "aria-describedby": describedBy };
 
   return (
     <div className={styles.playerContainer}>
@@ -183,6 +183,7 @@ export function AudioPlayer({
         />
         {state === "loading" ? (
           <button
+            type="button"
             {...controlProps}
             aria-busy="true"
             aria-disabled="true"
@@ -191,15 +192,16 @@ export function AudioPlayer({
             <span className={styles.spinner} aria-hidden="true" />
           </button>
         ) : state === "playing" ? (
-          <button {...controlProps} onClick={pause} aria-label={`${label}: ${t("audio.pause")}`}>
+          <button type="button" {...controlProps} onClick={pause} aria-label={`${label}: ${t("audio.pause")}`}>
             <FilledPlaybackIcon kind="pause" />
           </button>
         ) : state === "error" ? (
-          <button {...controlProps} onClick={retry} aria-label={`${label}: ${t("audio.retry")}`}>
+          <button type="button" {...controlProps} onClick={retry} aria-label={`${label}: ${t("audio.retry")}`}>
             <RotateCcw aria-hidden="true" />
           </button>
         ) : (
           <button
+            type="button"
             {...controlProps}
             onClick={() => void play()}
             aria-label={`${label}: ${state === "ended" ? t("audio.replay") : t("audio.play")}`}

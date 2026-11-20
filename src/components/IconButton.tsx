@@ -27,6 +27,7 @@ export function IconButton({
     .join(" ");
 
   return (
+    // eslint-disable-next-line react/button-has-type -- Native ButtonHTMLAttributes restricts type to button/submit/reset; the default above is button. Preserve callers’ native form semantics.
     <button type={type} className={classes} {...props}>
       <span className={styles.icon} aria-hidden="true">
         {icon}

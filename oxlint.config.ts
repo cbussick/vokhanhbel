@@ -240,7 +240,6 @@ export default defineConfig({
         "quality/no-conditional-empty-object-spread": "off",
         "quality/no-known-value-widening": "off",
         "quality/no-unsafe-dictionary-type": "off",
-        "react/button-has-type": "off",
         "typescript/no-non-null-assertion": "off",
         "typescript/no-unsafe-type-assertion": "off",
         "typescript/return-await": "off",
