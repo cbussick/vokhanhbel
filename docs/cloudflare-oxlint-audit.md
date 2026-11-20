@@ -1,4 +1,4 @@
-# Cloudflare defaults migration — continuation checkpoint
+# Cloudflare defaults migration — continuation checkpoint (second worker)
 
 **INCOMPLETE. Not integration-ready.** This is a handoff, not a completion report.
 Temporary rule disables remain in the clearly marked final override. No claim of
@@ -49,37 +49,37 @@ probe or independent review has yet been done.
 Initial actual root-config inventory: **969 diagnostics, 185 files**. This is
 not a count of distinct bugs. Counts before fixes:
 
-| Rule | Findings |
-| --- | ---: |
-| curly | 429 |
-| typescript/array-type | 144 |
-| typescript/no-unsafe-type-assertion | 86 |
-| unicorn/numeric-separators-style | 79 |
-| typescript/no-non-null-assertion | 61 |
-| import/consistent-type-specifier-style | 50 |
-| vitest/require-mock-type-parameters | 20 |
-| unicorn/consistent-function-scoping | 15 |
-| vitest/require-to-throw-message | 11 |
-| vitest/no-conditional-expect | 10 |
-| no-console | 9 |
-| unicorn/no-array-sort | 6 |
-| unicorn/prefer-top-level-await | 6 |
-| react/button-has-type | 5 |
-| @nkzw/no-instanceof | 5 |
-| quality/no-chained-type-assertions | 5 |
-| unicorn/prefer-string-replace-all | 4 |
-| quality/no-conditional-empty-object-spread | 4 |
-| unicorn/no-useless-promise-resolve-reject | 3 |
-| unicorn/catch-error-name | 3 |
-| quality/no-known-value-widening | 2 |
-| unicorn/prefer-string-raw | 2 |
-| unicorn/prefer-add-event-listener | 2 |
-| unicorn/prefer-at | 2 |
-| quality/no-array-filter-map | 2 |
-| no-promise-executor-return | 1 |
-| quality/no-unsafe-dictionary-type | 1 |
-| import/no-namespace | 1 |
-| typescript/return-await | 1 |
+| Rule                                       | Findings |
+| ------------------------------------------ | -------: |
+| curly                                      |      429 |
+| typescript/array-type                      |      144 |
+| typescript/no-unsafe-type-assertion        |       86 |
+| unicorn/numeric-separators-style           |       79 |
+| typescript/no-non-null-assertion           |       61 |
+| import/consistent-type-specifier-style     |       50 |
+| vitest/require-mock-type-parameters        |       20 |
+| unicorn/consistent-function-scoping        |       15 |
+| vitest/require-to-throw-message            |       11 |
+| vitest/no-conditional-expect               |       10 |
+| no-console                                 |        9 |
+| unicorn/no-array-sort                      |        6 |
+| unicorn/prefer-top-level-await             |        6 |
+| react/button-has-type                      |        5 |
+| @nkzw/no-instanceof                        |        5 |
+| quality/no-chained-type-assertions         |        5 |
+| unicorn/prefer-string-replace-all          |        4 |
+| quality/no-conditional-empty-object-spread |        4 |
+| unicorn/no-useless-promise-resolve-reject  |        3 |
+| unicorn/catch-error-name                   |        3 |
+| quality/no-known-value-widening            |        2 |
+| unicorn/prefer-string-raw                  |        2 |
+| unicorn/prefer-add-event-listener          |        2 |
+| unicorn/prefer-at                          |        2 |
+| quality/no-array-filter-map                |        2 |
+| no-promise-executor-return                 |        1 |
+| quality/no-unsafe-dictionary-type          |        1 |
+| import/no-namespace                        |        1 |
+| typescript/return-await                    |        1 |
 
 `04d954a` is the passing staged adoption commit (temporary disables).
 Subsequent focused lint-passing commits implement curly, generic arrays, numeric
@@ -126,6 +126,73 @@ conditional expectations, native event lifecycle, typed error identity guards,
 callback return contracts, hoisting, and all other temporary disables. No
 microtask tricks, weakened tests, unsupported assertion substitutions, or broad
 exceptions are authorized.
+
+## Second-worker continuation (through `a1c04ba`)
+
+Twelve additional focused rule commits passed root lint. **Eight temporary disables
+remain**, not twenty: chained assertions, non-null assertions, unsafe assertions,
+return-await, function scoping, native event listeners, typed mocks, and throw
+messages. This remains incomplete and must not be integrated.
+
+Implemented commits:
+
+- `3c3efad`: void Promise executor in the intentionally pending playback test.
+- `9da43a9`: explicit playback button types. `IconButton` retains one explained
+  `react/button-has-type` line exception: React's native button attribute union
+  admits only button/submit/reset and the component defaults to button. The
+  syntax-only rule rejects that typed variable; duplicating branches solely for
+  lint would obscure native form behavior.
+- `7f1377a`: non-mutating sorting of derived arrays; deliberately mutating private
+  Streak grouping is accepted by the stock rule and unchanged.
+- `80c8f03`: named database schema imports and an explicit schema object containing
+  exactly the same exported entries (including defaultCollectionId).
+- `87369b5`: CLI entrypoints await main inside try/catch. Two exact
+  `unicorn/prefer-top-level-await` exceptions on Zod icon `.catch` calls document
+  the proven synchronous-schema false positive; those are not Promise chains.
+- `e8cbc30`: no-console enabled. Nine line exceptions preserve native output:
+  AppErrorBoundary componentDidCatch (authorized browser error and stack), audio
+  operation logger and HTTP request logger (platform info severity, JSON, request
+  correlation), and six CLI messages (allocated application/database/volume,
+  selected Compose identity, startup identity, and stderr error inspection).
+  No logs were removed or redirected through raw streams to evade the rule.
+- `83b8f6b`: pure review projections use flatMap, preserving filtering, ordering,
+  date conversion, invalid-date exclusion, and missing matching entries.
+- `6921feb`: optional request body, stored Content-Range, log requestId, and parsed
+  range end are assigned explicitly under the original conditions. Named native
+  or owner contracts retain absent fields rather than present-undefined values.
+- `06bea1b`: Card boundary preprocessing uses guarded `in` properties; no unknown
+  dictionary or narrowing assertion remains there. Legacy strings, absent Topic
+  IDs, spread preservation, and structured validation remain.
+- `9503ad4`: inferred connection result and schema-parsed intercepted Card input
+  replace anonymous known-evidence widening in tests.
+- `08b9e13`: reducer assertions fail explicitly on wrong state instead of skipping
+  checks; Tutor message-limit checks run unconditionally after exchanges four
+  and five with the same eight real exchanges.
+- `a1c04ba`: the actual application Error class is named AppProblemError throughout
+  all consumers, preserving constructor identity and Error behavior. Two native
+  `@nkzw/no-instanceof` line exceptions retain Element identity before closest and
+  Uint8Array identity when copying signing keys for WebCrypto.
+
+Validation evidence: `/tmp/vok-cf-{executor,player,buttons,sort,namespace,top-await,
+console,filter-map,spread,dictionary,widening,conditional-expect,instanceof}.log`.
+Every above commit passed npm lint. Typecheck passed after namespace, top-await,
+filter-map, spread, dictionary, widening and instanceof changes. Focused suites
+passed: AudioPlayer; exercisePlanner and Tutor; setupEnvironment/migratePreview;
+appJourneys (repeated after later changes); reviewSessionReducer; all contracts;
+all server audio and HTTP suites. A mistyped filter-map test path first reported
+no test files; the actual planner/appJourneys suites then passed. This is not a
+claimed baseline test failure. No builds, browser or shared database writers ran.
+A scoping autofix trial changed no source and its config edit was reverted.
+
+A fresh read-only Pi investigation examined unsafe/non-null assertions. Its full
+plan is retained at `/tmp/vok-cf-assertion-plan.md`. In particular, inspectAudio
+appears to lack WebM TimecodeScale payload and Ogg segment/page bounds checks;
+verify with red/green malformed-audio regressions rather than calling those
+findings false positives. Shared API/HTTP generic boundaries, browser typing,
+planner tuple invariants and test-owned fake contracts need real redesign.
+
+No final review or full validation gate has been run; all gates below still apply.
+Second worker relinquishes write ownership only after committing this checkpoint.
 
 ## Validation status / remaining release gate
 
