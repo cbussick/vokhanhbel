@@ -251,7 +251,6 @@ export default defineConfig({
         "unicorn/prefer-add-event-listener": "off",
         "unicorn/prefer-at": "off",
         "unicorn/prefer-string-raw": "off",
-        "unicorn/prefer-string-replace-all": "off",
         "unicorn/prefer-top-level-await": "off",
         "vitest/no-conditional-expect": "off",
         "vitest/require-mock-type-parameters": "off",

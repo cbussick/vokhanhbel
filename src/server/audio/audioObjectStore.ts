@@ -198,7 +198,7 @@ export class R2AudioObjectStore implements AudioObjectStore {
     extraHeaders: Record<string, string> = {},
   ): Promise<Response> {
     const now = new Date();
-    const date = now.toISOString().replace(/[:-]|\.\d{3}/gu, "");
+    const date = now.toISOString().replaceAll(/[:-]|\.\d{3}/gu, "");
     const dateStamp = date.slice(0, 8);
     const path = encodeObjectPath(this.configuration.bucket, objectKey);
     const host = new URL(this.configuration.endpoint).host;

@@ -16,7 +16,7 @@ export function normalizeCardText(value: string): string {
     .replaceAll("\r\n", "\n")
     .replaceAll("\r", "\n")
     .split("\n")
-    .map((line) => line.replace(horizontalWhitespacePattern, " ").trim())
+    .map((line) => line.replaceAll(horizontalWhitespacePattern, " ").trim())
     .join("\n")
     .trim();
 }

@@ -12,8 +12,8 @@ export function composeProjectName(checkoutPath: string): string {
   const canonicalPath = resolve(checkoutPath);
   const readableName = basename(canonicalPath)
     .toLowerCase()
-    .replace(/[^a-z0-9_-]+/g, "-")
-    .replace(/^-+|-+$/g, "")
+    .replaceAll(/[^a-z0-9_-]+/g, "-")
+    .replaceAll(/^-+|-+$/g, "")
     .slice(0, 24);
   const pathHash = createHash("sha256").update(canonicalPath).digest("hex").slice(0, 10);
 
