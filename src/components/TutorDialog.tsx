@@ -37,9 +37,9 @@ export function TutorDialog({
   /** The Card the dialog is anchored to — always one of `exercise.cards`. */
   card: Card;
   exercise: TutorExerciseContext;
-  messages: TutorConversationMessage[];
+  messages: Array<TutorConversationMessage>;
   updateMessages: (
-    update: (messages: TutorConversationMessage[]) => TutorConversationMessage[],
+    update: (messages: Array<TutorConversationMessage>) => Array<TutorConversationMessage>,
   ) => void;
   onClose: () => void;
 }) {

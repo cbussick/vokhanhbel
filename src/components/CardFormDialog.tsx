@@ -42,7 +42,7 @@ export function CardFormDialog({
 }: {
   card?: Card;
   defaultCollectionId?: string | undefined;
-  defaultTopicIds?: string[] | undefined;
+  defaultTopicIds?: Array<string> | undefined;
   onClose: () => void;
   onDeleted?: () => void;
 }) {
@@ -71,7 +71,7 @@ export function CardFormDialog({
 
   const save = useMutation({
     mutationFn: async () => {
-      const uploadedIds: string[] = [];
+      const uploadedIds: Array<string> = [];
       // A generated clip is staged already, so only a clip recorded or picked here is uploaded —
       // and only that upload is undone below, leaving a generated clip to expire on its own.
       const claimAudio = async (draft: AudioDraft | null) => {

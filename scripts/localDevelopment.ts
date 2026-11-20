@@ -37,11 +37,11 @@ export function databaseUrlFromPublishedPort(output: string): string {
   return `postgresql://postgres:postgres@127.0.0.1:${port}/${databaseName}`;
 }
 
-function dockerArguments(project: string, ...args: string[]): string[] {
+function dockerArguments(project: string, ...args: Array<string>): Array<string> {
   return ["compose", "--project-name", project, "--file", composeFile, ...args];
 }
 
-function runDocker(project: string, ...args: string[]): string {
+function runDocker(project: string, ...args: Array<string>): string {
   return execFileSync("docker", dockerArguments(project, ...args), {
     cwd: repositoryRoot,
     encoding: "utf8",
@@ -85,7 +85,7 @@ export function vercelDevelopmentEnvironment(
   return runtimeEnvironment;
 }
 
-function runNode(script: string, args: string[], environment: NodeJS.ProcessEnv): Promise<number> {
+function runNode(script: string, args: Array<string>, environment: NodeJS.ProcessEnv): Promise<number> {
   return new Promise((resolveExit, reject) => {
     const child = spawn(process.execPath, [script, ...args], {
       cwd: repositoryRoot,

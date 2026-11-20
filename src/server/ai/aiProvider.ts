@@ -12,7 +12,7 @@ export interface TutorExerciseCardContent {
 export interface TutorProviderRequest {
   /** The Card the Tutor dialog is anchored to — always present in `exerciseCards` too. */
   subjectCard: { front: string; back: string };
-  exerciseCards: TutorExerciseCardContent[];
+  exerciseCards: Array<TutorExerciseCardContent>;
   chosenOptionText: string | null;
   input: TutorInput;
   signal: AbortSignal;

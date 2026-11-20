@@ -4,7 +4,7 @@ export class AppProblem extends Error {
     public readonly type: string,
     public readonly title: string,
     public readonly detail?: string,
-    public readonly errors?: { pointer: string; code: string }[],
+    public readonly errors?: Array<{ pointer: string; code: string }>,
     public readonly retryAfter?: number,
   ) {
     super(title);
@@ -18,7 +18,7 @@ interface ProblemBody {
   status: number;
   instance: string;
   detail?: string;
-  errors?: { pointer: string; code: string }[];
+  errors?: Array<{ pointer: string; code: string }>;
 }
 
 export function problemResponse(problem: AppProblem, requestId: string): Response {

@@ -15,7 +15,7 @@ vi.mock("openai", () => ({
 
 const subjectCard = { front: "front", back: "back" };
 
-async function* stream(events: unknown[]) {
+async function* stream(events: Array<unknown>) {
   yield* events;
 }
 
@@ -27,7 +27,7 @@ async function drain(events: AsyncIterable<unknown>): Promise<void> {
   while (!step.done) {step = await iterator.next();}
 }
 
-async function collectProviderEvents(events: unknown[]) {
+async function collectProviderEvents(events: Array<unknown>) {
   createResponse.mockResolvedValue(stream(events));
   const provider = createOpenAiProvider();
   const collected = [];
@@ -114,7 +114,7 @@ describe("Exercise content reaches the model as untrusted data", () => {
   function promptContent(): string {
     const call = createResponse.mock.calls[0]?.[0] as {
       instructions: string;
-      input: { role: string; content: string }[];
+      input: Array<{ role: string; content: string }>;
     };
 
     return call.input[0]!.content;

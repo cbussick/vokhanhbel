@@ -141,7 +141,7 @@ export function MatchingExercise({
     if (frontCardId !== backCardId) {setMismatch({ frontCardId, backCardId });}
   };
 
-  const renderColumn = (entries: MatchingEntryView[], side: MatchingSide, legend: string) => (
+  const renderColumn = (entries: Array<MatchingEntryView>, side: MatchingSide, legend: string) => (
     <fieldset className={styles.matchingColumn} disabled={inputBlocked}>
       <legend>{legend}</legend>
       {entries.map((entry) => (

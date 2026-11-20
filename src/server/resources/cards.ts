@@ -89,8 +89,8 @@ function selectCards() {
     .leftJoin(backAudio, eq(cards.backAudioId, backAudio.id));
 }
 
-async function topicIdsByCard(cardIds: string[]): Promise<Map<string, string[]>> {
-  const memberships = new Map<string, string[]>();
+async function topicIdsByCard(cardIds: Array<string>): Promise<Map<string, Array<string>>> {
+  const memberships = new Map<string, Array<string>>();
 
   if (cardIds.length === 0) {return memberships;}
 
@@ -112,8 +112,8 @@ async function topicIdsByCard(cardIds: string[]): Promise<Map<string, string[]>>
 async function uniqueTopicIdsForCollection(
   client: PoolClient,
   collectionId: string,
-  topicIds: string[],
-): Promise<string[]> {
+  topicIds: Array<string>,
+): Promise<Array<string>> {
   const unique = [...new Set(topicIds)];
 
   if (unique.length === 0) {return unique;}
@@ -133,7 +133,7 @@ async function uniqueTopicIdsForCollection(
 async function replaceCardTopics(
   client: PoolClient,
   cardId: string,
-  topicIds: string[],
+  topicIds: Array<string>,
 ): Promise<void> {
   await client.query("DELETE FROM card_topics WHERE card_id=$1", [cardId]);
 
@@ -255,7 +255,7 @@ export async function updateCard(
   requestId?: string,
 ) {
   const client = await getPool().connect();
-  const obsolete: { id: string; objectKey: string }[] = [];
+  const obsolete: Array<{ id: string; objectKey: string }> = [];
 
   try {
     await client.query("BEGIN");
@@ -335,7 +335,7 @@ export async function updateCard(
 
 export async function deleteCard(cardId: string, requestId?: string): Promise<void> {
   const client = await getPool().connect();
-  const obsolete: { id: string; objectKey: string }[] = [];
+  const obsolete: Array<{ id: string; objectKey: string }> = [];
 
   try {
     await client.query("BEGIN");

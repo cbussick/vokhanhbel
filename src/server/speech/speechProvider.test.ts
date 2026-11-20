@@ -15,7 +15,7 @@ vi.mock("@google-cloud/text-to-speech", () => ({
   },
 }));
 
-const pinnedVoices: [CollectionLanguage, string][] = [
+const pinnedVoices: Array<[CollectionLanguage, string]> = [
   ["vi-VN", "vi-VN-Chirp3-HD-Gacrux"],
   ["de-DE", "de-DE-Chirp3-HD-Achernar"],
   ["en-US", "en-US-Chirp3-HD-Despina"],

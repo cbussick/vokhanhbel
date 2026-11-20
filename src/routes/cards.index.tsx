@@ -24,7 +24,7 @@ function AddIcon() {
   );
 }
 
-function countCardsByCollection(cards: Card[]): Map<string, number> {
+function countCardsByCollection(cards: Array<Card>): Map<string, number> {
   const counts = new Map<string, number>();
 
   for (const card of cards) {counts.set(card.collectionId, (counts.get(card.collectionId) ?? 0) + 1);}

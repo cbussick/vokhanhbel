@@ -27,7 +27,7 @@ async function buildImage() {
   await run("docker", ["build", "--file", dockerfile, "--tag", image, repository]);
 }
 
-function dockerRun(options: string[], command: string[] = []) {
+function dockerRun(options: Array<string>, command: Array<string> = []) {
   return run("docker", ["run", "--rm", "--user", user, ...options, image, ...command]);
 }
 

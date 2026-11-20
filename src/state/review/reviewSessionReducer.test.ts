@@ -64,7 +64,7 @@ function submission(
   };
 }
 
-function matching(ids: string[]): MatchingExercise {
+function matching(ids: Array<string>): MatchingExercise {
   return {
     kind: "matching",
     id: ids.join(":"),

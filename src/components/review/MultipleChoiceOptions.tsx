@@ -19,7 +19,7 @@ export function MultipleChoiceOptions({
   onOptionAvailabilityChange,
   onChoose,
 }: {
-  options: MultipleChoiceOptionView[];
+  options: Array<MultipleChoiceOptionView>;
   resolved: boolean;
   language: string | null;
   disabled: boolean;

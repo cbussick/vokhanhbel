@@ -18,8 +18,8 @@ export interface StreakReview {
   boxAfter: number;
 }
 
-function groupReviewsByCard(reviews: readonly StreakReview[]): Map<string, StreakReview[]> {
-  const byCard = new Map<string, StreakReview[]>();
+function groupReviewsByCard(reviews: ReadonlyArray<StreakReview>): Map<string, Array<StreakReview>> {
+  const byCard = new Map<string, Array<StreakReview>>();
 
   for (const review of reviews) {
     const forCard = byCard.get(review.cardId);
@@ -40,7 +40,7 @@ function groupReviewsByCard(reviews: readonly StreakReview[]): Map<string, Strea
  */
 function dueDayForCard(
   card: StreakCard,
-  reviewHistory: readonly StreakReview[],
+  reviewHistory: ReadonlyArray<StreakReview>,
   day: string,
 ): string {
   let dueDay = toBerlinDay(card.createdAt);
@@ -57,7 +57,7 @@ function dueDayForCard(
 
 function isCardDueOnDay(
   card: StreakCard,
-  reviewHistory: readonly StreakReview[],
+  reviewHistory: ReadonlyArray<StreakReview>,
   day: string,
 ): boolean {
   if (toBerlinDay(card.createdAt) > day) {return false;} // created after day: drops out
@@ -67,8 +67,8 @@ function isCardDueOnDay(
 }
 
 function anyCardDueOnDay(
-  cards: readonly StreakCard[],
-  reviewsByCard: Map<string, StreakReview[]>,
+  cards: ReadonlyArray<StreakCard>,
+  reviewsByCard: Map<string, Array<StreakReview>>,
   day: string,
 ): boolean {
   return cards.some((card) => isCardDueOnDay(card, reviewsByCard.get(card.id) ?? [], day));
@@ -84,8 +84,8 @@ function anyCardDueOnDay(
  * log plus each Card's creation and deletion, with nothing stored in between.
  */
 export function calculateStreak(
-  cards: readonly StreakCard[],
-  reviews: readonly StreakReview[],
+  cards: ReadonlyArray<StreakCard>,
+  reviews: ReadonlyArray<StreakReview>,
   now: Date,
 ): number {
   if (cards.length === 0) {return 0;}

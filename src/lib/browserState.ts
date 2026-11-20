@@ -32,7 +32,7 @@ export function useOnlineStatus(): boolean {
   );
 }
 
-export function useDueTime(dueTimes: string[]): number {
+export function useDueTime(dueTimes: Array<string>): number {
   const [now, setNow] = useState(Date.now);
   const nextBoundary = dueTimes
     .map((dueAt) => new Date(dueAt).getTime())

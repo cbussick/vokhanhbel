@@ -545,7 +545,7 @@ test("keeps the Card audio rail stable while dragging and recording", async ({ p
   const dataTransfer = await page.evaluateHandle(() => {
     const browser = globalThis as unknown as {
       DataTransfer: new () => { items: { add: (file: Blob) => void } };
-      File: new (bits: string[], name: string, options: { type: string }) => Blob;
+      File: new (bits: Array<string>, name: string, options: { type: string }) => Blob;
     };
     const transfer = new browser.DataTransfer();
 
@@ -688,7 +688,7 @@ test("scrolls the Card dialog body below a fixed top bar and locks the page behi
 });
 
 test("completes Review, Tutor, repeat-ready summary, and Me", async ({ page }) => {
-  const preloadErrors: string[] = [];
+  const preloadErrors: Array<string> = [];
   page.on("console", (message) => {
     if (message.type() === "error" && message.text().includes("_nonReactive"))
       {preloadErrors.push(message.text());}

@@ -8,13 +8,13 @@ const runNode = promisify(execFile);
 
 interface BraceAst {
   type: string;
-  nodes?: BraceAst[];
+  nodes?: Array<BraceAst>;
 }
 
 interface Braces {
   parse(pattern: string): BraceAst;
   compile(input: string | BraceAst): string;
-  expand(input: string | BraceAst): string[];
+  expand(input: string | BraceAst): Array<string>;
   stringify(input: string | BraceAst): string;
 }
 

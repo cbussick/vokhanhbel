@@ -81,7 +81,7 @@ describe("real API handler stack", () => {
       ),
     );
     expect(cardResponse.status).toBe(201);
-    const card = (await cardResponse.json()) as { id: string; topicIds: string[] };
+    const card = (await cardResponse.json()) as { id: string; topicIds: Array<string> };
     expect(card.topicIds).toEqual([topic.id]);
 
     const reviewResponse = await createReview(

@@ -17,9 +17,9 @@ const matchingMinimumPairs = 2;
 
 interface ReviewSession {
   id: string;
-  exercises: PlannedExercise[];
+  exercises: Array<PlannedExercise>;
   exerciseAttemptNumber: number;
-  roundSubmissions: ReviewSubmission[];
+  roundSubmissions: Array<ReviewSubmission>;
   totalReviewSubmissions: number;
   optimisticPoints: number;
   roundNumber: number;
@@ -27,7 +27,7 @@ interface ReviewSession {
 
 /** Progress through the current multiple-choice Exercise. Reset whenever `currentIndex` moves. */
 interface MultipleChoiceProgress {
-  deadOptionIds: string[];
+  deadOptionIds: Array<string>;
   /** Set once the Exercise's verdict is final; the Session advances past it only on "Weiter". */
   resolvedSubmission: ReviewSubmission | undefined;
   /** The option whose pick produced `resolvedSubmission` — the "chosen option" the Tutor learns. */
@@ -42,10 +42,10 @@ interface MultipleChoiceProgress {
  */
 interface MatchingProgress {
   /** Cards already graded — matched correctly, in resolution order. */
-  resolvedCardIds: string[];
+  resolvedCardIds: Array<string>;
   /** Cards that have been part of at least one wrong pairing so far, so they grade `almost`
    * rather than `knew_it` once resolved. Never cleared once set, even across a rejection. */
-  taintedCardIds: string[];
+  taintedCardIds: Array<string>;
 }
 
 /**
@@ -79,7 +79,7 @@ export type ReviewSessionState =
     };
 
 type ReviewSessionAction =
-  | { type: "reviewSessionStarted"; reviewSessionId: string; exercises: PlannedExercise[] }
+  | { type: "reviewSessionStarted"; reviewSessionId: string; exercises: Array<PlannedExercise> }
   | { type: "answerRevealed" }
   | { type: "cardGraded"; submission: ReviewSubmission }
   | { type: "multipleChoiceOptionMissed"; optionId: string }
@@ -106,8 +106,8 @@ type ReviewSessionAction =
 export const idleReviewSessionState: ReviewSessionState = { status: "idle" };
 
 function findNextUngradedExercise(
-  exercises: PlannedExercise[],
-  submissions: ReviewSubmission[],
+  exercises: Array<PlannedExercise>,
+  submissions: Array<ReviewSubmission>,
 ): number {
   const gradedCardIds = new Set(submissions.map((submission) => submission.card.id));
 
@@ -117,7 +117,7 @@ function findNextUngradedExercise(
 }
 
 function exerciseWithCard(
-  exercises: PlannedExercise[],
+  exercises: Array<PlannedExercise>,
   cardId: string,
 ): PlannedExercise | undefined {
   return exercises.find((exercise) => exercise.cards.some((card) => card.id === cardId));

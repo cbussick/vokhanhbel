@@ -47,13 +47,13 @@ function waitForRetry(milliseconds: number, signal: AbortSignal): Promise<void> 
 
 export function useReviewSubmissionQueue(): ReviewSubmissionQueue {
   const queryClient = useQueryClient();
-  const [queuedSubmissions, setQueuedSubmissions] = useState<QueuedReviewSubmission[]>([]);
-  const queuedSubmissionsRef = useRef<QueuedReviewSubmission[]>([]);
+  const [queuedSubmissions, setQueuedSubmissions] = useState<Array<QueuedReviewSubmission>>([]);
+  const queuedSubmissionsRef = useRef<Array<QueuedReviewSubmission>>([]);
   const controllers = useRef(new Map<string, AbortController>());
   const generation = useRef(0);
 
   const updateQueuedSubmissions = (
-    update: (submissions: QueuedReviewSubmission[]) => QueuedReviewSubmission[],
+    update: (submissions: Array<QueuedReviewSubmission>) => Array<QueuedReviewSubmission>,
   ) => {
     setQueuedSubmissions((submissions) => {
       const nextSubmissions = update(submissions);

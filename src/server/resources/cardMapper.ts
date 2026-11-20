@@ -46,7 +46,7 @@ function audioOnCard(row: z.infer<typeof audioRowSchema>): AudioMetadata | null 
   return audioMetadataSchema.parse(row);
 }
 
-export function mapCard(value: unknown, topicIds: string[]): Card {
+export function mapCard(value: unknown, topicIds: Array<string>): Card {
   const row = joinedCardRowSchema.parse(value);
 
   return cardSchema.parse({

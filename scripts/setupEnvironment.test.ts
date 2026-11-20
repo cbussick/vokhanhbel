@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { setupEnvironment } from "./setupEnvironment.js";
 
-const temporaryDirectories: string[] = [];
+const temporaryDirectories: Array<string> = [];
 
 afterEach(async () => {
   await Promise.all(

@@ -78,7 +78,7 @@ export async function consumeTutorAllowance(sessionHash: string): Promise<void> 
  */
 export interface TutorExerciseInput {
   subjectCardId: string;
-  exerciseCards: TutorExerciseCard[];
+  exerciseCards: Array<TutorExerciseCard>;
   chosenOptionText: string | null;
 }
 

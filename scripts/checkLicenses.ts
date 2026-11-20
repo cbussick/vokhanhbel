@@ -2,7 +2,7 @@ import { readFile } from "node:fs/promises";
 
 interface PackageEntry {
   license?: string;
-  licenses?: { type?: string }[];
+  licenses?: Array<{ type?: string }>;
 }
 
 interface PackageLock {
@@ -10,7 +10,7 @@ interface PackageLock {
 }
 
 interface LicensePolicy {
-  approved: string[];
+  approved: Array<string>;
   overrides?: Record<string, string>;
 }
 
@@ -20,7 +20,7 @@ const lock = JSON.parse(await readFile("package-lock.json", "utf8")) as PackageL
 // SAFETY: license-policy.json is committed to this repository, so its shape is controlled here.
 const policy = JSON.parse(await readFile("license-policy.json", "utf8")) as LicensePolicy;
 const approved = new Set(policy.approved);
-const failures: string[] = [];
+const failures: Array<string> = [];
 
 for (const [path, entry] of Object.entries(lock.packages)) {
   if (!path.startsWith("node_modules/")) {continue;}

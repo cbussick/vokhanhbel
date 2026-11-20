@@ -17,7 +17,7 @@ export function CollectionSelect({
   disabled = false,
 }: {
   id: string;
-  collections: readonly Collection[];
+  collections: ReadonlyArray<Collection>;
   value: string;
   onChange: (collectionId: string) => void;
   onCreate?: () => void;

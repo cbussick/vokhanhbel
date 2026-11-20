@@ -8,7 +8,7 @@ import { beginPlayback, endPlayback } from "./playbackCoordinator";
 const revokeObjectUrl = vi.fn();
 
 class RecorderStub {
-  static instances: RecorderStub[] = [];
+  static instances: Array<RecorderStub> = [];
   static supportedTypes = new Set(["audio/webm;codecs=opus"]);
   static isTypeSupported(type: string) {
     return RecorderStub.supportedTypes.has(type);

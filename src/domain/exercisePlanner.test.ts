@@ -48,7 +48,7 @@ function audio(id: string) {
 }
 
 /** Deterministic random source: cycles through the given sequence, repeating the last value. */
-function sequence(values: number[]) {
+function sequence(values: Array<number>) {
   let index = 0;
 
   return () => values[Math.min(index++, values.length - 1)]!;
@@ -194,7 +194,7 @@ describe("planExercises", () => {
     // whether the injected random source changes one multiple-choice Exercise's option order.
     const first = planExercises([target], pool, sequence([0, 0, 0, 0])) as [
       MultipleChoiceExercise,
-      ...MultipleChoiceExercise[],
+      ...Array<MultipleChoiceExercise>,
     ];
     const second = planExercises([target], pool, sequence([0.99, 0.5, 0.9, 0.1]));
     const secondExercise = second.find(
@@ -489,7 +489,7 @@ describe("planExercises", () => {
   });
 
   describe("no-three-in-a-row", () => {
-    function multipleChoiceReadyCards(count: number): Card[] {
+    function multipleChoiceReadyCards(count: number): Array<Card> {
       const siblings = [
         card({ id: "s1", back: text("der Hund") }),
         card({ id: "s2", back: text("das Pferd") }),

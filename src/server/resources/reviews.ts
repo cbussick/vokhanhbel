@@ -51,7 +51,7 @@ const dueRowSchema = z.object({ due_at: z.date() });
 const maximumReviewAgeMilliseconds = 7 * 24 * 60 * 60 * 1_000;
 const maximumClockSkewMilliseconds = 5 * 60 * 1_000;
 
-function mapDatabaseCard(value: unknown, topicIds: string[]) {
+function mapDatabaseCard(value: unknown, topicIds: Array<string>) {
   const row = databaseCardRowSchema.parse(value);
 
   return mapCard(

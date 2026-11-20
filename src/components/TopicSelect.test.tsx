@@ -10,7 +10,7 @@ import { TopicSelect } from "./TopicSelect";
 const topics = topicListSchema.parse(testTopics);
 
 function TopicSelectHarness() {
-  const [value, setValue] = useState<string[]>([]);
+  const [value, setValue] = useState<Array<string>>([]);
 
   return (
     <>

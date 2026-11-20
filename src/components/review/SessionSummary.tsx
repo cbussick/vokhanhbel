@@ -34,7 +34,7 @@ interface ConfettiPiece {
  * the first ~0.7s (the burst) while durations run 2.2–3.4s (the settle), which puts the last piece
  * off screen a little over four seconds in.
  */
-function createConfettiPieces(): ConfettiPiece[] {
+function createConfettiPieces(): Array<ConfettiPiece> {
   return Array.from({ length: confettiPieceCount }, (_, index) => ({
     id: index,
     left: `${Math.round(Math.random() * 100)}%`,

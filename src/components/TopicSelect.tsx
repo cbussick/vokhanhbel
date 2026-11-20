@@ -17,9 +17,9 @@ export function TopicSelect({
   disabled = false,
 }: {
   id: string;
-  topics: readonly Topic[];
-  value: readonly string[];
-  onChange: (topicIds: string[]) => void;
+  topics: ReadonlyArray<Topic>;
+  value: ReadonlyArray<string>;
+  onChange: (topicIds: Array<string>) => void;
   onCreate?: () => void;
   disabled?: boolean;
 }) {

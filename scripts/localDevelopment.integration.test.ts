@@ -36,7 +36,7 @@ function connectionFromOutput(output: string): { project: string; url: string } 
   };
 }
 
-async function writeAndReadMarker(url: string, marker: string): Promise<string[]> {
+async function writeAndReadMarker(url: string, marker: string): Promise<Array<string>> {
   const client = new Client({ connectionString: url });
   await client.connect();
 

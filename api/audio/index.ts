@@ -13,7 +13,7 @@ import { getSpeechProvider } from "../../src/server/speech/speechProvider.js";
 
 async function readLimitedBody(request: Request): Promise<Uint8Array> {
   if (!request.body) {return new Uint8Array();}
-  const chunks: Uint8Array[] = [];
+  const chunks: Array<Uint8Array> = [];
   let byteLength = 0;
 
   const chunkStream: AsyncIterable<Uint8Array> = request.body;

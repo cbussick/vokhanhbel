@@ -77,7 +77,7 @@ export async function updateCollection(collectionId: string, input: CollectionIn
 
 export async function deleteCollection(collectionId: string): Promise<void> {
   const client = await getPool().connect();
-  const obsoleteAudio: { id: string; objectKey: string }[] = [];
+  const obsoleteAudio: Array<{ id: string; objectKey: string }> = [];
 
   try {
     await client.query("BEGIN");

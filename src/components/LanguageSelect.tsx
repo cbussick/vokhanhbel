@@ -32,7 +32,7 @@ export function LanguageSelect({
   const triggerRef = useRef<HTMLButtonElement>(null);
   const listboxRef = useRef<HTMLUListElement>(null);
 
-  const options: (string | null)[] = [
+  const options: Array<string | null> = [
     null,
     ...collectionLanguages,
     // A Collection may carry a locale a newer build declared. Listing it keeps it selectable, and

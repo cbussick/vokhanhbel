@@ -96,7 +96,7 @@ function readEbmlNumber(
   return { value, length };
 }
 
-function findBytes(bytes: Uint8Array, target: number[]): number {
+function findBytes(bytes: Uint8Array, target: Array<number>): number {
   outer: for (let offset = 0; offset <= bytes.byteLength - target.length; offset += 1) {
     for (let index = 0; index < target.length; index += 1) {
       if (bytes[offset + index] !== target[index]) {continue outer;}

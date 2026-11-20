@@ -134,7 +134,7 @@ export function AudioInput({
   const timerRef = useRef<number | undefined>(undefined);
   const intervalRef = useRef<number | undefined>(undefined);
   const startedAtRef = useRef(0);
-  const chunksRef = useRef<Blob[]>([]);
+  const chunksRef = useRef<Array<Blob>>([]);
   const dragDepthRef = useRef(0);
   const [recordingState, setRecordingState] = useState<
     "idle" | "requesting" | "recording" | "denied" | "missing" | "unsupported"

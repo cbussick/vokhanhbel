@@ -107,7 +107,7 @@ describe("calculateStreak", () => {
 
   it("never lets the still-unfinished current day break the Streak", () => {
     const cards = [card("c1", "2026-08-23")]; // due immediately, never reviewed today
-    const reviews: StreakReview[] = [];
+    const reviews: Array<StreakReview> = [];
 
     // Today (2026-08-25) has a Card due and nothing reviewed yet, but the day isn't over, so it is
     // passed over rather than breaking the Streak. Walking further back does find the break.

@@ -35,14 +35,14 @@ function byDueDate(left: Card, right: Card): number {
 }
 
 /** Due Cards when there are any, otherwise the ones coming up soonest. */
-function selectQueue(cards: Card[], now: number): Card[] {
+function selectQueue(cards: Array<Card>, now: number): Array<Card> {
   const ordered = [...cards].sort(byDueDate);
   const due = ordered.filter((card) => new Date(card.dueAt).getTime() <= now);
 
   return due.length > 0 ? due : ordered;
 }
 
-function countDue(cards: Card[], now: number): number {
+function countDue(cards: Array<Card>, now: number): number {
   return cards.filter((card) => new Date(card.dueAt).getTime() <= now).length;
 }
 
@@ -56,7 +56,7 @@ function GroupRow({
 }: {
   icon: React.ReactNode;
   name: string;
-  cards: Card[];
+  cards: Array<Card>;
   now: number;
   onStart: () => void;
 }) {
@@ -98,7 +98,7 @@ function ReviewRoute() {
     document.title = `${t("review.title")} | ${t("appName")}`;
   }, [t]);
 
-  const begin = (selected: Card[], scope: ReviewScope = { kind: "all" }) => {
+  const begin = (selected: Array<Card>, scope: ReviewScope = { kind: "all" }) => {
     reviewSession.startReviewSession(selected, scope);
     window.setTimeout(() => void navigate({ to: "/review/session" }), 0);
   };

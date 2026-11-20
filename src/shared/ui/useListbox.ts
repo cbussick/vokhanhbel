@@ -38,7 +38,7 @@ export function useListbox({
 }) {
   const listboxId = useId();
   const rootElement = useRef<HTMLDivElement>(null);
-  const optionElements = useRef<(HTMLLIElement | null)[]>([]);
+  const optionElements = useRef<Array<HTMLLIElement | null>>([]);
   const typeAheadState = useRef<TypeAheadState>({ query: "", lastKeyAt: 0 });
   const [isExpanded, setIsExpanded] = useState(false);
 

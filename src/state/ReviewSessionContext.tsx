@@ -25,7 +25,7 @@ export type ReviewScope =
   | {
       kind: "collection";
       collection: { name: string; icon: CollectionIconKey };
-      topics: { name: string; icon: TopicIconKey }[];
+      topics: Array<{ name: string; icon: TopicIconKey }>;
     };
 
 interface IdleView {
@@ -40,7 +40,7 @@ export interface FlipExerciseView {
   revealed: boolean;
   issue: ReviewSubmissionIssue | undefined;
   issueRequestId: string | undefined;
-  tutorConversation: TutorConversationMessage[];
+  tutorConversation: Array<TutorConversationMessage>;
   tutorExercise: TutorExerciseContext;
 }
 
@@ -57,17 +57,17 @@ export interface MatchingExerciseView {
   position: number;
   total: number;
   /** The board's Cards, for looking up the one a resolved tap opens Tutopher for. */
-  cards: Card[];
+  cards: Array<Card>;
   /** Front-column entries, in the planned shuffled order. */
-  front: MatchingEntryView[];
+  front: Array<MatchingEntryView>;
   /** Back-column entries, shuffled independently of `front`. */
-  back: MatchingEntryView[];
+  back: Array<MatchingEntryView>;
   /** True once every Card on the board has graded — the board stays up, and tapping any pair now
    * opens Tutopher for it instead of attempting another match. */
   resolved: boolean;
   issue: ReviewSubmissionIssue | undefined;
   issueRequestId: string | undefined;
-  tutorConversation: TutorConversationMessage[];
+  tutorConversation: Array<TutorConversationMessage>;
   tutorExercise: TutorExerciseContext;
 }
 
@@ -87,13 +87,13 @@ export interface MultipleChoiceExerciseView {
   currentCard: Card;
   position: number;
   total: number;
-  options: MultipleChoiceOptionView[];
+  options: Array<MultipleChoiceOptionView>;
   resolved: boolean;
   /** Whether the final verdict was correct — only meaningful once `resolved` is true. */
   correct: boolean;
   issue: ReviewSubmissionIssue | undefined;
   issueRequestId: string | undefined;
-  tutorConversation: TutorConversationMessage[];
+  tutorConversation: Array<TutorConversationMessage>;
   tutorExercise: TutorExerciseContext;
 }
 
@@ -111,7 +111,7 @@ export interface SwipeExerciseView {
   total: number;
   currentCard: Card;
   /** The Card's two options, left first — exactly one has `correct: true`. */
-  options: SwipeOptionView[];
+  options: Array<SwipeOptionView>;
   /** True once the Card has been swiped or tapped; the Session advances past it only on "Weiter",
    * the same pause every other Exercise in this app gives before moving on. */
   resolved: boolean;
@@ -119,7 +119,7 @@ export interface SwipeExerciseView {
   correct: boolean;
   issue: ReviewSubmissionIssue | undefined;
   issueRequestId: string | undefined;
-  tutorConversation: TutorConversationMessage[];
+  tutorConversation: Array<TutorConversationMessage>;
   tutorExercise: TutorExerciseContext;
 }
 
@@ -151,13 +151,13 @@ export interface TutorConversationMessage {
  * chose (null for a flip Card, which has none). Mirrors `TutorInput`'s exercise fields.
  */
 export interface TutorExerciseContext {
-  cards: { cardId: string; outcome: Grade | null }[];
+  cards: Array<{ cardId: string; outcome: Grade | null }>;
   chosenOptionText: string | null;
 }
 
 interface ReviewSessionContextValue {
   view: ReviewSessionView;
-  startReviewSession: (dueCards: Card[], scope?: ReviewScope) => void;
+  startReviewSession: (dueCards: Array<Card>, scope?: ReviewScope) => void;
   revealAnswer: () => void;
   gradeCard: (grade: Grade) => void;
   chooseOption: (optionId: string) => void;
@@ -173,7 +173,7 @@ interface ReviewSessionContextValue {
   repeatForgotten: () => void;
   leaveReviewSession: () => void;
   updateTutorConversation: (
-    update: (messages: TutorConversationMessage[]) => TutorConversationMessage[],
+    update: (messages: Array<TutorConversationMessage>) => Array<TutorConversationMessage>,
   ) => void;
 }
 
@@ -201,7 +201,7 @@ function getExerciseAttemptKey(state: ReviewSessionState): string | undefined {
 
 function toReviewSessionView(
   state: ReviewSessionState,
-  tutorConversation: { attemptKey: string; messages: TutorConversationMessage[] },
+  tutorConversation: { attemptKey: string; messages: Array<TutorConversationMessage> },
   scope: ReviewScope,
 ): ReviewSessionView {
   if (state.status === "idle") {return { kind: "idle" };}
@@ -255,7 +255,7 @@ function toReviewSessionView(
         ? { cardId, text: faceText, matched: resolvedCardIds.has(cardId) }
         : undefined;
     };
-    const toEntries = (order: string[], face: "front" | "back") =>
+    const toEntries = (order: Array<string>, face: "front" | "back") =>
       order
         .map((cardId) => toEntry(cardId, face))
         .filter((entry): entry is MatchingEntryView => entry !== undefined);
@@ -355,7 +355,7 @@ export function ReviewSessionProvider({ children }: { children: ReactNode }) {
   const [scope, setScope] = useState<ReviewScope>({ kind: "all" });
   const [tutorConversation, setTutorConversation] = useState<{
     attemptKey: string;
-    messages: TutorConversationMessage[];
+    messages: Array<TutorConversationMessage>;
   }>({ attemptKey: "", messages: [] });
   const { enqueueSubmission } = useReviewSubmissions();
 
@@ -368,7 +368,7 @@ export function ReviewSessionProvider({ children }: { children: ReactNode }) {
     });
   };
 
-  const startReviewSession = (dueCards: Card[], requestedScope: ReviewScope = { kind: "all" }) => {
+  const startReviewSession = (dueCards: Array<Card>, requestedScope: ReviewScope = { kind: "all" }) => {
     const initialQueue = dueCards.slice(0, reviewSessionSize);
 
     if (initialQueue.length === 0) {return;}
@@ -593,7 +593,7 @@ export function ReviewSessionProvider({ children }: { children: ReactNode }) {
     dispatch({ type: "reviewSessionLeft" });
   };
   const updateTutorConversation = (
-    update: (messages: TutorConversationMessage[]) => TutorConversationMessage[],
+    update: (messages: Array<TutorConversationMessage>) => Array<TutorConversationMessage>,
   ) => {
     const attemptKey = getExerciseAttemptKey(state);
 

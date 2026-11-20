@@ -10,7 +10,7 @@ function BackIcon() {
   );
 }
 
-function classNames(...values: (string | false | undefined)[]) {
+function classNames(...values: Array<string | false | undefined>) {
   return values.filter(Boolean).join(" ");
 }
 
