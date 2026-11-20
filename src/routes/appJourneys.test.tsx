@@ -15,6 +15,33 @@ import {
   testTopics,
 } from "../test/server";
 
+const initialRelease = () => undefined;
+
+const storedAudio = (id: string, synthesizedText: string | null) => ({
+      id,
+      durationMs: 1000,
+      contentType: "audio/wav",
+      byteSize: 8044,
+      synthesizedText,
+    });
+
+function multipleChoiceCard(id: string, front: string, back: string) {
+    return {
+      ...testCards[0]!,
+      id,
+      front,
+      back,
+    };
+  }
+
+function matchingCard(id: string, front: string, back: string) {
+    return { ...testCards[0]!, id, front, back };
+  }
+
+function swipeCard(id: string, front: string, back: string) {
+    return { ...testCards[0]!, id, front, back };
+  }
+
 function dialogByHeading(name: string) {
   const dialog = screen.getByRole("heading", { name }).closest("dialog");
 
@@ -443,7 +470,7 @@ describe("rendered app journeys", () => {
     const user = userEvent.setup();
     let created: Partial<CreateCardInput> = {};
     let cardRequests = 0;
-    let finishGeneration: () => void = () => undefined;
+    let finishGeneration: () => void = initialRelease;
     const generation = new Promise<void>((resolve) => {
       finishGeneration = resolve;
     });
@@ -553,13 +580,7 @@ describe("rendered app journeys", () => {
   });
 
   it("says what a stored clip says when a Card is reopened, and nothing about the recording beside it", async () => {
-    const storedAudio = (id: string, synthesizedText: string | null) => ({
-      id,
-      durationMs: 1000,
-      contentType: "audio/wav",
-      byteSize: 8044,
-      synthesizedText,
-    });
+    
     const savedCard = {
       ...testCards[0]!,
       front: {
@@ -978,14 +999,7 @@ describe("rendered app journeys", () => {
     expect(await screen.findByRole("button", { name: "Review starten" })).toBeVisible();
   });
 
-  function multipleChoiceCard(id: string, front: string, back: string) {
-    return {
-      ...testCards[0]!,
-      id,
-      front,
-      back,
-    };
-  }
+  
 
   const multipleChoiceCards = [
     multipleChoiceCard("33333333-3333-4333-8333-333333333331", "eins", "one"),
@@ -1158,9 +1172,7 @@ describe("rendered app journeys", () => {
     expect(tutorRequests).toBe(0);
   });
 
-  function matchingCard(id: string, front: string, back: string) {
-    return { ...testCards[0]!, id, front, back };
-  }
+  
 
   const matchingCards = [
     matchingCard("66666666-6666-4666-8666-666666666661", "eins", "one"),
@@ -1366,9 +1378,7 @@ describe("rendered app journeys", () => {
     );
   });
 
-  function swipeCard(id: string, front: string, back: string) {
-    return { ...testCards[0]!, id, front, back };
-  }
+  
 
   // "zwei" and "drei" share a back, so whichever the shuffle picks as "eins"'s one distractor, the
   // visible text is always "haus" — and "haus" is excluded as a distractor for whichever of "zwei"

@@ -2,6 +2,13 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { resetServerEnvironmentForTests } from "../config/environment.js";
 import { createOpenAiProvider } from "./aiProvider.js";
 
+function promptContent(): string {
+    const first = createResponse.mock.calls[0]?.[0].input[0];
+    if (!first) {throw new Error("Expected model input");}
+
+    return first.content;
+  }
+
 interface ResponseRequest {
   instructions: string;
   input: Array<{ role: string; content: string }>;
@@ -117,12 +124,7 @@ describe("Exercise content reaches the model as untrusted data", () => {
     createResponse.mockResolvedValue(stream([]));
   });
 
-  function promptContent(): string {
-    const first = createResponse.mock.calls[0]?.[0].input[0];
-    if (!first) {throw new Error("Expected model input");}
-
-    return first.content;
-  }
+  
 
   it("marks a flip Card's Exercise as unbewertet, with no chosen option", async () => {
     const provider = createOpenAiProvider();

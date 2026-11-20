@@ -2,6 +2,13 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 import { handleRequest } from "./handler.js";
 
+const createRequest = (headers: Record<string, string>, body: string) =>
+      new Request("https://cards.example/api/test", {
+        method: "POST",
+        headers: { origin: "https://cards.example", "sec-fetch-site": "same-origin", ...headers },
+        body,
+      });
+
 const schema = z.object({ name: z.string() });
 
 afterEach(() => vi.restoreAllMocks());
@@ -34,12 +41,7 @@ describe("public HTTP envelope", () => {
   it("returns stable problems for wrong content type, oversized JSON, and bad fields", async () => {
     vi.spyOn(console, "info").mockImplementation(() => undefined);
     const callback = vi.fn<() => Promise<Response>>(async () => Response.json({ ok: true }));
-    const createRequest = (headers: Record<string, string>, body: string) =>
-      new Request("https://cards.example/api/test", {
-        method: "POST",
-        headers: { origin: "https://cards.example", "sec-fetch-site": "same-origin", ...headers },
-        body,
-      });
+    
 
     const wrongType = await handleRequest(
       createRequest({ "content-type": "text/plain" }, "{}"),

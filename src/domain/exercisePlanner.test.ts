@@ -3,6 +3,24 @@ import type { Card } from "../contracts/card.js";
 import { leadingGroupedExerciseKind, planExercises } from './exercisePlanner.js';
 import type { MatchingExercise, MultipleChoiceExercise, SwipeExercise } from './exercisePlanner.js';
 
+function createMultipleChoiceReadyCards(count: number): Array<Card> {
+      const siblings = [
+        card({ id: "s1", back: text("der Hund") }),
+        card({ id: "s2", back: text("das Pferd") }),
+        card({ id: "s3", back: text("die Kuh") }),
+      ];
+
+      const targets = Array.from({ length: count }, (_, index) =>
+        card({ id: `t${index}`, back: text(`Wort ${index}`) }),
+      );
+
+      return [...targets, ...siblings];
+    }
+
+function matchingReadyCard(id: string, front: string, back: string) {
+      return card({ id, front: text(front), back: text(back) });
+    }
+
 const collectionA = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
 const collectionB = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
 const topicAnimals = "cccccccc-cccc-4ccc-8ccc-cccccccccccc";
@@ -484,22 +502,10 @@ describe("planExercises", () => {
   });
 
   describe("no-three-in-a-row", () => {
-    function multipleChoiceReadyCards(count: number): Array<Card> {
-      const siblings = [
-        card({ id: "s1", back: text("der Hund") }),
-        card({ id: "s2", back: text("das Pferd") }),
-        card({ id: "s3", back: text("die Kuh") }),
-      ];
-
-      const targets = Array.from({ length: count }, (_, index) =>
-        card({ id: `t${index}`, back: text(`Wort ${index}`) }),
-      );
-
-      return [...targets, ...siblings];
-    }
+    
 
     it("demotes a would-be third consecutive multiple-choice Exercise to a flip Card", () => {
-      const cards = multipleChoiceReadyCards(4);
+      const cards = createMultipleChoiceReadyCards(4);
       const dueCards = cards.filter((c) => c.id.startsWith("t"));
 
       const plan = planExercises(dueCards, cards, zero);
@@ -529,9 +535,7 @@ describe("planExercises", () => {
   });
 
   describe("matching", () => {
-    function matchingReadyCard(id: string, front: string, back: string) {
-      return card({ id, front: text(front), back: text(back) });
-    }
+    
 
     it("groups four eligible due Cards into one matching Exercise", () => {
       const cards = [

@@ -17,6 +17,9 @@ export type AudioDraft =
   | { origin: "local"; blob: Blob; source: string; metadata: AudioMetadata }
   | { origin: "staged"; metadata: AudioMetadata };
 
+const hasDraggedFiles = (event: React.DragEvent) =>
+    Array.from(event.dataTransfer.types).includes("Files");
+
 const recorderTypes = [
   "audio/webm;codecs=opus",
   "audio/ogg;codecs=opus",
@@ -234,8 +237,7 @@ export function AudioInput({
     if (inputRef.current) {inputRef.current.value = "";}
   };
 
-  const hasDraggedFiles = (event: React.DragEvent) =>
-    Array.from(event.dataTransfer.types).includes("Files");
+
 
   const resetDragState = () => {
     dragDepthRef.current = 0;

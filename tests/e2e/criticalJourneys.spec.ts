@@ -2,6 +2,17 @@ import { AxeBuilder } from "@axe-core/playwright";
 import { expect, test } from '@playwright/test';
 import type { Locator, Page, Route } from '@playwright/test';
 
+const initialRelease = () => undefined;
+
+const background = (locator: ReturnType<Page["locator"]>) =>
+    locator.evaluate((element) => {
+      const browser = globalThis as unknown as {
+        getComputedStyle: (target: unknown) => { backgroundColor: string };
+      };
+
+      return browser.getComputedStyle(element).backgroundColor;
+    });
+
 interface MockCard {
   id: string;
   collectionId: string;
@@ -409,14 +420,7 @@ test("gives primary, surface, and navigation controls a hover state", async ({ p
   await installMockApi(page);
   await page.goto(`/cards/${mockCollection.id}`);
 
-  const background = (locator: ReturnType<Page["locator"]>) =>
-    locator.evaluate((element) => {
-      const browser = globalThis as unknown as {
-        getComputedStyle: (target: unknown) => { backgroundColor: string };
-      };
-
-      return browser.getComputedStyle(element).backgroundColor;
-    });
+  
 
   const addCard = page.getByRole("button", { name: "Karte hinzufügen" }).first();
   const cardRow = page.getByRole("listitem").filter({ hasText: "der Apfel" });
@@ -442,7 +446,7 @@ test("gives primary, surface, and navigation controls a hover state", async ({ p
 
 test("keeps the Card dialog locked while Save is pending", async ({ page }) => {
   let saveRequests = 0;
-  let releaseSave: () => void = () => undefined;
+  let releaseSave: () => void = initialRelease;
   const saveGate = new Promise<void>((resolve) => {
     releaseSave = resolve;
   });

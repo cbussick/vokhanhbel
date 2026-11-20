@@ -8,8 +8,10 @@ import { queryKeys } from "../lib/queryKeys";
 import { renderApp } from "../test/renderApp";
 import { mockServer, testCards, testCollections } from "../test/server";
 
+const initialRelease = () => undefined;
+
 function createRequestGate() {
-  let resolve: () => void = () => undefined;
+  let resolve: () => void = initialRelease;
   const promise = new Promise<void>((release) => {
     resolve = release;
   });
