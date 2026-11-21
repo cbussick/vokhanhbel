@@ -3,12 +3,12 @@ import babel from "@rolldown/plugin-babel";
 import { tanstackRouter } from "@tanstack/router-plugin/vite";
 import react, { reactCompilerPreset } from "@vitejs/plugin-react";
 import { configDefaults, defineConfig } from "vitest/config";
+import { z } from "zod";
 
-// SAFETY: vercel.json is committed to this repository, so its shape is controlled here rather than
-// supplied externally. A mismatch fails the build loudly.
-const deployment = JSON.parse(readFileSync(new URL("./vercel.json", import.meta.url), "utf8")) as {
-  headers: Array<{ source: string; headers: Array<{ key: string; value: string }> }>;
-};
+const deploymentSchema = z.object({
+  headers: z.array(z.object({ source: z.string(), headers: z.array(z.object({ key: z.string(), value: z.string() })) })),
+});
+const deployment = deploymentSchema.parse(JSON.parse(readFileSync(new URL("./vercel.json", import.meta.url), "utf8")));
 
 /**
  * The preview server backs the end-to-end suite, so it has to answer with the same headers

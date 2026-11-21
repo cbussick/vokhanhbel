@@ -7,7 +7,9 @@ import { POST as createReview } from "../../api/reviews.js";
 import { POST as createSession } from "../../api/session.js";
 import { GET as readStats } from "../../api/stats.js";
 import { POST as createTopic } from "../../api/topics/index.js";
-import { maximumAudioBytes } from "../../src/contracts/card.js";
+import { maximumAudioBytes, audioMetadataSchema, cardSchema } from "../../src/contracts/card.js";
+import { collectionSchema } from "../../src/contracts/collection.js";
+import { topicSchema } from "../../src/contracts/topic.js";
 import { maximumPronunciationTextLength } from "../../src/contracts/pronunciation.js";
 import { createWavFixture } from "../../src/server/audio/audioFixture.test-helper.js";
 import {
@@ -55,7 +57,7 @@ describe("real API handler stack", () => {
       request("/api/collections", "POST", { name: "Echter Stack", icon: "book" }, cookie),
     );
     expect(collectionResponse.status).toBe(201);
-    const collection = (await collectionResponse.json()) as { id: string };
+    const collection = collectionSchema.parse(await collectionResponse.json());
     const topicResponse = await createTopic(
       request(
         "/api/topics",
@@ -65,7 +67,7 @@ describe("real API handler stack", () => {
       ),
     );
     expect(topicResponse.status).toBe(201);
-    const topic = (await topicResponse.json()) as { id: string };
+    const topic = topicSchema.parse(await topicResponse.json());
 
     const cardResponse = await createCard(
       request(
@@ -81,7 +83,7 @@ describe("real API handler stack", () => {
       ),
     );
     expect(cardResponse.status).toBe(201);
-    const card = (await cardResponse.json()) as { id: string; topicIds: Array<string> };
+    const card = cardSchema.parse(await cardResponse.json());
     expect(card.topicIds).toEqual([topic.id]);
 
     const reviewResponse = await createReview(
@@ -133,7 +135,7 @@ describe("real API handler stack", () => {
     const uploadResponse = await postAudio(uploadRequest);
 
     expect(uploadResponse.status).toBe(201);
-    const audio = (await uploadResponse.json()) as { id: string; durationMs: number };
+    const audio = audioMetadataSchema.parse(await uploadResponse.json());
     // A recording was never told what to say, so there is nothing to disclose about it.
     expect(audio).toMatchObject({ durationMs: 1000, synthesizedText: null });
     expect(JSON.stringify(audio)).not.toContain("objectKey");
@@ -218,7 +220,7 @@ describe("real API handler stack", () => {
     );
 
     expect(generateResponse.status).toBe(201);
-    const audio = (await generateResponse.json()) as { id: string };
+    const audio = audioMetadataSchema.parse(await generateResponse.json());
     expect(audio).toMatchObject({
       contentType: "audio/mpeg",
       durationMs: 1000,

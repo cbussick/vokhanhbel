@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
+import { problemSchema } from "../../contracts/problem.js";
 import { handleJsonRequest, handleRequest } from "./handler.js";
 
 const createRequest = (headers: Record<string, string>, body: string) =>
@@ -28,7 +29,7 @@ describe("public HTTP envelope", () => {
     });
 
     const response = await handleJsonRequest(request, { unsafe: true, bodySchema: schema }, callback);
-    const problem = (await response.json()) as { type: string; instance: string };
+    const problem = problemSchema.parse(await response.json());
 
     expect(response.status).toBe(403);
     expect(problem.type).toBe("/problems/invalid-origin");
