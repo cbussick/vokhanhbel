@@ -33,7 +33,9 @@ unused variables and mixed promise arrays. Original strict settings are restored
 Original no-explicit-any, unsafe-argument, only-throw-error and unbound-method
 checks are explicitly restored after inherited test overrides; existing intentional
 test unsafe-assignment/member-access and require-await exceptions remain unchanged.
-No compiler/build/test script is removed. Knip no longer needs its tsrs dependency
+The original JSX attribute promise exemption was removed after independent review;
+stock no-misused-promises now rejects direct async JSX handlers, verified by a
+specific temporary probe. No compiler/build/test script is removed. Knip no longer needs its tsrs dependency
 ignore because the preset exposes that dependency.
 
 Browser callbacks now have a **separate DOM-enabled tests/e2e/tsconfig.json**,
@@ -159,16 +161,16 @@ passes without diagnostics. No assertion-rule exceptions were needed.
 
 Fresh **npm ci** passes. After that installation:
 
-| Check                                       | Result                                         |
-| ------------------------------------------- | ---------------------------------------------- |
-| format:check, lint, typecheck, build        | pass                                           |
-| Knip normal/production                      | pass (obsolete tsrs hint subsequently removed) |
-| npm audit --omit=dev --audit-level=high     | 0 vulnerabilities                              |
-| licenses                                    | pass, 15 approved forms                        |
-| unit suite, maxWorkers=1                    | **272 passed / 33 files**                      |
-| isolated database suite, maxWorkers=1       | **30 passed / 2 files**                        |
-| local-development integration, maxWorkers=1 | **1 passed / 1 file**                          |
-| complete browser suite, one worker          | **69 passed, 20 failed, 46 existing skipped**  |
+| Check                                       | Result                                                                  |
+| ------------------------------------------- | ----------------------------------------------------------------------- |
+| format:check, lint, typecheck, build        | pass                                                                    |
+| Knip normal/production                      | pass (obsolete tsrs hint subsequently removed)                          |
+| npm audit --omit=dev --audit-level=high     | 0 vulnerabilities                                                       |
+| licenses                                    | pass, 15 approved forms                                                 |
+| unit suite, maxWorkers=1                    | **272 passed / 33 files**                                               |
+| isolated database suite, maxWorkers=1       | **31 passed / 2 files** (including review-added raw privacy regression) |
+| local-development integration, maxWorkers=1 | **1 passed / 1 file**                                                   |
+| complete browser suite, one worker          | **69 passed, 20 failed, 46 existing skipped**                           |
 
 Logs: `/tmp/vok-cf-final-*.log`. Temporary JSX/client/server/test/E2E probes
 detected floating promises (including JSX body), await-thenable, test unbound methods,
@@ -215,8 +217,18 @@ comparable to this warmed series.
 
 Two fresh LOCAL read-only Pi reviewers must inspect the full exact
 `192638b...<review-tip>` diff independently (standards/spec and behavior/coverage).
-**Pending.** Do not treat this report as completion before that gate, affected
-re-reviews, final cleanup and final validation refresh.
+First round: two isolated Pi processes independently inspected complete range
+`192638b94f8278f109a5b799f6e9ce8cd5fe344b...189827ef58dc9e691fe39f144c6de169a9d23bb0`.
+Standards found the inherited JSX attribute promise exemption; Spec found response
+parsing could strip an objectKey leak before the privacy assertion. Both were
+verified and fixed in `fd6690a`: strict JSX checking restored, and raw JSON checked
+before parsing. A leaked-response regression fails with parse-before-check and
+passes with raw-before-parse (`/tmp/vok-cf-review-privacy-{red,green}.log`). A direct
+async JSX probe produces no-misused-promises, then is removed
+(`/tmp/vok-cf-review-jsx-probe.log`). Lint/typecheck/full isolated DB pass.
+
+**Fresh full-diff re-reviews pending.** Do not treat this report as completion
+before that gate, final cleanup and final validation refresh.
 
 Defaults are implemented, but do not integrate yet: review remains and full
 browsers have reproduced original failures. All work stays local pending explicit
