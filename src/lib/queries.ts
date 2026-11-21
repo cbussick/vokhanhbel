@@ -14,31 +14,31 @@ function retryRead(failureCount: number, error: unknown): boolean {
 
 export const sessionQuery = queryOptions({
   queryKey: queryKeys.session,
-  queryFn: async () => sessionStatusSchema.parse(await apiRequest(apiPaths.session)),
+  queryFn: async () => await apiRequest(apiPaths.session, sessionStatusSchema),
   retry: retryRead,
   staleTime: 30_000,
 });
 export const cardsQuery = queryOptions({
   queryKey: queryKeys.cards,
-  queryFn: async () => cardListSchema.parse(await apiRequest(apiPaths.cards)),
+  queryFn: async () => await apiRequest(apiPaths.cards, cardListSchema),
   retry: retryRead,
   staleTime: 30_000,
 });
 export const collectionsQuery = queryOptions({
   queryKey: queryKeys.collections,
-  queryFn: async () => collectionListSchema.parse(await apiRequest(apiPaths.collections)),
+  queryFn: async () => await apiRequest(apiPaths.collections, collectionListSchema),
   retry: retryRead,
   staleTime: 30_000,
 });
 export const topicsQuery = queryOptions({
   queryKey: queryKeys.topics,
-  queryFn: async () => topicListSchema.parse(await apiRequest(apiPaths.topics)),
+  queryFn: async () => await apiRequest(apiPaths.topics, topicListSchema),
   retry: retryRead,
   staleTime: 30_000,
 });
 export const statsQuery = queryOptions({
   queryKey: queryKeys.stats,
-  queryFn: async () => statsSchema.parse(await apiRequest(apiPaths.stats)),
+  queryFn: async () => await apiRequest(apiPaths.stats, statsSchema),
   retry: retryRead,
   staleTime: 30_000,
 });

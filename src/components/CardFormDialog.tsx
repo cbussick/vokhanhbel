@@ -6,7 +6,7 @@ import { cardSchema, createCardInputSchema, updateCardInputSchema } from '../con
 import type { Card } from '../contracts/card';
 import { offeredCollectionLanguage } from "../contracts/collection";
 import { problemTypes } from "../contracts/problem";
-import { ApiError, apiRequest } from "../lib/apiClient";
+import { ApiError, apiRequest, apiCommand } from "../lib/apiClient";
 import { useOnlineStatus } from "../lib/browserState";
 import { collectionsQuery, topicsQuery } from "../lib/queries";
 import { mutationKeys, queryKeys } from "../lib/queryKeys";
@@ -99,17 +99,15 @@ export function CardFormDialog({
         const input = card
           ? updateCardInputSchema.parse(value)
           : createCardInputSchema.parse(value);
-        const saved = cardSchema.parse(
-          await apiRequest(card ? apiPaths.card(card.id) : apiPaths.cards, {
+        const saved = await apiRequest(card ? apiPaths.card(card.id) : apiPaths.cards, cardSchema, {
             method: card ? "PATCH" : "POST",
             body: JSON.stringify(input),
-          }),
-        );
+          });
 
         return saved;
       } catch (error_) {
         await Promise.allSettled(
-          uploadedIds.map((audioId) => apiRequest(apiPaths.audio(audioId), { method: "DELETE" })),
+          uploadedIds.map((audioId) => apiCommand(apiPaths.audio(audioId), { method: "DELETE" })),
         );
         throw error_;
       }
@@ -131,7 +129,7 @@ export function CardFormDialog({
   });
 
   const remove = useMutation({
-    mutationFn: async () => apiRequest<void>(apiPaths.card(card!.id), { method: "DELETE" }),
+    mutationFn: async () => apiCommand(apiPaths.card(card!.id), { method: "DELETE" }),
     onSuccess: async () => {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: queryKeys.cards }),

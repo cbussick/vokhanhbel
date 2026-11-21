@@ -5,7 +5,7 @@ import { apiPaths } from "../contracts/apiPaths";
 import { problemTypes } from "../contracts/problem";
 import { createTopicInputSchema, defaultTopicIcon, topicIconKeys, topicInputSchema, topicSchema } from '../contracts/topic';
 import type { Topic, TopicIconKey } from '../contracts/topic';
-import { apiRequest, ApiError } from "../lib/apiClient";
+import { apiRequest, ApiError, apiCommand } from "../lib/apiClient";
 import { useOnlineStatus } from "../lib/browserState";
 import { queryKeys } from "../lib/queryKeys";
 import { Dialog } from "./Dialog";
@@ -49,17 +49,15 @@ export function TopicFormDialog({
     mutationFn: async () => {
       const input = topicInputSchema.parse({ name, icon });
 
-      return topicSchema.parse(
-        topic
-          ? await apiRequest(apiPaths.topic(topic.id), {
+      return topic
+          ? await apiRequest(apiPaths.topic(topic.id), topicSchema, {
               method: "PATCH",
               body: JSON.stringify(input),
             })
-          : await apiRequest(apiPaths.topics, {
+          : await apiRequest(apiPaths.topics, topicSchema, {
               method: "POST",
               body: JSON.stringify(createTopicInputSchema.parse({ collectionId, ...input })),
-            }),
-      );
+            });
     },
     onSuccess: async (saved) => {
       await queryClient.invalidateQueries({ queryKey: queryKeys.topics });
@@ -72,7 +70,7 @@ export function TopicFormDialog({
   });
 
   const remove = useMutation({
-    mutationFn: async () => apiRequest<void>(apiPaths.topic(topic!.id), { method: "DELETE" }),
+    mutationFn: async () => apiCommand(apiPaths.topic(topic!.id), { method: "DELETE" }),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: queryKeys.topics });
       await queryClient.invalidateQueries({ queryKey: queryKeys.cards });

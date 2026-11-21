@@ -23,10 +23,8 @@ export async function stageAudioDraft(blob: Blob): Promise<AudioMetadata> {
  * through the claiming path a recording already uses. Nothing is written when this rejects.
  */
 export async function generatePronunciation(input: PronunciationInput): Promise<AudioMetadata> {
-  return audioMetadataSchema.parse(
-    await apiRequest(apiPaths.pronunciations, {
+  return await apiRequest(apiPaths.pronunciations, audioMetadataSchema, {
       method: "POST",
       body: JSON.stringify(pronunciationInputSchema.parse(input)),
-    }),
-  );
+    });
 }

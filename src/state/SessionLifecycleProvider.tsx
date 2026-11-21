@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect } from 'react';
 import type { ReactNode } from 'react';
 import { apiPaths } from "../contracts/apiPaths";
-import { apiRequest } from "../lib/apiClient";
+import { apiCommand } from "../lib/apiClient";
 import { subscribeToSessionExpiry } from "../lib/sessionEvents";
 import { useAuth } from "./AuthContext";
 import { useReviewSubmissions } from "./ReviewSubmissionContext";
@@ -27,7 +27,7 @@ export function SessionLifecycleProvider({ children }: { children: ReactNode }) 
   );
 
   const logout = async () => {
-    await apiRequest(apiPaths.session, { method: "DELETE" });
+    await apiCommand(apiPaths.session, { method: "DELETE" });
     discardAllSubmissions();
     await discardSession(false);
   };

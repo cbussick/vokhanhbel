@@ -5,7 +5,7 @@ import { apiPaths } from "../contracts/apiPaths";
 import { collectionIconKeys, collectionInputSchema, collectionSchema, defaultCollectionIcon } from '../contracts/collection';
 import type { Collection, CollectionIconKey } from '../contracts/collection';
 import { problemTypes } from "../contracts/problem";
-import { apiRequest, ApiError } from "../lib/apiClient";
+import { apiRequest, ApiError, apiCommand } from "../lib/apiClient";
 import { useOnlineStatus } from "../lib/browserState";
 import { queryKeys } from "../lib/queryKeys";
 import { CollectionIcon } from "./CollectionIcon";
@@ -95,17 +95,15 @@ export function CollectionFormDialog({
         ...(backLanguage !== (collection?.backLanguage ?? null) && { backLanguage }),
       });
 
-      return collectionSchema.parse(
-        collection
-          ? await apiRequest(apiPaths.collection(collection.id), {
+      return collection
+          ? await apiRequest(apiPaths.collection(collection.id), collectionSchema, {
               method: "PATCH",
               body: JSON.stringify(input),
             })
-          : await apiRequest(apiPaths.collections, {
+          : await apiRequest(apiPaths.collections, collectionSchema, {
               method: "POST",
               body: JSON.stringify(input),
-            }),
-      );
+            });
     },
     onSuccess: async (saved) => {
       await queryClient.invalidateQueries({ queryKey: queryKeys.collections });
@@ -119,7 +117,7 @@ export function CollectionFormDialog({
 
   const remove = useMutation({
     mutationFn: async () =>
-      apiRequest<void>(apiPaths.collection(collection!.id), { method: "DELETE" }),
+      apiCommand(apiPaths.collection(collection!.id), { method: "DELETE" }),
     onSuccess: async () => {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: queryKeys.collections }),

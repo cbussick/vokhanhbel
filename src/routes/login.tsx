@@ -7,7 +7,7 @@ import { SessionErrorScreen } from "../components/SessionErrorScreen";
 import { TutopherAvatar } from "../components/TutopherAvatar";
 import { apiPaths } from "../contracts/apiPaths";
 import { problemTypes } from "../contracts/problem";
-import { apiRequest, ApiError } from "../lib/apiClient";
+import { ApiError, apiCommand } from "../lib/apiClient";
 import { useOnlineStatus } from "../lib/browserState";
 import { useAuth } from "../state/AuthContext";
 import styles from "./login.module.css";
@@ -30,7 +30,7 @@ function LoginRoute() {
 
   const mutation = useMutation({
     mutationFn: async () =>
-      apiRequest<void>(apiPaths.session, { method: "POST", body: JSON.stringify({ password }) }),
+      apiCommand(apiPaths.session, { method: "POST", body: JSON.stringify({ password }) }),
     onSuccess: async () => {
       auth.markAuthenticated();
       setPassword("");

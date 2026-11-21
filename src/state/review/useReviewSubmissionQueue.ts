@@ -1,7 +1,7 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useEffectEvent, useRef, useState } from "react";
 import { apiPaths } from "../../contracts/apiPaths";
-import { apiRequest, isTemporaryError } from "../../lib/apiClient";
+import { apiCommand, isTemporaryError } from "../../lib/apiClient";
 import { queryKeys } from "../../lib/queryKeys";
 import type { ReviewSubmission } from "./reviewSubmission";
 
@@ -94,7 +94,7 @@ export function useReviewSubmissionQueue(): ReviewSubmissionQueue {
     try {
       for (let attempt = 0; attempt < attempts; attempt += 1) {
         try {
-          await apiRequest(apiPaths.reviews, {
+          await apiCommand(apiPaths.reviews, {
             method: "POST",
             body: JSON.stringify(submission.input),
             signal: controller.signal,

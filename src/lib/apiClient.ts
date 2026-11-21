@@ -1,3 +1,4 @@
+import type { ZodType } from "zod";
 import { apiPaths } from "../contracts/apiPaths";
 import { problemSchema, problemTypes } from '../contracts/problem';
 import type { Problem } from '../contracts/problem';
@@ -13,7 +14,7 @@ export class ApiError extends Error {
   }
 }
 
-export async function apiRequest<T>(path: string, init?: RequestInit): Promise<T> {
+async function fetchApiResponse(path: string, init?: RequestInit): Promise<Response> {
   const headers = new Headers(init?.headers);
 
   if (init?.body) {headers.set("content-type", "application/json");}
@@ -21,15 +22,22 @@ export async function apiRequest<T>(path: string, init?: RequestInit): Promise<T
 
   if (response.status === 401 && path !== apiPaths.session) {publishSessionExpired();}
   if (!response.ok) {await throwApiError(response);}
-  if (response.status === 204) {
-    // SAFETY: 204 means the endpoint has no body by definition, and every caller of a 204 endpoint
-    // declares T as void or undefined.
-    return undefined as T;
-  }
 
-  // SAFETY: T is the caller's declared response contract. This is NOT validated here - the
-  // response is parsed against its schema at the call site.
-  return response.json() as Promise<T>;
+  return response;
+}
+
+export async function apiRequest<T>(path: string, schema: ZodType<T>, init?: RequestInit): Promise<T> {
+  const response = await fetchApiResponse(path, init);
+  if (response.status === 204) {throw new Error("Expected a JSON response, received no content");}
+
+  return schema.parse(await response.json());
+}
+
+export async function apiCommand(path: string, init?: RequestInit): Promise<void> {
+  const response = await fetchApiResponse(path, init);
+  // Some commands return JSON which callers intentionally do not consume (Review Submission).
+  // Keep checking JSON syntax, without inventing an unchecked caller-chosen return type.
+  if (response.status !== 204) {await response.json();}
 }
 
 export async function throwApiError(response: Response): Promise<never> {
