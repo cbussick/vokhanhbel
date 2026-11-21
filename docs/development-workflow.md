@@ -150,4 +150,15 @@ After a standalone or final integration pull request merges:
 3. delete the merged local and remote branch if it still exists; and
 4. fetch and fast-forward the clean primary checkout's `main`.
 
+Remove task-generated artifacts when delivery and review are complete, including screenshots,
+recordings, comparison galleries, throwaway scripts, logs, test databases, and temporary build or
+test output, whether inside the repository or elsewhere such as `/tmp`. Stop task-owned preview
+servers and other temporary processes. Limit cleanup to artifacts and processes known to belong
+to the task; preserve shared resources, other agents' work, committed fixtures, and intended
+deliverables. Retain artifacts still needed for review or explicitly requested by the user, report
+their locations and why they remain, and remove them once that need ends. User-provided files,
+including uploaded recordings, require explicit permission before deletion. Before declaring
+cleanup complete, verify that no task-owned temporary processes or unneeded generated artifacts
+remain.
+
 Start the next task only after the primary checkout is clean and current.
