@@ -17,7 +17,7 @@ class RecorderStub {
 
   readonly mimeType: string;
   state: RecordingState = "inactive";
-  ondataavailable: ((event: BlobEvent) => void) | null = null;
+  ondataavailable: ((event: { data: Blob }) => void) | null = null;
   onstop: (() => void) | null = null;
 
   constructor(_stream: MediaStream, options?: MediaRecorderOptions) {
@@ -32,7 +32,7 @@ class RecorderStub {
   stop() {
     if (this.state !== "recording") {return;}
     this.state = "inactive";
-    this.ondataavailable?.({ data: new Blob(["recording"], { type: this.mimeType }) } as BlobEvent);
+    this.ondataavailable?.({ data: new Blob(["recording"], { type: this.mimeType }) });
     this.onstop?.();
   }
 }

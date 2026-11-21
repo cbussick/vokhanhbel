@@ -18,9 +18,10 @@ export function toBerlinDay(date: Date): string {
  * or a DST transition — the input is already a calendar label, not an instant.
  */
 export function shiftCalendarDay(day: string, deltaDays: number): string {
-  // SAFETY: every caller passes a `YYYY-MM-DD` string (produced by `toBerlinDay` or `berlinDateSchema`),
-  // which always splits into exactly three numeric parts.
-  const [year, month, dayOfMonth] = day.split("-").map(Number) as [number, number, number];
+  const [year, month, dayOfMonth] = day.split("-").map(Number);
+  if (year === undefined || month === undefined || dayOfMonth === undefined) {
+    throw new RangeError("Invalid time value");
+  }
 
   return new Date(Date.UTC(year, month - 1, dayOfMonth + deltaDays)).toISOString().slice(0, 10);
 }
