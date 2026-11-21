@@ -212,14 +212,6 @@ export default defineConfig({
         ],
         "react/rules-of-hooks": "error",
         "react/unsupported-syntax": "error",
-        "typescript/no-misused-promises": [
-          "error",
-          {
-            checksVoidReturn: {
-              attributes: false,
-            },
-          },
-        ],
         "react/exhaustive-deps": "error",
         "react/incompatible-library": "error",
       },

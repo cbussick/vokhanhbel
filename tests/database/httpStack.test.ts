@@ -25,6 +25,12 @@ import { RecordingSpeechProvider } from "../../src/server/speech/speechProvider.
 
 const origin = "http://localhost:4173";
 
+function parsePublicAudio(value: unknown) {
+  expect(JSON.stringify(value)).not.toContain("objectKey");
+
+  return audioMetadataSchema.parse(value);
+}
+
 afterEach(() => {
   setAudioObjectStoreForTests(undefined);
   setSpeechProviderForTests(undefined);
@@ -49,6 +55,17 @@ function request(path: string, method: "GET" | "POST", body?: unknown, cookie?: 
 }
 
 describe("real API handler stack", () => {
+  it("detects a private object key before parsing can strip response fields", () => {
+    const leaked = {
+      id: crypto.randomUUID(),
+      durationMs: 1000,
+      contentType: "audio/wav",
+      byteSize: 100,
+      synthesizedText: null,
+      objectKey: "private storage location",
+    };
+    expect(() => parsePublicAudio(leaked)).toThrow("objectKey");
+  });
   it("authenticates, creates and Grades a Card, then returns durable statistics", async () => {
     const password = "real stack password";
     process.env.APP_PASSWORD_HASH = await encodePassword(password);
@@ -141,10 +158,9 @@ describe("real API handler stack", () => {
     const uploadResponse = await postAudio(uploadRequest);
 
     expect(uploadResponse.status).toBe(201);
-    const audio = audioMetadataSchema.parse(await uploadResponse.json());
+    const audio = parsePublicAudio(await uploadResponse.json());
     // A recording was never told what to say, so there is nothing to disclose about it.
     expect(audio).toMatchObject({ durationMs: 1000, synthesizedText: null });
-    expect(JSON.stringify(audio)).not.toContain("objectKey");
     const recorded = await getPool().query<{ source: string; synthesized_text: string | null }>(
       "SELECT source, synthesized_text FROM audio_assets WHERE id=$1",
       [audio.id],
