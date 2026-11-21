@@ -28,6 +28,8 @@
     "vite.config.ts",
     "vitest.database.config.ts",
     "playwright.config.ts",
+    "playwright.container.config.ts",
+    "tools/previewHeaders.ts",
     "drizzle.config.ts"
   ]
 }
