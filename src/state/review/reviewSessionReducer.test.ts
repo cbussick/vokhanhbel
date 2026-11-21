@@ -53,12 +53,12 @@ function submission(
   return {
     input: {
       id: `${exercise.id}-submission`,
-      cardId: exercise.cards[0]!.id,
+      cardId: exercise.cards[0].id,
       grade,
       reviewedAt: new Date().toISOString(),
     },
     reviewSessionId: "session",
-    card: exercise.cards[0]!,
+    card: exercise.cards[0],
     optimisticPoints: grade === "knew_it" ? 10 : grade === "almost" ? 5 : 1,
     exerciseIndex,
   };

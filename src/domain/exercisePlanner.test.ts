@@ -70,6 +70,10 @@ function sequence(values: Array<number>) {
 const zero = () => 0;
 
 describe("planExercises", () => {
+  it.each([1.1, -0.1, Number.NaN])("rejects an invalid random source (%s) before corrupting the plan", (value) => {
+    const pool = createMultipleChoiceReadyCards(1);
+    expect(() => planExercises(pool, pool, () => value)).toThrow("Invalid shuffle source or missing item");
+  });
   it("plans a multiple-choice Exercise for a Card with three sibling backs in its Sammlung", () => {
     const target = card({ id: "1", back: text("die Katze") });
     const siblings = [
@@ -82,7 +86,7 @@ describe("planExercises", () => {
     const plan = planExercises(pool, pool, zero);
 
     expect(plan).toHaveLength(4);
-    const exercise = plan.find((planned) => planned.cards[0]!.id === "1")!;
+    const exercise = plan.find((planned) => planned.cards[0].id === "1")!;
 
     expect(exercise.kind).toBe("multipleChoice");
     const multipleChoice = exercise as MultipleChoiceExercise;
@@ -119,7 +123,7 @@ describe("planExercises", () => {
     const pool = [target, ...siblings];
 
     const plan = planExercises(pool, pool, zero);
-    const exercise = plan.find((planned) => planned.cards[0]!.id === "1")!;
+    const exercise = plan.find((planned) => planned.cards[0].id === "1")!;
 
     expect(exercise).toEqual({ kind: "flip", id: "1", cards: [target] });
   });
@@ -136,7 +140,7 @@ describe("planExercises", () => {
 
     const plan = planExercises(pool, pool, zero);
     const exercise = plan.find(
-      (planned) => planned.cards[0]!.id === "1",
+      (planned) => planned.cards[0].id === "1",
     )! as MultipleChoiceExercise;
 
     expect(exercise.kind).toBe("multipleChoice");
@@ -155,7 +159,7 @@ describe("planExercises", () => {
 
     const plan = planExercises(pool, pool, zero);
     const exercise = plan.find(
-      (planned) => planned.cards[0]!.id === "1",
+      (planned) => planned.cards[0].id === "1",
     )! as MultipleChoiceExercise;
     const backs = exercise.options.map((option) => option.text!.trim().toLowerCase());
 
@@ -191,7 +195,7 @@ describe("planExercises", () => {
 
     const plan = planExercises(cards, cards, zero);
 
-    expect(plan.map((exercise) => exercise.cards[0]!.id)).toEqual(["1", "2", "3"]);
+    expect(plan.map((exercise) => exercise.cards[0].id)).toEqual(["1", "2", "3"]);
   });
 
   it("shuffles the option order using the injected random source", () => {
@@ -211,9 +215,9 @@ describe("planExercises", () => {
     ];
     const second = planExercises([target], pool, sequence([0.99, 0.5, 0.9, 0.1]));
     const secondExercise = second.find(
-      (planned) => planned.cards[0]!.id === "1",
+      (planned) => planned.cards[0].id === "1",
     )! as MultipleChoiceExercise;
-    const firstExercise = first.find((planned) => planned.cards[0]!.id === "1")!;
+    const firstExercise = first.find((planned) => planned.cards[0].id === "1")!;
 
     expect(secondExercise.options.map((option) => option.cardId)).not.toEqual(
       firstExercise.options.map((option) => option.cardId),
@@ -387,7 +391,7 @@ describe("planExercises", () => {
     expect(plan).toHaveLength(5);
     // The lone text Card has no text sibling at all, so it falls back to flip; every audio-backed
     // Card has three audio siblings and is offered audio options instead of also falling back.
-    expect(plan.find((exercise) => exercise.cards[0]!.id === "1")!.kind).toBe("flip");
+    expect(plan.find((exercise) => exercise.cards[0].id === "1")!.kind).toBe("flip");
     expect(plan.some((exercise) => exercise.kind === "multipleChoice")).toBe(true);
   });
 
@@ -403,7 +407,7 @@ describe("planExercises", () => {
 
       const plan = planExercises(pool, pool, zero);
       const exercise = plan.find(
-        (planned) => planned.cards[0]!.id === "1",
+        (planned) => planned.cards[0].id === "1",
       )! as MultipleChoiceExercise;
 
       expect(exercise.kind).toBe("multipleChoice");
@@ -435,7 +439,7 @@ describe("planExercises", () => {
       const pool = [target, ...siblings];
 
       const plan = planExercises(pool, pool, zero);
-      const exercise = plan.find((planned) => planned.cards[0]!.id === "1")!;
+      const exercise = plan.find((planned) => planned.cards[0].id === "1")!;
 
       expect(exercise).toEqual({ kind: "flip", id: "1", cards: [target] });
     });
@@ -726,7 +730,7 @@ describe("planExercises", () => {
       const plan = planExercises(multipleChoiceReadyCards, multipleChoiceReadyCards, zero);
 
       expect(plan.every((exercise) => exercise.kind !== "swipe")).toBe(true);
-      expect(plan.find((exercise) => exercise.cards[0]!.id === "1")!.kind).toBe("multipleChoice");
+      expect(plan.find((exercise) => exercise.cards[0].id === "1")!.kind).toBe("multipleChoice");
     });
 
     it("claims such a Card on its own turn, leaving the rest of the queue to multiple choice", () => {
@@ -758,7 +762,7 @@ describe("planExercises", () => {
 
       const plan = planExercises(cards, cards, zero);
 
-      expect(plan.find((exercise) => exercise.cards[0]!.id === "1")!.kind).not.toBe("swipe");
+      expect(plan.find((exercise) => exercise.cards[0].id === "1")!.kind).not.toBe("swipe");
       const swipeExercise = plan.find((exercise) => exercise.kind === "swipe");
 
       expect(swipeExercise?.cards.some((swiped) => swiped.id === "1")).toBe(false);
