@@ -27,7 +27,7 @@ const recorderTypes = [
 ];
 
 function normalizeContentType(type: string): AudioMetadata["contentType"] | undefined {
-  const base = type.split(";", 1)[0]!.toLowerCase();
+  const base = (type.split(";", 1)[0] ?? "").toLowerCase();
 
   if (base === "audio/mpeg" || base === "audio/mp3") {return "audio/mpeg";}
   if (base === "audio/mp4" || base === "audio/x-m4a") {return "audio/mp4";}

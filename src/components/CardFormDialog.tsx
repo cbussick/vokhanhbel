@@ -129,7 +129,11 @@ export function CardFormDialog({
   });
 
   const remove = useMutation({
-    mutationFn: async () => apiCommand(apiPaths.card(card!.id), { method: "DELETE" }),
+    mutationFn: async () => {
+      if (!card) {throw new Error("Cannot delete a missing card");}
+
+      return apiCommand(apiPaths.card(card.id), { method: "DELETE" });
+    },
     onSuccess: async () => {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: queryKeys.cards }),

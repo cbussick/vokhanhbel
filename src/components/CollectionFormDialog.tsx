@@ -116,8 +116,11 @@ export function CollectionFormDialog({
   });
 
   const remove = useMutation({
-    mutationFn: async () =>
-      apiCommand(apiPaths.collection(collection!.id), { method: "DELETE" }),
+    mutationFn: async () => {
+      if (!collection) {throw new Error("Cannot delete a missing collection");}
+
+      return apiCommand(apiPaths.collection(collection.id), { method: "DELETE" });
+    },
     onSuccess: async () => {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: queryKeys.collections }),

@@ -149,11 +149,12 @@ function shrinkMatchingExercise(
   const taintedCardIds = (matching?.taintedCardIds ?? []).filter((id) => id !== removedCardId);
   const unresolved = cards.filter((card) => !resolvedCardIds.includes(card.id));
 
-  if (unresolved.length === 0) {return { replacement: undefined, matching: undefined };}
+  const [first] = unresolved;
+  if (!first) {return { replacement: undefined, matching: undefined };}
 
   if (unresolved.length < matchingMinimumPairs)
     {return {
-      replacement: { kind: "flip", id: unresolved[0]!.id, cards: [unresolved[0]!] },
+      replacement: { kind: "flip", id: first.id, cards: [first] },
       matching: undefined,
     };}
 

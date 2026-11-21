@@ -70,7 +70,11 @@ export function TopicFormDialog({
   });
 
   const remove = useMutation({
-    mutationFn: async () => apiCommand(apiPaths.topic(topic!.id), { method: "DELETE" }),
+    mutationFn: async () => {
+      if (!topic) {throw new Error("Cannot delete a missing topic");}
+
+      return apiCommand(apiPaths.topic(topic.id), { method: "DELETE" });
+    },
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: queryKeys.topics });
       await queryClient.invalidateQueries({ queryKey: queryKeys.cards });
