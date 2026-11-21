@@ -36,10 +36,12 @@ interface ConfettiPiece {
  * off screen a little over four seconds in.
  */
 function createConfettiPieces(): Array<ConfettiPiece> {
-  return Array.from({ length: confettiPieceCount }, (_, index) => ({
+  const colors = Array.from({ length: Math.ceil(confettiPieceCount / confettiColors.length) }, () => confettiColors).flat().slice(0, confettiPieceCount);
+
+  return colors.map((color, index) => ({
     id: index,
     left: `${Math.round(Math.random() * 100)}%`,
-    color: confettiColors[index % confettiColors.length]!,
+    color,
     delay: `${Math.round(Math.random() * 700)}ms`,
     duration: `${(2.2 + Math.random() * 1.2).toFixed(2)}s`,
     drift: (Math.random() * 2 - 1).toFixed(2),
@@ -149,8 +151,8 @@ export function SessionSummary({
                     ? t("review.scopeAllCards")
                     : view.scope.topics.length === 0
                       ? view.scope.collection.name
-                      : view.scope.topics.length === 1
-                        ? `${view.scope.collection.name} · ${view.scope.topics[0]!.name}`
+                      : view.scope.topics.length === 1 && view.scope.topics[0]
+                        ? `${view.scope.collection.name} · ${view.scope.topics[0].name}`
                         : t("review.scopeTopics", {
                             collection: view.scope.collection.name,
                             count: view.scope.topics.length,
