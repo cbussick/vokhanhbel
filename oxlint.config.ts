@@ -50,6 +50,9 @@ export default defineConfig({
   rules: {
     ...cloudflare.rules,
     "no-case-declarations": "error",
+    // Retain stronger pre-migration category defaults instead of inherited relaxations.
+    "no-unused-vars": "error",
+    "typescript/await-thenable": ["error", { allowMixedPromiseArrays: false }],
     "no-empty": "error",
     "no-fallthrough": "error",
     "no-prototype-builtins": "error",
@@ -114,6 +117,11 @@ export default defineConfig({
         "no-unreachable": "off",
         "no-unsafe-negation": "off",
         "no-var": "error",
+        // Inherited test overrides must not weaken pre-existing correctness coverage.
+        "typescript/no-explicit-any": "error",
+        "typescript/no-unsafe-argument": "error",
+        "typescript/only-throw-error": "error",
+        "typescript/unbound-method": "error",
         "no-with": "off",
         "prefer-const": "error",
         "jsx-a11y/control-has-associated-label": "off",
