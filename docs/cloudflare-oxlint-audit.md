@@ -1,53 +1,50 @@
-# Cloudflare defaults migration — continuation checkpoint (second worker)
+# Cloudflare defaults migration — local validation report
 
-**INCOMPLETE. Not integration-ready.** This is a handoff, not a completion report.
-Temporary rule disables remain in the clearly marked final override. No claim of
-full default compliance, test correctness, or performance improvement is made.
+## Status
 
-## Scope and evidence
+**Default adoption implemented; independent review gate still pending.**
+No temporary disables remain. This is not permission to integrate: the full
+browser suite is not green, and final independent reviewers have not yet run.
 
-Worktree: `.worktrees/cloudflare-oxlint-defaults`; branch
-`chore/cloudflare-oxlint-defaults`; exact base `192638b`.
-All changes are local. No push, PR, review posting, main edits, merge, production
-operation, or deployment was performed.
+Worktree `.worktrees/cloudflare-oxlint-defaults`, branch
+`chore/cloudflare-oxlint-defaults`, exact base `192638b`. Local only: no push,
+PR, review posting, merge, main edit, production operation or deployment.
 
-Read repository workflow/domain/operations instructions, GLOSSARY, applicable
-hosting/auth/offline/speech ADRs, official current Cloudflare README and full
-migration skill via webfetch, and Shelf audit for read-only context. Read review,
-Pi-review, and spawning skills. Other ADRs still need reading if later changes
-reach their domains.
+## Versions and preserved coverage
 
-Registry and runtime inspection:
+Node **24.22.1**, npm **11.19.1**, Oxlint **1.94.0** unchanged.
+`@cloudflare/oxlint-config` **0.1.0** exact inherits nkzw **3.0.0**.
+`tsrs` changed from **7.1.0-beta.tsrs3** to exact
+**0.25.0-ts7.1.0-beta**. Installed backend reports TypeScript 7.1.0-beta,
+compiler commit **3e9236361fa9**. Registry peers require Oxlint ^1.94.0,
+tsrs >=0.25.0-ts7.1.0-beta; engines ^22.18.0 || >=24.0.0.
+Fresh npm ci, valid npm ls, actual lint and compiler probes establish runtime
+compatibility rather than guessing from unusual semver names. Lockfile committed.
+Evidence: `/tmp/vok-cf-final-{install,deps,registry}.log` (registry uses .json).
 
-- Node 24.22.1 (baseline supplied by coordinator).
-- Oxlint 1.94.0, unchanged.
-- `@cloudflare/oxlint-config` 0.1.0 exact; inherited nkzw config 3.0.0.
-- `tsrs` changed from 7.1.0-beta.tsrs3 to exact 0.25.0-ts7.1.0-beta.
-- Preset peers: Oxlint ^1.94.0, tsrs >=0.25.0-ts7.1.0-beta.
-- Preset engines: ^22.18.0 || >=24.0.0.
-- `npm ls @cloudflare/oxlint-config oxlint tsrs @nkzw/oxlint-config` passes.
-- Installed backend reports Version 7.1.0-beta, tsrs 0.25.0-ts7.1.0-beta,
-  microsoft/TypeScript@3e9236361fa9. Runtime lint succeeds; compatibility is not
-  inferred solely from unusual semver names.
-- Dependency install and lock changes were supplied by coordinator; no force or
-  legacy-peer install was used by this worker.
+Root-spread preset preserves inherited plugins/options/environments/overrides,
+then original project rules, category coverage, anti-slop/style plugins, ignores,
+and existing test safety exceptions. Old interface-only style preference is
+removed; compiler rules previously warning now follow preset errors. Stock
+no-empty is stronger than the original permissive catch option.
 
-Config uses root-spread preset, inherited plugins/JS plugins/options/environment
-and overrides, then original project rules and ignores. Original anti-slop plugin,
-style plugin, tsc/build/scripts, category checks and safety exceptions remain.
-Old interface-only style policy was removed rather than overriding stock choices.
-React compiler warnings overlapping preset are upgraded to preset errors.
-`no-empty` now follows stock (no permissive catch option).
+Resolved original/current config comparison found two inherited root relaxations:
+unused variables and mixed promise arrays. Original strict settings are restored.
+Original no-explicit-any, unsafe-argument, only-throw-error and unbound-method
+checks are explicitly restored after inherited test overrides; existing intentional
+test unsafe-assignment/member-access and require-await exceptions remain unchanged.
+No compiler/build/test script is removed. Knip no longer needs its tsrs dependency
+ignore because the preset exposes that dependency.
 
-**Still audit config merging carefully:** original project overrides and preset
-aliases need final comparison, including test-specific correctness rules and
-whether inherited relaxations reduce pre-existing coverage. No final coverage
-probe or independent review has yet been done.
+Browser callbacks now have a **separate DOM-enabled tests/e2e/tsconfig.json**,
+referenced by root tsc -b. The original Node project excludes only those E2E files
+and stays Node-only; shared contracts/domain remain checked in both projects.
+Playwright config remains Node-owned. Final probes confirm E2E discovery.
 
-## Inventory and staged commits
+## Initial inventory and adoption
 
-Initial actual root-config inventory: **969 diagnostics, 185 files**. This is
-not a count of distinct bugs. Counts before fixes:
+Authoritative first root-config inventory: **969 diagnostics in 185 files**,
+not a count of bugs. All 29 newly failing rules have been adopted.
 
 | Rule                                       | Findings |
 | ------------------------------------------ | -------: |
@@ -81,202 +78,303 @@ not a count of distinct bugs. Counts before fixes:
 | import/no-namespace                        |        1 |
 | typescript/return-await                    |        1 |
 
-`04d954a` is the passing staged adoption commit (temporary disables).
-Subsequent focused lint-passing commits implement curly, generic arrays, numeric
-separators, top-level type imports, catch names, replaceAll, at, String.raw, and
-unnecessary Promise.resolve/reject removal. Stock safe autofixes were used;
-multiple passes were necessary for some nested fixes. Type-only import changes
-also include two ignored custom-plugin implementation imports, mechanically
-converted to the same style. No assertion or runtime guard redesign yet.
+`04d954a` is the passing staged adoption with temporary disables. Focused commits
+then enabled each rule. Large crosscutting assertion work was deliberately split
+into checked domain, HTTP, API, UI, storage and test-boundary commits before removing
+the final two assertion disables in `4d2fac7`. `0509533` preserves stronger coverage;
+`287b30e` formats the mechanical migration. No broad convenience exclusions added.
 
-Evidence retained outside Git:
+## Behavioral and type-boundary work
 
-- `/tmp/vok-cf-baseline-install.log`, `/tmp/vok-cf-baseline-lint.log`
-  (coordinator-provided original installation/lint).
-- `/tmp/vok-cf-stock.json`: full root-config diagnostic inventory.
-- `/tmp/vok-cf-inventory.json`: earlier exploratory overlay inventory; do not use
-  its counts as authoritative (overlapping alias/config differences).
-- `/tmp/vok-cf-adoption-lint.log` and per-rule `/tmp/vok-cf-*.log` files.
-- Ignored `.scratch/cloudflare-inventory.config.ts` exploratory config, not used
-  by npm lint. Remove before final validation but preserve evidence separately.
-
-## Confirmed policy response
-
-Coordinator supplied user authorization in `/tmp/vok-cf-policy-response.md`:
-accept an explained single-line `no-console` exception at native browser
-`AppErrorBoundary.componentDidCatch`, retaining error and component stack.
-Do not hide console behind a wrapper or delete observability. Assess structured
-server and CLI boundaries individually: narrow justified native-observability
-exceptions are preferable to rewriting through raw process streams merely to
-evade lint, especially if semantics/format change. No such exceptions have been
-implemented yet; no-console currently remains temporarily disabled.
-
-## Continuation notes
-
-Next pending rule `typescript/return-await` exposes
-`src/server/resources/cards.ts` createCard returning getCard after COMMIT inside
-try/finally. Do not blindly insert await: it changes rejection handling and holds
-the transaction connection while getCard acquires another pool connection.
-Investigate moving the post-commit read after finally (released connection) with
-behavior-sensitive red/green regression coverage. A trial edit was reverted;
-worktree source is clean at this checkpoint.
-
-Large remaining work: unsafe assertions and non-null guards, test mock contracts,
-conditional expectations, native event lifecycle, typed error identity guards,
-callback return contracts, hoisting, and all other temporary disables. No
-microtask tricks, weakened tests, unsupported assertion substitutions, or broad
-exceptions are authorized.
-
-## Second-worker continuation (through `a1c04ba`)
-
-Twelve additional focused rule commits passed root lint. **Eight temporary disables
-remain**, not twenty: chained assertions, non-null assertions, unsafe assertions,
-return-await, function scoping, native event listeners, typed mocks, and throw
-messages. This remains incomplete and must not be integrated.
-
-Implemented commits:
-
-- `3c3efad`: void Promise executor in the intentionally pending playback test.
-- `9da43a9`: explicit playback button types. `IconButton` retains one explained
-  `react/button-has-type` line exception: React's native button attribute union
-  admits only button/submit/reset and the component defaults to button. The
-  syntax-only rule rejects that typed variable; duplicating branches solely for
-  lint would obscure native form behavior.
-- `7f1377a`: non-mutating sorting of derived arrays; deliberately mutating private
-  Streak grouping is accepted by the stock rule and unchanged.
-- `80c8f03`: named database schema imports and an explicit schema object containing
-  exactly the same exported entries (including defaultCollectionId).
-- `87369b5`: CLI entrypoints await main inside try/catch. Two exact
-  `unicorn/prefer-top-level-await` exceptions on Zod icon `.catch` calls document
-  the proven synchronous-schema false positive; those are not Promise chains.
-- `e8cbc30`: no-console enabled. Nine line exceptions preserve native output:
-  AppErrorBoundary componentDidCatch (authorized browser error and stack), audio
-  operation logger and HTTP request logger (platform info severity, JSON, request
-  correlation), and six CLI messages (allocated application/database/volume,
-  selected Compose identity, startup identity, and stderr error inspection).
-  No logs were removed or redirected through raw streams to evade the rule.
-- `83b8f6b`: pure review projections use flatMap, preserving filtering, ordering,
-  date conversion, invalid-date exclusion, and missing matching entries.
-- `6921feb`: optional request body, stored Content-Range, log requestId, and parsed
-  range end are assigned explicitly under the original conditions. Named native
-  or owner contracts retain absent fields rather than present-undefined values.
-- `06bea1b`: Card boundary preprocessing uses guarded `in` properties; no unknown
-  dictionary or narrowing assertion remains there. Legacy strings, absent Topic
-  IDs, spread preservation, and structured validation remain.
-- `9503ad4`: inferred connection result and schema-parsed intercepted Card input
-  replace anonymous known-evidence widening in tests.
-- `08b9e13`: reducer assertions fail explicitly on wrong state instead of skipping
-  checks; Tutor message-limit checks run unconditionally after exchanges four
-  and five with the same eight real exchanges.
-- `a1c04ba`: the actual application Error class is named AppProblemError throughout
-  all consumers, preserving constructor identity and Error behavior. Two native
-  `@nkzw/no-instanceof` line exceptions retain Element identity before closest and
-  Uint8Array identity when copying signing keys for WebCrypto.
-
-Validation evidence: `/tmp/vok-cf-{executor,player,buttons,sort,namespace,top-await,
-console,filter-map,spread,dictionary,widening,conditional-expect,instanceof}.log`.
-Every above commit passed npm lint. Typecheck passed after namespace, top-await,
-filter-map, spread, dictionary, widening and instanceof changes. Focused suites
-passed: AudioPlayer; exercisePlanner and Tutor; setupEnvironment/migratePreview;
-appJourneys (repeated after later changes); reviewSessionReducer; all contracts;
-all server audio and HTTP suites. A mistyped filter-map test path first reported
-no test files; the actual planner/appJourneys suites then passed. This is not a
-claimed baseline test failure. No builds, browser or shared database writers ran.
-A scoping autofix trial changed no source and its config edit was reverted.
-
-A fresh read-only Pi investigation examined unsafe/non-null assertions. Its full
-plan is retained at `/tmp/vok-cf-assertion-plan.md`. In particular, inspectAudio
-appears to lack WebM TimecodeScale payload and Ogg segment/page bounds checks;
-verify with red/green malformed-audio regressions rather than calling those
-findings false positives. Shared API/HTTP generic boundaries, browser typing,
-planner tuple invariants and test-owned fake contracts need real redesign.
-
-No final review or full validation gate has been run; all gates below still apply.
-Second worker relinquishes write ownership only after committing this checkpoint.
-
-## Third-worker progress (through `bd4bbc1`)
-
-**Still incomplete. Three temporary rules remain:** unsafe assertions, non-null
-assertions, and chained assertions. No final reviewer or integration claim.
-
-- `e2baf33`: malformed WebM scale/duration and Ogg page bounds now produce
-  invalid-audio errors instead of accepting NaN duration or truncated pages.
-  Red: `/tmp/vok-cf-audio-bounds-red.log` (2 failed / 3 passed); green:
-  `/tmp/vok-cf-audio-bounds-green.log`. Lint and typecheck passed.
-- `e20a81b`: metadata/error subscriptions use native addEventListener, with once
-  semantics; AudioInput suite, lint and typecheck passed.
-- `663e710`: Card writer takes explicit connection/read dependencies; transaction
-  releases before starting the independent post-commit read. Regression runs
-  prove old ordering fails, new ordering passes, read rejection does not roll
-  back a committed write, and failed writes roll back/release without reading.
-  Tests use a faithful query contract, not module mocking. Evidence:
+- **Malformed audio:** bounded WebM TimecodeScale/duration and Ogg segment/page
+  reads reject invalid audio rather than accepting NaN duration/truncated pages.
+  Red 2 failures / 3 passes, then green; exact logs
+  `/tmp/vok-cf-audio-bounds-{red,green,lint,types}.log`. Bounded DataView reads and
+  checked MP3 bitrate replace non-null indexing; native header name/value entries
+  retain signing order without nullable lookups.
+- **Transactions:** createCard releases its committed connection before starting
+  the separate read. Explicit writer dependencies make the real ordering testable
+  without module mocking. Old ordering fails; new ordering passes; read rejection
+  does not roll back committed work; failed write rolls back/releases without read.
   `/tmp/vok-cf-card-return-{di-red,green,lint,types}.log`.
-- `7602bdb`: mock argument/result contracts declared across UI/provider/HTTP/DB
-  tests; model prompt helper now checks the required first input rather than
-  asserting it. Seven focused suites, lint and typecheck passed.
-- `3fc20f5`: pure helpers hoisted, including browser-evaluation wrapper (its
-  serialized function remains inside evaluate); native dialog polyfills carry
-  explicit this contracts. Six focused suites, lint and typecheck passed.
-- `fcd741d`: bounded DataView reads replace byte assertions, bitrate checked;
-  private-store rejection expectations identify actual validation errors.
-- `497cc13`, `c3aabc4`: Box derives from a literal schema; promotion uses a fixed
-  tuple. Configuration values narrow individually before use. Focused domain,
-  speech and storage suites, lint and typecheck passed.
-- `51ef195`: throw-message default enabled. Card normalization SQL fixtures now
-  include the required Collection, so constraints rather than unrelated not-null
-  errors are exercised. Exact constraint expectations pass all 26 core DB tests.
-  An initial hypothesis based only on migration 0003 suggested trigger repair;
-  the actual migrated-DB probe disproved it: migration 0007 preserves the check.
-  The coordinator escalation was explicitly withdrawn. No schema change needed.
-  Evidence `/tmp/vok-cf-{normalization-probe,throw-db,throw-db-green,throw-lint,throw-types}.log`.
-- `160372a`: data-returning requests take endpoint schemas; commands return void
-  and retain JSON-syntax checking when a response body is intentionally ignored.
-  Missing JSON bodies reject explicitly. A preliminary attempt validated ignored
-  Review responses and exposed intentionally minimal test fixtures; it was
-  replaced with a void command contract preserving existing semantics, not test
-  weakening. Final 91 API/journey/dialog tests pass. Schema-bypass red evidence
-  exists in `/tmp/vok-cf-api-schema-red.log`; final evidence is
-  `/tmp/vok-cf-api-schema-{tests,lint,types}.log`. The preliminary command-status
-  expectation in that red run is not the final command policy.
-- `e2858f0`, `bd4bbc1`: searchable label arrays replace unchecked index callbacks;
-  native Node identity is checked before contains (one explained line exception).
-  Deletion mutations guard missing entities; reducer binds its first remaining
-  Card; MIME splitting has an explicit empty-string fallback. Six focused suites,
-  lint and typecheck passed (`/tmp/vok-cf-ui-invariants-*.log`).
+- **Planner/domain:** literal Box schema and promotion tuple; single-Card Exercise
+  tuples; checked shuffle indices and elements preserve valid RNG call order.
+  Three invalid-RNG cases fail with old shuffle and pass with checked shuffle;
+  planner/reducer 67 tests pass (`/tmp/vok-cf-planner-{red,green}.log`).
+  Calendar parts and required configuration values narrow before use.
+- **HTTP:** bodyless and schema-backed callbacks are separate; authenticated
+  variants guarantee sessionHash via an actual runtime guard. Auth/origin checks
+  still precede body parsing. Full isolated HTTP/database suites pass.
+- **Client API:** data-returning operations require endpoint schemas; commands
+  return void and preserve JSON syntax checking for intentionally ignored bodies,
+  including Review Submission. Unexpected 204 JSON responses reject explicitly.
+  Schema-bypass red probe rejects unchecked JSON; final 91 API/journey/dialog tests
+  pass. An exploratory validation of ignored Review response bodies produced nine
+  test failures against minimal mocks; the final void command contract preserves
+  prior semantics without weakening those fixtures or expectations.
+- **UI:** deletion guards require an owned entity, listbox carries labels rather
+  than unchecked count/index callbacks, native target identity checked before
+  contains; reducer binds its first remaining Card. Confetti keeps exactly 90
+  pieces, original palette order and random-call order. Metadata subscriptions
+  use native addEventListener with once semantics.
+- **Tests/tools:** checked Exercise discriminants replace casts. Intercepted wire
+  schemas preserve whitespace, unknown keys, and omission (including nested keys)
+  rather than normalizing away evidence; two regressions lock this down. Mock
+  arguments/results are typed. JSON tool inputs and HTTP responses are parsed.
+  Transitive braces resolution remains actual Stylelint→micromatch resolution,
+  with callable-surface and result validation.
+- **Normalization test preconditions:** Card SQL fixtures omitted required
+  collection_id, so old toThrow passed on an unrelated not-null error. Supplying
+  the seeded Collection now exercises/asserts the intended constraints; all 26
+  core database tests pass. A premature hypothesis based on migration 0003 was
+  disproved by the migrated-DB probe: migration 0007 preserves normalization.
+  Escalation was explicitly withdrawn; no schema change was needed.
 
-Intermediate full unit suite: **264 passed in 31 files**
-(`/tmp/vok-cf-third-unit.log`), before the API schema tests were added. This does
-not replace final full validation. Expected jsdom unimplemented media warnings
-remain visible; no tests/timeouts were weakened.
+No microtask workaround, unsupported assertion substitution, removed diagnostics,
+weakened timeout/expectation, new test skip, or production migration was used.
 
-Isolated DB evidence uses container `vok-cf-defaults-tests`, PostgreSQL 17 Alpine,
-loopback port 32776, database `cf_defaults_test`; it never uses the shared 5433
-service. Ignored `.scratch/cf-database.config.ts` disables the ordinary shared
-DB lifecycle and overrides DATABASE_URL to this disposable container. Preserve
-logs; remove the temporary config before final validation. No build/browser
-artifact writers were run concurrently by this worker.
+## Every new necessary exception
 
-## Validation status / remaining release gate
+All are one source line, with adjacent rationale; no entire file/rule is exempted.
 
-Original lint passed with fresh baseline installation (coordinator evidence).
-Every committed adoption/per-rule stage passed `npm run lint`. No test failures
-have been observed or claimed pre-existing because tests have not yet run here.
+- **9 no-console:** AppErrorBoundary.componentDidCatch (browser error and component
+  stack, explicitly authorized); HTTP request logger (structured severity and
+  correlation); audio storage logger (structured operation diagnostics); six
+  local-development CLI output/error boundaries (application/database/volume,
+  inspect/start identity, stderr inspection). Logs were not redirected through
+  raw streams merely to evade the rule.
+- **3 @nkzw/no-instanceof:** SwipeExercise Element identity before closest;
+  useListbox Node identity before contains; audioObjectStore Uint8Array identity
+  selects a byte copy for WebCrypto while preserving raw ArrayBuffer behavior.
+- **1 react/button-has-type:** IconButton native ButtonHTMLAttributes union
+  constrains the variable to button/submit/reset and defaults to button; syntax
+  rule cannot prove the variable. No duplicated form-behavior branches.
+- **2 unicorn/prefer-top-level-await:** Collection/Topic Zod icon .catch calls
+  supply synchronous schema fallbacks, not Promise rejection handlers.
 
-**NOT YET RUN:** fresh final npm ci, final formatting, typecheck, build, Knip both
-modes, unit/database/local-development/browser suites, full CI equivalents,
-licenses/security checks, temporary JSX/server/test type-aware regression probes,
-and fair interleaved warmed timings. Serialize artifact writers and use limited
-workers and isolated ports/databases; the shared test database port is not an
-isolated worktree database. Reproduce any baseline failures in a fresh original
-checkout before claiming they predate migration.
+Original exceptions remain original policy; `oxlint --report-unused-disable-directives`
+passes without diagnostics. No assertion-rule exceptions were needed.
 
-No independent reviewers have yet run. Final gate requires at least two fresh
-LOCAL read-only Pi reviewers covering the complete exact `192638b...<final-tip>`
-diff, documented standards/spec and behavior/coverage; fix and re-review material
-findings. Preserve evidence until integration authorization.
+## Validation and baseline evidence
 
-Only timing currently available is coordinator's original single cold lint run:
-real 9.937 s, user 10.587 s, sys 2.026 s. This is not a benchmark and cannot support
-speedup or overhead claims.
+Fresh **npm ci** passes. After that installation:
 
-Recommendation: **continue implementation; do not integrate this checkpoint.**
+| Check                                       | Result                                         |
+| ------------------------------------------- | ---------------------------------------------- |
+| format:check, lint, typecheck, build        | pass                                           |
+| Knip normal/production                      | pass (obsolete tsrs hint subsequently removed) |
+| npm audit --omit=dev --audit-level=high     | 0 vulnerabilities                              |
+| licenses                                    | pass, 15 approved forms                        |
+| unit suite, maxWorkers=1                    | **272 passed / 33 files**                      |
+| isolated database suite, maxWorkers=1       | **30 passed / 2 files**                        |
+| local-development integration, maxWorkers=1 | **1 passed / 1 file**                          |
+| complete browser suite, one worker          | **69 passed, 20 failed, 46 existing skipped**  |
+
+Logs: `/tmp/vok-cf-final-*.log`. Temporary JSX/client/server/test/E2E probes
+detected floating promises (including JSX body), await-thenable, test unbound methods,
+test non-Error throws and TS2322 in client/server/E2E. Probes were removed; lint and
+typecheck pass afterward. `/tmp/vok-cf-final-probe-{lint,types}.log`,
+`/tmp/vok-cf-probes-removed-{lint,types}.log`.
+
+The browser result is **not green**. A clean archive of exact original **192638b**
+at `/tmp/vok-cf-original-checkout`, with its own fresh npm ci and production build,
+reproduces the **same 20 Chromium screenshot failures**, 69 passes and 46 skips.
+All three browser projects were exercised; Firefox/WebKit exclusions are existing.
+19/20 failing actual screenshots are byte-identical between setups; one differs
+between captures. Failures are small screenshot differences (often 1 pixel), not
+claimed fixed. No screenshot baseline or tolerance was updated.
+Logs `/tmp/vok-cf-original-fresh-{install,browser}.log`,
+`/tmp/vok-cf-final-browser2.log`; artifacts `/tmp/vok-cf-{original-browser-results,browser-results}`.
+An earlier isolated browser launcher timed out because its temporary config did
+not set root cwd; fixing the launcher allowed the real suite. That is not called
+a baseline product failure.
+
+Database checks use a disposable PostgreSQL17 container `vok-cf-defaults-tests`,
+loopback 32776, DB `cf_defaults_test`, not shared host port5433. Browser setups
+use isolated loopback 42781/42782 and separate artifact directories. Builds,
+browsers, tests and timings were serialized. No production data accessed.
+
+## Warmed lint timing
+
+Two discarded warmups per setup, then seven interleaved `npm run lint` samples,
+alternating order, same Node/host/default threads. Both installations are fresh;
+this includes npm startup, Oxlint and Stylelint, not just the executable.
+
+| Setup            | Seconds                                         | Median     |
+| ---------------- | ----------------------------------------------- | ---------- |
+| Original 192638b | 5.152, 4.681, 6.491, 4.899, 5.096, 4.347, 4.951 | **4.951s** |
+| Passing defaults | 5.731, 5.700, 5.389, 5.587, 5.374, 4.983, 5.918 | **5.587s** |
+
+Every sample exits0. Median adds **0.636s (~12.8%)** for complete configurations,
+source coverage and toolchains, not isolated backend performance. No speedup claim.
+Shared-host load remains uncontrolled; this is not a formal benchmark.
+`/tmp/vok-cf-final-timings.json`. Original coordinator single cold9.937s is not
+comparable to this warmed series.
+
+## Independent reviews / recommendation
+
+Two fresh LOCAL read-only Pi reviewers must inspect the full exact
+`192638b...<review-tip>` diff independently (standards/spec and behavior/coverage).
+**Pending.** Do not treat this report as completion before that gate, affected
+re-reviews, final cleanup and final validation refresh.
+
+Defaults are implemented, but do not integrate yet: review remains and full
+browsers have reproduced original failures. All work stays local pending explicit
+integration authorization.
+
+## Changed files
+
+Before this final audit/Knip refresh: **142 files, +3413/-1507**. Final exact Git
+diff is authoritative. Most breadth is mechanical braces/arrays/imports/formatting.
+
+```text
+api/audio/[audioId].ts
+api/audio/index.ts
+api/cards/[cardId].ts
+api/cards/index.ts
+api/collections/[collectionId].ts
+api/collections/index.ts
+api/internal/audio-cleanup.ts
+api/reviews.ts
+api/session.ts
+api/topics/index.ts
+api/tutor-replies.ts
+docs/cloudflare-oxlint-audit.md
+oxlint.config.ts
+package-lock.json
+package.json
+scripts/checkLicenses.ts
+scripts/dependencySecurity.test.ts
+scripts/hashPassword.ts
+scripts/localDevelopment.integration.test.ts
+scripts/localDevelopment.ts
+scripts/migratePreview.ts
+scripts/migrateProduction.ts
+scripts/process.ts
+scripts/runMigrationContainer.ts
+scripts/setupEnvironment.test.ts
+scripts/setupEnvironment.ts
+scripts/verifyRestore.ts
+src/components/AppErrorBoundary.tsx
+src/components/AppShell.tsx
+src/components/CardFormDialog.tsx
+src/components/CollectionFormDialog.tsx
+src/components/CollectionSelect.test.tsx
+src/components/CollectionSelect.tsx
+src/components/ConnectivityBanner.tsx
+src/components/Dialog.tsx
+src/components/IconButton.tsx
+src/components/LanguageSelect.tsx
+src/components/RequireSession.tsx
+src/components/TopicFormDialog.tsx
+src/components/TopicSelect.test.tsx
+src/components/TopicSelect.tsx
+src/components/TutorDialog.tsx
+src/components/audio/AudioInput.test.tsx
+src/components/audio/AudioInput.tsx
+src/components/audio/AudioPlayer.test.tsx
+src/components/audio/AudioPlayer.tsx
+src/components/audio/PronunciationGenerator.tsx
+src/components/audio/audioApi.ts
+src/components/audio/playbackCoordinator.ts
+src/components/review/MatchingExercise.tsx
+src/components/review/MultipleChoiceOptions.tsx
+src/components/review/SessionSummary.tsx
+src/components/review/SwipeExercise.tsx
+src/components/review/optionAppearance.tsx
+src/contracts/card.ts
+src/contracts/collection.ts
+src/contracts/contracts.test.ts
+src/contracts/pronunciation.ts
+src/contracts/topic.ts
+src/contracts/tutor.ts
+src/domain/cardText.ts
+src/domain/exercisePlanner.test.ts
+src/domain/exercisePlanner.ts
+src/domain/review.ts
+src/domain/streak.test.ts
+src/domain/streak.ts
+src/domain/time.ts
+src/lib/apiClient.test.ts
+src/lib/apiClient.ts
+src/lib/browserState.ts
+src/lib/queries.ts
+src/main.tsx
+src/routes/appJourneys.test.tsx
+src/routes/cards.$collectionId.$cardId.tsx
+src/routes/cards.$collectionId.tsx
+src/routes/cards.index.tsx
+src/routes/dialogPendingActions.test.tsx
+src/routes/index.tsx
+src/routes/login.tsx
+src/routes/me.tsx
+src/routes/review.session.tsx
+src/routes/review.tsx
+src/server/ai/aiProvider.test.ts
+src/server/ai/aiProvider.ts
+src/server/audio/audioFixture.test-helper.ts
+src/server/audio/audioObjectStore.test.ts
+src/server/audio/audioObjectStore.ts
+src/server/audio/inspectAudio.test.ts
+src/server/audio/inspectAudio.ts
+src/server/auth/password.ts
+src/server/auth/session.ts
+src/server/config/environment.ts
+src/server/database/client.ts
+src/server/database/errors.ts
+src/server/http/cookies.ts
+src/server/http/handler.test.ts
+src/server/http/handler.ts
+src/server/http/origin.ts
+src/server/http/problem.ts
+src/server/resources/audio.ts
+src/server/resources/cardMapper.ts
+src/server/resources/cards.test.ts
+src/server/resources/cards.ts
+src/server/resources/collectionMapper.ts
+src/server/resources/collections.ts
+src/server/resources/pronunciations.ts
+src/server/resources/reviews.ts
+src/server/resources/sessions.ts
+src/server/resources/stats.ts
+src/server/resources/topicMapper.ts
+src/server/resources/topics.ts
+src/server/resources/tutor.test.ts
+src/server/resources/tutor.ts
+src/server/speech/speechProvider.test-helper.ts
+src/server/speech/speechProvider.test.ts
+src/server/speech/speechProvider.ts
+src/shared/ui/ListboxOption.tsx
+src/shared/ui/ListboxRoot.test.tsx
+src/shared/ui/ListboxRoot.tsx
+src/shared/ui/useListbox.ts
+src/state/AuthContext.tsx
+src/state/ReviewSessionContext.tsx
+src/state/ReviewSubmissionContext.tsx
+src/state/SessionLifecycleProvider.tsx
+src/state/review/reviewSessionReducer.test.ts
+src/state/review/reviewSessionReducer.ts
+src/state/review/useReviewSubmissionQueue.ts
+src/test/renderApp.tsx
+src/test/server.ts
+src/test/setup.ts
+src/test/wireSchemas.test.ts
+src/test/wireSchemas.ts
+tests/database/core.test.ts
+tests/database/globalSetup.ts
+tests/database/httpStack.test.ts
+tests/e2e/criticalJourneys.spec.ts
+tests/e2e/tsconfig.json
+tools/oxlint/anti-slop/rules/no-known-value-widening.ts
+tools/oxlint/anti-slop/rules/no-unsafe-dictionary-type.ts
+tsconfig.json
+tsconfig.node.json
+vite.config.ts
+```
+
+## Sources
+
+- Official current [Cloudflare README](https://github.com/cloudflare/oxlint-config).
+- Full [migration skill](https://github.com/cloudflare/oxlint-config/blob/main/skills/migrate-oxlint-config/SKILL.md).
+- Installed preset/nkzw sources, npm registry peers/engines and runtime version.
+- Repository workflow/domain/operations/GLOSSARY/ADRs; Shelf audit read-only context.
