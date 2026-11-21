@@ -1,7 +1,17 @@
 import { describe, expect, it } from "vitest";
 import type { Card } from "../contracts/card.js";
 import { leadingGroupedExerciseKind, planExercises } from './exercisePlanner.js';
-import type { MatchingExercise, MultipleChoiceExercise, SwipeExercise } from './exercisePlanner.js';
+import type { PlannedExercise } from './exercisePlanner.js';
+
+function hasExerciseKind<K extends PlannedExercise["kind"]>(exercise: PlannedExercise | undefined, kind: K): exercise is Extract<PlannedExercise, { kind: K }> {
+  return exercise?.kind === kind;
+}
+
+function requireExercise<K extends PlannedExercise["kind"]>(exercise: PlannedExercise | undefined, kind: K): Extract<PlannedExercise, { kind: K }> {
+  if (!hasExerciseKind(exercise, kind)) {throw new Error(`Expected ${kind} Exercise`);}
+
+  return exercise;
+}
 
 function createMultipleChoiceReadyCards(count: number): Array<Card> {
       const siblings = [
@@ -89,7 +99,7 @@ describe("planExercises", () => {
     const exercise = plan.find((planned) => planned.cards[0].id === "1")!;
 
     expect(exercise.kind).toBe("multipleChoice");
-    const multipleChoice = exercise as MultipleChoiceExercise;
+    const multipleChoice = requireExercise(exercise, "multipleChoice");
 
     expect(multipleChoice.options).toHaveLength(4);
     expect(multipleChoice.options.filter((option) => option.correct)).toEqual([
@@ -139,9 +149,9 @@ describe("planExercises", () => {
     const pool = [target, ...siblings];
 
     const plan = planExercises(pool, pool, zero);
-    const exercise = plan.find(
+    const exercise = requireExercise(plan.find(
       (planned) => planned.cards[0].id === "1",
-    )! as MultipleChoiceExercise;
+    ), "multipleChoice");
 
     expect(exercise.kind).toBe("multipleChoice");
     expect(exercise.options.some((option) => option.cardId === "2")).toBe(false);
@@ -158,9 +168,9 @@ describe("planExercises", () => {
     const pool = [target, ...siblings];
 
     const plan = planExercises(pool, pool, zero);
-    const exercise = plan.find(
+    const exercise = requireExercise(plan.find(
       (planned) => planned.cards[0].id === "1",
-    )! as MultipleChoiceExercise;
+    ), "multipleChoice");
     const backs = exercise.options.map((option) => option.text!.trim().toLowerCase());
 
     expect(new Set(backs).size).toBe(backs.length);
@@ -176,7 +186,7 @@ describe("planExercises", () => {
     const pool = [target, ...sameCollection, ...otherCollection];
 
     const plan = planExercises([target], pool, zero);
-    const exercise = plan[0] as SwipeExercise;
+    const exercise = requireExercise(plan[0], "swipe");
 
     // Two same-Sammlung siblings are one short of multiple choice, so this is Swipe — and its one
     // distractor still never reaches across into the other Sammlung.
@@ -209,15 +219,12 @@ describe("planExercises", () => {
 
     // Only `target` is due, so nothing here competes for a grouped Exercise — this is purely about
     // whether the injected random source changes one multiple-choice Exercise's option order.
-    const first = planExercises([target], pool, sequence([0, 0, 0, 0])) as [
-      MultipleChoiceExercise,
-      ...Array<MultipleChoiceExercise>,
-    ];
+    const first = planExercises([target], pool, sequence([0, 0, 0, 0]));
     const second = planExercises([target], pool, sequence([0.99, 0.5, 0.9, 0.1]));
-    const secondExercise = second.find(
+    const secondExercise = requireExercise(second.find(
       (planned) => planned.cards[0].id === "1",
-    )! as MultipleChoiceExercise;
-    const firstExercise = first.find((planned) => planned.cards[0].id === "1")!;
+    ), "multipleChoice");
+    const firstExercise = requireExercise(first.find((planned) => planned.cards[0].id === "1"), "multipleChoice");
 
     expect(secondExercise.options.map((option) => option.cardId)).not.toEqual(
       firstExercise.options.map((option) => option.cardId),
@@ -248,7 +255,7 @@ describe("planExercises", () => {
       const pool = [target, ...inThema, ...restOfSammlung];
 
       const plan = planExercises([target], pool, zero);
-      const exercise = plan[0] as MultipleChoiceExercise;
+      const exercise = requireExercise(plan[0], "multipleChoice");
 
       expect(exercise.kind).toBe("multipleChoice");
       const distractorIds = exercise.options
@@ -272,7 +279,7 @@ describe("planExercises", () => {
       const pool = [target, ...inThema, ...restOfSammlung];
 
       const plan = planExercises([target], pool, zero);
-      const exercise = plan[0] as MultipleChoiceExercise;
+      const exercise = requireExercise(plan[0], "multipleChoice");
 
       expect(exercise.kind).toBe("multipleChoice");
       const distractorIds = exercise.options
@@ -300,7 +307,7 @@ describe("planExercises", () => {
       const pool = [target, inAnimals, inFood, inBoth, outsideThema];
 
       const plan = planExercises([target], pool, zero);
-      const exercise = plan[0] as MultipleChoiceExercise;
+      const exercise = requireExercise(plan[0], "multipleChoice");
 
       const distractorIds = exercise.options
         .filter((option) => !option.correct)
@@ -334,7 +341,7 @@ describe("planExercises", () => {
     const pool = [target, ...audioOnly, ...textSiblings];
 
     const plan = planExercises([target], pool, zero);
-    const exercise = plan[0] as SwipeExercise;
+    const exercise = requireExercise(plan[0], "swipe");
 
     // Only one text sibling is available, so three distractors can't be found and this falls to
     // Swipe — whose single distractor is that text sibling, never one of the audio-backed Cards.
@@ -353,7 +360,7 @@ describe("planExercises", () => {
     const pool = [target, ...siblings];
 
     const plan = planExercises([target], pool, zero);
-    const exercise = plan[0] as MultipleChoiceExercise;
+    const exercise = requireExercise(plan[0], "multipleChoice");
 
     expect(exercise.kind).toBe("multipleChoice");
     const distractorIds = exercise.options
@@ -406,9 +413,9 @@ describe("planExercises", () => {
       const pool = [target, ...siblings];
 
       const plan = planExercises(pool, pool, zero);
-      const exercise = plan.find(
+      const exercise = requireExercise(plan.find(
         (planned) => planned.cards[0].id === "1",
-      )! as MultipleChoiceExercise;
+      ), "multipleChoice");
 
       expect(exercise.kind).toBe("multipleChoice");
       expect(exercise.options).toHaveLength(4);
@@ -491,8 +498,8 @@ describe("planExercises", () => {
 
       // Each planned on its own, so the no-three-in-a-row rule (covered separately below) cannot
       // demote either — this test is only about modality never mixing within one Exercise's pool.
-      const audioExercise = planExercises([audioTarget], pool, zero)[0] as MultipleChoiceExercise;
-      const textExercise = planExercises([textTarget], pool, zero)[0] as MultipleChoiceExercise;
+      const audioExercise = requireExercise(planExercises([audioTarget], pool, zero)[0], "multipleChoice");
+      const textExercise = requireExercise(planExercises([textTarget], pool, zero)[0], "multipleChoice");
 
       expect(audioExercise.kind).toBe("multipleChoice");
       expect(textExercise.kind).toBe("multipleChoice");
@@ -552,7 +559,7 @@ describe("planExercises", () => {
       const plan = planExercises(cards, cards, zero);
 
       expect(plan).toHaveLength(1);
-      const exercise = plan[0] as MatchingExercise;
+      const exercise = requireExercise(plan[0], "matching");
 
       expect(exercise.kind).toBe("matching");
       expect(exercise.cards.map((matched) => matched.id)).toEqual(["1", "2", "3", "4"]);
@@ -589,7 +596,7 @@ describe("planExercises", () => {
       ];
 
       const plan = planExercises(cards, cards, zero);
-      const matching = plan.find((exercise) => exercise.kind === "matching") as MatchingExercise;
+      const matching = requireExercise(plan.find((exercise) => exercise.kind === "matching"), "matching");
 
       expect(matching.cards.map((matched) => matched.id)).toEqual(["1", "2", "5", "6"]);
     });
@@ -684,7 +691,7 @@ describe("planExercises", () => {
       ];
 
       const plan = planExercises(cards, cards, zero);
-      const exercise = plan[0] as SwipeExercise;
+      const exercise = requireExercise(plan[0], "swipe");
 
       expect(exercise.kind).toBe("swipe");
       expect(exercise.cards.map((swiped) => swiped.id)).toEqual(["1"]);
@@ -748,7 +755,7 @@ describe("planExercises", () => {
         "multipleChoice",
         "flip",
       ]);
-      expect((plan[0] as SwipeExercise).cards.map((swiped) => swiped.id)).toEqual(["1"]);
+      expect((requireExercise(plan[0], "swipe")).cards.map((swiped) => swiped.id)).toEqual(["1"]);
     });
 
     it("never offers Swipe to a Card whose back is a recording", () => {

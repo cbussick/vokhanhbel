@@ -416,7 +416,8 @@ describe("Matching Exercise", () => {
       reviewSession: { totalReviewSubmissions: 0, optimisticPoints: 0 },
     });
     if (rejected.status !== "reviewing") {throw new Error("expected reviewing");}
-    const board = rejected.reviewSession.exercises[0] as MatchingExercise;
+    const board = rejected.reviewSession.exercises[0];
+    if (board?.kind !== "matching") {throw new Error("Expected matching Exercise");}
 
     // The Exercise total is untouched — the board shrinks, it doesn't disappear or requeue.
     expect(rejected.reviewSession.exercises).toHaveLength(2);
