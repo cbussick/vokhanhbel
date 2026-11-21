@@ -1,8 +1,11 @@
 import { maximumAudioBytes } from "../../src/contracts/card.js";
 import { problemTypes } from "../../src/contracts/problem.js";
 import { pronunciationInputSchema } from "../../src/contracts/pronunciation.js";
-import { handleRequest } from "../../src/server/http/handler.js";
-import { AppProblem } from "../../src/server/http/problem.js";
+import {
+  handleAuthenticatedRequest,
+  handleAuthenticatedJsonRequest,
+} from "../../src/server/http/handler.js";
+import { AppProblemError } from "../../src/server/http/problem.js";
 import {
   cleanupExpiredAudio,
   enforceAudioUploadRateLimit,
@@ -12,8 +15,10 @@ import { generatePronunciation } from "../../src/server/resources/pronunciations
 import { getSpeechProvider } from "../../src/server/speech/speechProvider.js";
 
 async function readLimitedBody(request: Request): Promise<Uint8Array> {
-  if (!request.body) return new Uint8Array();
-  const chunks: Uint8Array[] = [];
+  if (!request.body) {
+    return new Uint8Array();
+  }
+  const chunks: Array<Uint8Array> = [];
   let byteLength = 0;
 
   const chunkStream: AsyncIterable<Uint8Array> = request.body;
@@ -21,7 +26,7 @@ async function readLimitedBody(request: Request): Promise<Uint8Array> {
   for await (const value of chunkStream) {
     byteLength += value.byteLength;
     if (byteLength > maximumAudioBytes) {
-      throw new AppProblem(413, problemTypes.requestTooLarge, "Audiodatei ist zu groß");
+      throw new AppProblemError(413, problemTypes.requestTooLarge, "Audiodatei ist zu groß");
     }
     chunks.push(value);
   }
@@ -37,21 +42,22 @@ async function readLimitedBody(request: Request): Promise<Uint8Array> {
 }
 
 function uploadRecording(request: Request): Promise<Response> {
-  return handleRequest(
+  return handleAuthenticatedRequest(
     request,
     { unsafe: true, protected: true },
     async ({ sessionHash, requestId }) => {
       const contentLength = Number(request.headers.get("content-length") ?? 0);
 
-      if (contentLength > maximumAudioBytes)
-        throw new AppProblem(413, problemTypes.requestTooLarge, "Audiodatei ist zu groß");
-      await enforceAudioUploadRateLimit(sessionHash!);
+      if (contentLength > maximumAudioBytes) {
+        throw new AppProblemError(413, problemTypes.requestTooLarge, "Audiodatei ist zu groß");
+      }
+      await enforceAudioUploadRateLimit(sessionHash);
       const bytes = await readLimitedBody(request);
       await cleanupExpiredAudio();
 
       return Response.json(
         await stageAudio(
-          sessionHash!,
+          sessionHash,
           bytes,
           { source: "recorded" },
           request.headers.get("content-type") ?? undefined,
@@ -64,17 +70,17 @@ function uploadRecording(request: Request): Promise<Response> {
 }
 
 function generateClip(request: Request): Promise<Response> {
-  return handleRequest(
+  return handleAuthenticatedJsonRequest(
     request,
     { unsafe: true, protected: true, bodySchema: pronunciationInputSchema },
     async ({ body, sessionHash, requestId }) => {
       // Generation stages an audio asset the same way an upload does, so it draws on the same
       // allowance rather than opening a second, unmetered way to create one.
-      await enforceAudioUploadRateLimit(sessionHash!);
+      await enforceAudioUploadRateLimit(sessionHash);
       await cleanupExpiredAudio();
 
       return Response.json(
-        await generatePronunciation(sessionHash!, body, getSpeechProvider(), requestId),
+        await generatePronunciation(sessionHash, body, getSpeechProvider(), requestId),
         { status: 201 },
       );
     },

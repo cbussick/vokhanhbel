@@ -5,12 +5,12 @@ import { problemTypes } from "../../contracts/problem.js";
 import { getDatabase, getPool } from "../database/client.js";
 import { isUniqueViolation } from "../database/errors.js";
 import { collections } from "../database/schema.js";
-import { AppProblem } from "../http/problem.js";
+import { AppProblemError } from "../http/problem.js";
 import { deleteAudioObject } from "./audio.js";
 import { mapCollection } from "./collectionMapper.js";
 
 function throwNameConflict(): never {
-  throw new AppProblem(
+  throw new AppProblemError(
     409,
     problemTypes.collectionNameConflict,
     "Diese Sammlung gibt es schon",
@@ -42,9 +42,16 @@ export async function createCollection(input: CollectionInput) {
       })
       .returning();
 
-    return mapCollection(rows[0]!);
+    const [row] = rows;
+    if (!row) {
+      throw new Error("Insert returned no resource");
+    }
+
+    return mapCollection(row);
   } catch (error) {
-    if (isUniqueViolation(error)) throwNameConflict();
+    if (isUniqueViolation(error)) {
+      throwNameConflict();
+    }
     throw error;
   }
 }
@@ -65,19 +72,22 @@ export async function updateCollection(collectionId: string, input: CollectionIn
       .where(and(eq(collections.id, collectionId), isNull(collections.deletedAt)))
       .returning();
 
-    if (!rows[0])
-      throw new AppProblem(404, problemTypes.collectionNotFound, "Sammlung nicht gefunden");
+    if (!rows[0]) {
+      throw new AppProblemError(404, problemTypes.collectionNotFound, "Sammlung nicht gefunden");
+    }
 
     return mapCollection(rows[0]);
   } catch (error) {
-    if (isUniqueViolation(error)) throwNameConflict();
+    if (isUniqueViolation(error)) {
+      throwNameConflict();
+    }
     throw error;
   }
 }
 
 export async function deleteCollection(collectionId: string): Promise<void> {
   const client = await getPool().connect();
-  const obsoleteAudio: { id: string; objectKey: string }[] = [];
+  const obsoleteAudio: Array<{ id: string; objectKey: string }> = [];
 
   try {
     await client.query("BEGIN");
@@ -86,8 +96,9 @@ export async function deleteCollection(collectionId: string): Promise<void> {
       [collectionId],
     );
 
-    if (!selected.rows[0])
-      throw new AppProblem(404, problemTypes.collectionNotFound, "Sammlung nicht gefunden");
+    if (!selected.rows[0]) {
+      throw new AppProblemError(404, problemTypes.collectionNotFound, "Sammlung nicht gefunden");
+    }
 
     const audio = await client.query(
       `SELECT audio_assets.id, audio_assets.object_key

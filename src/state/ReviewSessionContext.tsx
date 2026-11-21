@@ -1,4 +1,5 @@
-import { createContext, type ReactNode, useContext, useReducer, useState } from "react";
+import { createContext, useContext, useReducer, useState } from "react";
+import type { ReactNode } from "react";
 import { apiPaths } from "../contracts/apiPaths";
 import type { AudioMetadata, Card } from "../contracts/card";
 import type { CollectionIconKey } from "../contracts/collection";
@@ -11,12 +12,8 @@ import type { Grade } from "../domain/review";
 import { getPointsForGrade, reviewSessionSize } from "../domain/review";
 import { ApiError } from "../lib/apiClient";
 import { getLastGroupedExerciseKind, setLastGroupedExerciseKind } from "../lib/browserState";
-import {
-  idleReviewSessionState,
-  reviewSessionReducer,
-  type ReviewSessionState,
-  type ReviewSubmissionIssue,
-} from "./review/reviewSessionReducer";
+import { idleReviewSessionState, reviewSessionReducer } from "./review/reviewSessionReducer";
+import type { ReviewSessionState, ReviewSubmissionIssue } from "./review/reviewSessionReducer";
 import type { ReviewSubmission } from "./review/reviewSubmission";
 import { useReviewSubmissions } from "./ReviewSubmissionContext";
 
@@ -25,7 +22,7 @@ export type ReviewScope =
   | {
       kind: "collection";
       collection: { name: string; icon: CollectionIconKey };
-      topics: { name: string; icon: TopicIconKey }[];
+      topics: Array<{ name: string; icon: TopicIconKey }>;
     };
 
 interface IdleView {
@@ -40,7 +37,7 @@ export interface FlipExerciseView {
   revealed: boolean;
   issue: ReviewSubmissionIssue | undefined;
   issueRequestId: string | undefined;
-  tutorConversation: TutorConversationMessage[];
+  tutorConversation: Array<TutorConversationMessage>;
   tutorExercise: TutorExerciseContext;
 }
 
@@ -57,17 +54,17 @@ export interface MatchingExerciseView {
   position: number;
   total: number;
   /** The board's Cards, for looking up the one a resolved tap opens Tutopher for. */
-  cards: Card[];
+  cards: Array<Card>;
   /** Front-column entries, in the planned shuffled order. */
-  front: MatchingEntryView[];
+  front: Array<MatchingEntryView>;
   /** Back-column entries, shuffled independently of `front`. */
-  back: MatchingEntryView[];
+  back: Array<MatchingEntryView>;
   /** True once every Card on the board has graded — the board stays up, and tapping any pair now
    * opens Tutopher for it instead of attempting another match. */
   resolved: boolean;
   issue: ReviewSubmissionIssue | undefined;
   issueRequestId: string | undefined;
-  tutorConversation: TutorConversationMessage[];
+  tutorConversation: Array<TutorConversationMessage>;
   tutorExercise: TutorExerciseContext;
 }
 
@@ -87,13 +84,13 @@ export interface MultipleChoiceExerciseView {
   currentCard: Card;
   position: number;
   total: number;
-  options: MultipleChoiceOptionView[];
+  options: Array<MultipleChoiceOptionView>;
   resolved: boolean;
   /** Whether the final verdict was correct — only meaningful once `resolved` is true. */
   correct: boolean;
   issue: ReviewSubmissionIssue | undefined;
   issueRequestId: string | undefined;
-  tutorConversation: TutorConversationMessage[];
+  tutorConversation: Array<TutorConversationMessage>;
   tutorExercise: TutorExerciseContext;
 }
 
@@ -111,7 +108,7 @@ export interface SwipeExerciseView {
   total: number;
   currentCard: Card;
   /** The Card's two options, left first — exactly one has `correct: true`. */
-  options: SwipeOptionView[];
+  options: Array<SwipeOptionView>;
   /** True once the Card has been swiped or tapped; the Session advances past it only on "Weiter",
    * the same pause every other Exercise in this app gives before moving on. */
   resolved: boolean;
@@ -119,7 +116,7 @@ export interface SwipeExerciseView {
   correct: boolean;
   issue: ReviewSubmissionIssue | undefined;
   issueRequestId: string | undefined;
-  tutorConversation: TutorConversationMessage[];
+  tutorConversation: Array<TutorConversationMessage>;
   tutorExercise: TutorExerciseContext;
 }
 
@@ -151,13 +148,13 @@ export interface TutorConversationMessage {
  * chose (null for a flip Card, which has none). Mirrors `TutorInput`'s exercise fields.
  */
 export interface TutorExerciseContext {
-  cards: { cardId: string; outcome: Grade | null }[];
+  cards: Array<{ cardId: string; outcome: Grade | null }>;
   chosenOptionText: string | null;
 }
 
 interface ReviewSessionContextValue {
   view: ReviewSessionView;
-  startReviewSession: (dueCards: Card[], scope?: ReviewScope) => void;
+  startReviewSession: (dueCards: Array<Card>, scope?: ReviewScope) => void;
   revealAnswer: () => void;
   gradeCard: (grade: Grade) => void;
   chooseOption: (optionId: string) => void;
@@ -173,7 +170,7 @@ interface ReviewSessionContextValue {
   repeatForgotten: () => void;
   leaveReviewSession: () => void;
   updateTutorConversation: (
-    update: (messages: TutorConversationMessage[]) => TutorConversationMessage[],
+    update: (messages: Array<TutorConversationMessage>) => Array<TutorConversationMessage>,
   ) => void;
 }
 
@@ -182,9 +179,15 @@ const ReviewSessionContext = createContext<ReviewSessionContextValue | undefined
 function getReviewSubmissionIssue(error: unknown): ReviewSubmissionIssue {
   const type = error instanceof ApiError ? error.problem.type : "";
 
-  if (type === problemTypes.reviewTooOld) return "too-old";
-  if (type === problemTypes.deviceClockAhead) return "clock";
-  if (type === problemTypes.cardNotFound) return "deleted";
+  if (type === problemTypes.reviewTooOld) {
+    return "too-old";
+  }
+  if (type === problemTypes.deviceClockAhead) {
+    return "clock";
+  }
+  if (type === problemTypes.cardNotFound) {
+    return "deleted";
+  }
 
   return "conflict";
 }
@@ -194,17 +197,21 @@ function getRequestId(error: unknown): string | undefined {
 }
 
 function getExerciseAttemptKey(state: ReviewSessionState): string | undefined {
-  if (state.status !== "reviewing") return undefined;
+  if (state.status !== "reviewing") {
+    return undefined;
+  }
 
   return `${state.reviewSession.id}:${state.reviewSession.exerciseAttemptNumber}`;
 }
 
 function toReviewSessionView(
   state: ReviewSessionState,
-  tutorConversation: { attemptKey: string; messages: TutorConversationMessage[] },
+  tutorConversation: { attemptKey: string; messages: Array<TutorConversationMessage> },
   scope: ReviewScope,
 ): ReviewSessionView {
-  if (state.status === "idle") return { kind: "idle" };
+  if (state.status === "idle") {
+    return { kind: "idle" };
+  }
   if (state.status === "summary") {
     return {
       kind: "summary",
@@ -221,7 +228,9 @@ function toReviewSessionView(
   const exercise = state.reviewSession.exercises[state.currentIndex];
   const currentCard = exercise?.cards[0];
 
-  if (!exercise || !currentCard) return { kind: "idle" };
+  if (!exercise || !currentCard) {
+    return { kind: "idle" };
+  }
 
   const position = state.currentIndex + 1;
   const total = state.reviewSession.exercises.length;
@@ -255,10 +264,12 @@ function toReviewSessionView(
         ? { cardId, text: faceText, matched: resolvedCardIds.has(cardId) }
         : undefined;
     };
-    const toEntries = (order: string[], face: "front" | "back") =>
-      order
-        .map((cardId) => toEntry(cardId, face))
-        .filter((entry): entry is MatchingEntryView => entry !== undefined);
+    const toEntries = (order: Array<string>, face: "front" | "back") =>
+      order.flatMap((cardId) => {
+        const entry = toEntry(cardId, face);
+
+        return entry === undefined ? [] : [entry];
+      });
 
     return {
       kind: "matching",
@@ -355,7 +366,7 @@ export function ReviewSessionProvider({ children }: { children: ReactNode }) {
   const [scope, setScope] = useState<ReviewScope>({ kind: "all" });
   const [tutorConversation, setTutorConversation] = useState<{
     attemptKey: string;
-    messages: TutorConversationMessage[];
+    messages: Array<TutorConversationMessage>;
   }>({ attemptKey: "", messages: [] });
   const { enqueueSubmission } = useReviewSubmissions();
 
@@ -368,10 +379,15 @@ export function ReviewSessionProvider({ children }: { children: ReactNode }) {
     });
   };
 
-  const startReviewSession = (dueCards: Card[], requestedScope: ReviewScope = { kind: "all" }) => {
+  const startReviewSession = (
+    dueCards: Array<Card>,
+    requestedScope: ReviewScope = { kind: "all" },
+  ) => {
     const initialQueue = dueCards.slice(0, reviewSessionSize);
 
-    if (initialQueue.length === 0) return;
+    if (initialQueue.length === 0) {
+      return;
+    }
 
     setScope(requestedScope);
 
@@ -421,16 +437,21 @@ export function ReviewSessionProvider({ children }: { children: ReactNode }) {
       !state.revealed ||
       state.issue === "clock" ||
       state.issue === "conflict"
-    )
+    ) {
       return;
+    }
 
     const exercise = state.reviewSession.exercises[state.currentIndex];
 
-    if (!exercise || exercise.kind !== "flip") return;
+    if (!exercise || exercise.kind !== "flip") {
+      return;
+    }
 
     const card = exercise.cards[0];
 
-    if (!card) return;
+    if (!card) {
+      return;
+    }
 
     const points = getPointsForGrade(grade);
     const input = {
@@ -453,21 +474,28 @@ export function ReviewSessionProvider({ children }: { children: ReactNode }) {
   };
 
   const chooseOption = (optionId: string) => {
-    if (state.status !== "reviewing" || state.issue === "clock" || state.issue === "conflict")
+    if (state.status !== "reviewing" || state.issue === "clock" || state.issue === "conflict") {
       return;
+    }
 
     const exercise = state.reviewSession.exercises[state.currentIndex];
 
-    if (!exercise || exercise.kind !== "multipleChoice") return;
+    if (!exercise || exercise.kind !== "multipleChoice") {
+      return;
+    }
 
     const deadOptionIds = state.multipleChoice?.deadOptionIds ?? [];
 
-    if (state.multipleChoice?.resolvedSubmission || deadOptionIds.includes(optionId)) return;
+    if (state.multipleChoice?.resolvedSubmission || deadOptionIds.includes(optionId)) {
+      return;
+    }
 
     const option = exercise.options.find((candidate) => candidate.cardId === optionId);
     const card = exercise.cards[0];
 
-    if (!option || !card) return;
+    if (!option || !card) {
+      return;
+    }
 
     // A first wrong pick just knocks the option out and re-asks; the Exercise stays open.
     if (!option.correct && deadOptionIds.length === 0) {
@@ -502,16 +530,21 @@ export function ReviewSessionProvider({ children }: { children: ReactNode }) {
   };
 
   const attemptMatchingPair = (frontCardId: string, backCardId: string) => {
-    if (state.status !== "reviewing" || state.issue === "clock" || state.issue === "conflict")
+    if (state.status !== "reviewing" || state.issue === "clock" || state.issue === "conflict") {
       return;
+    }
 
     const exercise = state.reviewSession.exercises[state.currentIndex];
 
-    if (!exercise || exercise.kind !== "matching") return;
+    if (!exercise || exercise.kind !== "matching") {
+      return;
+    }
 
     const resolvedCardIds = state.matching?.resolvedCardIds ?? [];
 
-    if (resolvedCardIds.includes(frontCardId) || resolvedCardIds.includes(backCardId)) return;
+    if (resolvedCardIds.includes(frontCardId) || resolvedCardIds.includes(backCardId)) {
+      return;
+    }
 
     // Front and back entries both carry the id of the Card they belong to, so a pair is correct
     // exactly when the two tapped ids are the same Card's — no text comparison needed.
@@ -523,7 +556,9 @@ export function ReviewSessionProvider({ children }: { children: ReactNode }) {
 
     const card = exercise.cards.find((candidate) => candidate.id === frontCardId);
 
-    if (!card) return;
+    if (!card) {
+      return;
+    }
 
     const taintedCardIds = state.matching?.taintedCardIds ?? [];
     const grade: Grade = taintedCardIds.includes(frontCardId) ? "almost" : "knew_it";
@@ -548,20 +583,27 @@ export function ReviewSessionProvider({ children }: { children: ReactNode }) {
   };
 
   const chooseSwipeOption = (optionCardId: string) => {
-    if (state.status !== "reviewing" || state.issue === "clock" || state.issue === "conflict")
+    if (state.status !== "reviewing" || state.issue === "clock" || state.issue === "conflict") {
       return;
+    }
 
     const exercise = state.reviewSession.exercises[state.currentIndex];
 
-    if (!exercise || exercise.kind !== "swipe") return;
+    if (!exercise || exercise.kind !== "swipe") {
+      return;
+    }
 
     // The resolution is still on screen — Swipe has no retry, so nothing more can be committed.
-    if (state.swipe) return;
+    if (state.swipe) {
+      return;
+    }
 
     const option = exercise.options.find((candidate) => candidate.cardId === optionCardId);
     const card = exercise.cards[0];
 
-    if (!option || !card) return;
+    if (!option || !card) {
+      return;
+    }
 
     // Two options mean no meaningful retry, so Swipe is the one binary Exercise (ADR-0014).
     const grade: Grade = option.correct ? "knew_it" : "forgot";
@@ -593,11 +635,13 @@ export function ReviewSessionProvider({ children }: { children: ReactNode }) {
     dispatch({ type: "reviewSessionLeft" });
   };
   const updateTutorConversation = (
-    update: (messages: TutorConversationMessage[]) => TutorConversationMessage[],
+    update: (messages: Array<TutorConversationMessage>) => Array<TutorConversationMessage>,
   ) => {
     const attemptKey = getExerciseAttemptKey(state);
 
-    if (!attemptKey) return;
+    if (!attemptKey) {
+      return;
+    }
 
     setTutorConversation((current) => ({
       attemptKey,
@@ -626,7 +670,9 @@ export function ReviewSessionProvider({ children }: { children: ReactNode }) {
 export function useReviewSession(): ReviewSessionContextValue {
   const value = useContext(ReviewSessionContext);
 
-  if (!value) throw new Error("ReviewSessionProvider missing");
+  if (!value) {
+    throw new Error("ReviewSessionProvider missing");
+  }
 
   return value;
 }

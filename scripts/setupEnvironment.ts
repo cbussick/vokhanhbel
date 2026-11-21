@@ -12,7 +12,9 @@ export async function setupEnvironment(directory = process.cwd()): Promise<"crea
 
     return "created";
   } catch (error) {
-    if (error instanceof Error && "code" in error && error.code === "EEXIST") return "exists";
+    if (error instanceof Error && "code" in error && error.code === "EEXIST") {
+      return "exists";
+    }
     throw error;
   }
 }
@@ -31,9 +33,11 @@ export async function main(): Promise<void> {
 const scriptPath = process.argv[1];
 
 if (scriptPath && import.meta.url === pathToFileURL(scriptPath).href) {
-  main().catch((error: unknown) => {
+  try {
+    await main();
+  } catch (error) {
     const message = error instanceof Error ? error.message : "Environment setup failed.";
     process.stderr.write(`${message}\n`);
     process.exitCode = 1;
-  });
+  }
 }

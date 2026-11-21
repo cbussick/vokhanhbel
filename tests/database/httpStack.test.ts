@@ -7,8 +7,10 @@ import { POST as createReview } from "../../api/reviews.js";
 import { POST as createSession } from "../../api/session.js";
 import { GET as readStats } from "../../api/stats.js";
 import { POST as createTopic } from "../../api/topics/index.js";
-import { maximumAudioBytes } from "../../src/contracts/card.js";
+import { maximumAudioBytes, audioMetadataSchema, cardSchema } from "../../src/contracts/card.js";
+import { collectionSchema } from "../../src/contracts/collection.js";
 import { maximumPronunciationTextLength } from "../../src/contracts/pronunciation.js";
+import { topicSchema } from "../../src/contracts/topic.js";
 import { createWavFixture } from "../../src/server/audio/audioFixture.test-helper.js";
 import {
   InMemoryAudioObjectStore,
@@ -23,6 +25,12 @@ import { RecordingSpeechProvider } from "../../src/server/speech/speechProvider.
 
 const origin = "http://localhost:4173";
 
+function parsePublicAudio(value: unknown) {
+  expect(JSON.stringify(value)).not.toContain("objectKey");
+
+  return audioMetadataSchema.parse(value);
+}
+
 afterEach(() => {
   setAudioObjectStoreForTests(undefined);
   setSpeechProviderForTests(undefined);
@@ -31,16 +39,33 @@ afterEach(() => {
 function request(path: string, method: "GET" | "POST", body?: unknown, cookie?: string): Request {
   const headers = new Headers({ origin, "sec-fetch-site": "same-origin" });
 
-  if (body !== undefined) headers.set("content-type", "application/json");
-  if (cookie) headers.set("cookie", cookie);
+  if (body !== undefined) {
+    headers.set("content-type", "application/json");
+  }
+  if (cookie) {
+    headers.set("cookie", cookie);
+  }
   const init: RequestInit = { method, headers };
 
-  if (body !== undefined) init.body = JSON.stringify(body);
+  if (body !== undefined) {
+    init.body = JSON.stringify(body);
+  }
 
   return new Request(`${origin}${path}`, init);
 }
 
 describe("real API handler stack", () => {
+  it("detects a private object key before parsing can strip response fields", () => {
+    const leaked = {
+      id: crypto.randomUUID(),
+      durationMs: 1000,
+      contentType: "audio/wav",
+      byteSize: 100,
+      synthesizedText: null,
+      objectKey: "private storage location",
+    };
+    expect(() => parsePublicAudio(leaked)).toThrow("objectKey");
+  });
   it("authenticates, creates and Grades a Card, then returns durable statistics", async () => {
     const password = "real stack password";
     process.env.APP_PASSWORD_HASH = await encodePassword(password);
@@ -55,7 +80,7 @@ describe("real API handler stack", () => {
       request("/api/collections", "POST", { name: "Echter Stack", icon: "book" }, cookie),
     );
     expect(collectionResponse.status).toBe(201);
-    const collection = (await collectionResponse.json()) as { id: string };
+    const collection = collectionSchema.parse(await collectionResponse.json());
     const topicResponse = await createTopic(
       request(
         "/api/topics",
@@ -65,7 +90,7 @@ describe("real API handler stack", () => {
       ),
     );
     expect(topicResponse.status).toBe(201);
-    const topic = (await topicResponse.json()) as { id: string };
+    const topic = topicSchema.parse(await topicResponse.json());
 
     const cardResponse = await createCard(
       request(
@@ -81,7 +106,7 @@ describe("real API handler stack", () => {
       ),
     );
     expect(cardResponse.status).toBe(201);
-    const card = (await cardResponse.json()) as { id: string; topicIds: string[] };
+    const card = cardSchema.parse(await cardResponse.json());
     expect(card.topicIds).toEqual([topic.id]);
 
     const reviewResponse = await createReview(
@@ -133,10 +158,9 @@ describe("real API handler stack", () => {
     const uploadResponse = await postAudio(uploadRequest);
 
     expect(uploadResponse.status).toBe(201);
-    const audio = (await uploadResponse.json()) as { id: string; durationMs: number };
+    const audio = parsePublicAudio(await uploadResponse.json());
     // A recording was never told what to say, so there is nothing to disclose about it.
-    expect(audio).toMatchObject({ durationMs: 1_000, synthesizedText: null });
-    expect(JSON.stringify(audio)).not.toContain("objectKey");
+    expect(audio).toMatchObject({ durationMs: 1000, synthesizedText: null });
     const recorded = await getPool().query<{ source: string; synthesized_text: string | null }>(
       "SELECT source, synthesized_text FROM audio_assets WHERE id=$1",
       [audio.id],
@@ -218,10 +242,10 @@ describe("real API handler stack", () => {
     );
 
     expect(generateResponse.status).toBe(201);
-    const audio = (await generateResponse.json()) as { id: string };
+    const audio = audioMetadataSchema.parse(await generateResponse.json());
     expect(audio).toMatchObject({
       contentType: "audio/mpeg",
-      durationMs: 1_000,
+      durationMs: 1000,
       byteSize: synthesizer.speech.bytes.byteLength,
       // Answered with the clip, so the Card form can say what it says without asking again.
       synthesizedText: "xin chào",

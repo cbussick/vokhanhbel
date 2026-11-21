@@ -7,11 +7,10 @@ import {
   collectionInputSchema,
   collectionSchema,
   defaultCollectionIcon,
-  type Collection,
-  type CollectionIconKey,
 } from "../contracts/collection";
+import type { Collection, CollectionIconKey } from "../contracts/collection";
 import { problemTypes } from "../contracts/problem";
-import { apiRequest, ApiError } from "../lib/apiClient";
+import { apiRequest, ApiError, apiCommand } from "../lib/apiClient";
 import { useOnlineStatus } from "../lib/browserState";
 import { queryKeys } from "../lib/queryKeys";
 import { CollectionIcon } from "./CollectionIcon";
@@ -82,9 +81,12 @@ export function CollectionFormDialog({
   const [error, setError] = useState<string>();
 
   const describeError = (value: unknown, fallback: string) => {
-    if (!(value instanceof ApiError)) return fallback;
-    if (value.problem.type === problemTypes.collectionNameConflict)
+    if (!(value instanceof ApiError)) {
+      return fallback;
+    }
+    if (value.problem.type === problemTypes.collectionNameConflict) {
       return t("collections.nameConflict");
+    }
 
     return fallback;
   };
@@ -101,21 +103,21 @@ export function CollectionFormDialog({
         ...(backLanguage !== (collection?.backLanguage ?? null) && { backLanguage }),
       });
 
-      return collectionSchema.parse(
-        collection
-          ? await apiRequest(apiPaths.collection(collection.id), {
-              method: "PATCH",
-              body: JSON.stringify(input),
-            })
-          : await apiRequest(apiPaths.collections, {
-              method: "POST",
-              body: JSON.stringify(input),
-            }),
-      );
+      return collection
+        ? await apiRequest(apiPaths.collection(collection.id), collectionSchema, {
+            method: "PATCH",
+            body: JSON.stringify(input),
+          })
+        : await apiRequest(apiPaths.collections, collectionSchema, {
+            method: "POST",
+            body: JSON.stringify(input),
+          });
     },
     onSuccess: async (saved) => {
       await queryClient.invalidateQueries({ queryKey: queryKeys.collections });
-      if (!collection) onCreated?.(saved);
+      if (!collection) {
+        onCreated?.(saved);
+      }
 
       dialogRef.current?.close();
       onClose();
@@ -124,8 +126,13 @@ export function CollectionFormDialog({
   });
 
   const remove = useMutation({
-    mutationFn: async () =>
-      apiRequest<void>(apiPaths.collection(collection!.id), { method: "DELETE" }),
+    mutationFn: async () => {
+      if (!collection) {
+        throw new Error("Cannot delete a missing collection");
+      }
+
+      return apiCommand(apiPaths.collection(collection.id), { method: "DELETE" });
+    },
     onSuccess: async () => {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: queryKeys.collections }),
@@ -146,7 +153,9 @@ export function CollectionFormDialog({
   const isPending = save.isPending || remove.isPending;
 
   const close = () => {
-    if (isPending) return;
+    if (isPending) {
+      return;
+    }
 
     dialogRef.current?.close();
     onClose();
@@ -155,7 +164,9 @@ export function CollectionFormDialog({
   const submit = (event: React.FormEvent) => {
     event.preventDefault();
 
-    if (isPending) return;
+    if (isPending) {
+      return;
+    }
 
     setError(undefined);
 
@@ -200,7 +211,9 @@ export function CollectionFormDialog({
               aria-busy={remove.isPending}
               aria-disabled={remove.isPending}
               onClick={() => {
-                if (!remove.isPending) remove.mutate();
+                if (!remove.isPending) {
+                  remove.mutate();
+                }
               }}
             >
               <PendingActionContent

@@ -1,11 +1,8 @@
 import { mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import { dirname, resolve, sep } from "node:path";
 import { z } from "zod";
-import {
-  getR2Environment,
-  getServerEnvironment,
-  type R2Environment,
-} from "../config/environment.js";
+import { getR2Environment, getServerEnvironment } from "../config/environment.js";
+import type { R2Environment } from "../config/environment.js";
 
 export interface AudioObjectRange {
   start: number;
@@ -28,7 +25,9 @@ function storedBytesInRange(bytes: Uint8Array, range?: AudioObjectRange): Stored
   const start = range?.start ?? 0;
   const end = Math.min(range?.end ?? bytes.byteLength - 1, bytes.byteLength - 1);
 
-  if (start < 0 || start >= bytes.byteLength || end < start) return null;
+  if (start < 0 || start >= bytes.byteLength || end < start) {
+    return null;
+  }
 
   return {
     bytes: bytes.slice(start, end + 1),
@@ -49,7 +48,9 @@ export class InMemoryAudioObjectStore implements AudioObjectStore {
   read(objectKey: string, range?: AudioObjectRange): Promise<StoredAudioObject | null> {
     const object = this.objects.get(objectKey);
 
-    if (!object) return Promise.resolve(null);
+    if (!object) {
+      return Promise.resolve(null);
+    }
 
     return Promise.resolve(storedBytesInRange(object.bytes, range));
   }
@@ -71,8 +72,9 @@ export class LocalAudioObjectStore implements AudioObjectStore {
   private pathFor(objectKey: string): string {
     const path = resolve(this.root, objectKey);
 
-    if (!path.startsWith(`${this.root}${sep}`))
+    if (!path.startsWith(`${this.root}${sep}`)) {
       throw new Error("Audio object key escapes local store");
+    }
 
     return path;
   }
@@ -92,7 +94,9 @@ export class LocalAudioObjectStore implements AudioObjectStore {
     try {
       bytes = Uint8Array.from(await readFile(this.pathFor(objectKey)));
     } catch (error) {
-      if (error instanceof Error && "code" in error && error.code === "ENOENT") return null;
+      if (error instanceof Error && "code" in error && error.code === "ENOENT") {
+        return null;
+      }
       throw error;
     }
 
@@ -114,7 +118,9 @@ export class FailingAudioObjectStore implements AudioObjectStore {
   }
 
   private rejectWhenConfigured(operation: keyof AudioObjectStore): void {
-    if (this.failures.has(operation)) throw new Error(`Injected audio ${operation} failure`);
+    if (this.failures.has(operation)) {
+      throw new Error(`Injected audio ${operation} failure`);
+    }
   }
 
   async put(objectKey: string, bytes: Uint8Array, contentType: string): Promise<void> {
@@ -143,7 +149,12 @@ const contentRangeSchema = z
   .string()
   .regex(/^bytes \d+-\d+\/\d+$/u)
   .transform((value, context) => {
-    const match = /^bytes (\d+)-(\d+)\/(\d+)$/u.exec(value)!;
+    const match = /^bytes (\d+)-(\d+)\/(\d+)$/u.exec(value);
+    if (!match) {
+      context.addIssue({ code: "custom", message: "Invalid R2 content range" });
+
+      return z.NEVER;
+    }
     const parsed = z
       .tuple([responseIntegerSchema, responseIntegerSchema, responseIntegerSchema])
       .safeParse(match.slice(1));
@@ -175,6 +186,7 @@ async function sha256(value: Uint8Array | string): Promise<string> {
 }
 
 async function hmac(key: ArrayBuffer | Uint8Array, value: string): Promise<ArrayBuffer> {
+  // eslint-disable-next-line @nkzw/no-instanceof -- Native typed-array identity selects a byte copy for WebCrypto; ArrayBuffer inputs must remain raw buffers.
   const keyBytes = key instanceof Uint8Array ? Uint8Array.from(key) : key;
   const cryptoKey = await crypto.subtle.importKey(
     "raw",
@@ -201,7 +213,7 @@ export class R2AudioObjectStore implements AudioObjectStore {
     extraHeaders: Record<string, string> = {},
   ): Promise<Response> {
     const now = new Date();
-    const date = now.toISOString().replace(/[:-]|\.\d{3}/gu, "");
+    const date = now.toISOString().replaceAll(/[:-]|\.\d{3}/gu, "");
     const dateStamp = date.slice(0, 8);
     const path = encodeObjectPath(this.configuration.bucket, objectKey);
     const host = new URL(this.configuration.endpoint).host;
@@ -212,9 +224,12 @@ export class R2AudioObjectStore implements AudioObjectStore {
       "x-amz-date": date,
       ...extraHeaders,
     });
-    const signedHeaderNames = [...headers.keys()].sort();
-    const canonicalHeaders = signedHeaderNames
-      .map((name) => `${name.toLowerCase()}:${headers.get(name)!.trim()}\n`)
+    const signedEntries = [...headers.entries()].toSorted(([left], [right]) =>
+      left < right ? -1 : left > right ? 1 : 0,
+    );
+    const signedHeaderNames = signedEntries.map(([name]) => name);
+    const canonicalHeaders = signedEntries
+      .map(([name, value]) => `${name.toLowerCase()}:${value.trim()}\n`)
       .join("");
     const signedHeaders = signedHeaderNames.map((name) => name.toLowerCase()).join(";");
     const canonicalRequest = [method, path, "", canonicalHeaders, signedHeaders, payloadHash].join(
@@ -237,27 +252,37 @@ export class R2AudioObjectStore implements AudioObjectStore {
       `AWS4-HMAC-SHA256 Credential=${this.configuration.accessKeyId}/${scope}, SignedHeaders=${signedHeaders}, Signature=${signature}`,
     );
 
-    return fetch(`${this.configuration.endpoint}${path}`, {
-      method,
-      headers,
-      ...(body ? { body: new Blob([Uint8Array.from(body)]) } : {}),
-    });
+    const request: RequestInit = { method, headers };
+
+    if (body) {
+      request.body = new Blob([Uint8Array.from(body)]);
+    }
+
+    return fetch(`${this.configuration.endpoint}${path}`, request);
   }
 
   async put(objectKey: string, bytes: Uint8Array, contentType: string): Promise<void> {
     const response = await this.request("PUT", objectKey, bytes, { "content-type": contentType });
 
-    if (!response.ok) throw new Error(`R2 upload failed (${response.status})`);
+    if (!response.ok) {
+      throw new Error(`R2 upload failed (${response.status})`);
+    }
   }
 
   async read(objectKey: string, range?: AudioObjectRange): Promise<StoredAudioObject | null> {
     const extraHeaders: Record<string, string> = {};
 
-    if (range) extraHeaders.range = `bytes=${range.start}-${range.end ?? ""}`;
+    if (range) {
+      extraHeaders.range = `bytes=${range.start}-${range.end ?? ""}`;
+    }
     const response = await this.request("GET", objectKey, undefined, extraHeaders);
 
-    if (response.status === 404) return null;
-    if (!response.ok) throw new Error(`R2 read failed (${response.status})`);
+    if (response.status === 404) {
+      return null;
+    }
+    if (!response.ok) {
+      throw new Error(`R2 read failed (${response.status})`);
+    }
 
     const bytes = new Uint8Array(await response.arrayBuffer());
     const contentRangeHeader = response.headers.get("content-range");
@@ -268,29 +293,34 @@ export class R2AudioObjectStore implements AudioObjectStore {
       response.headers.get("content-length") ?? bytes.byteLength,
     );
 
-    if (contentLength !== bytes.byteLength)
+    if (contentLength !== bytes.byteLength) {
       throw new Error("R2 returned an invalid content length");
+    }
     if (
       contentRange &&
       (contentRange.end - contentRange.start + 1 !== bytes.byteLength ||
         contentRange.start !== range?.start ||
         (range?.end !== undefined && contentRange.end > range.end))
-    )
+    ) {
       throw new Error("R2 returned an unexpected content range");
+    }
     const totalSize = contentRange?.totalSize ?? contentLength;
 
-    return {
-      bytes,
-      totalSize,
-      ...(contentRange ? { contentRange: contentRange.value } : {}),
-    };
+    const stored: StoredAudioObject = { bytes, totalSize };
+
+    if (contentRange) {
+      stored.contentRange = contentRange.value;
+    }
+
+    return stored;
   }
 
   async delete(objectKey: string): Promise<void> {
     const response = await this.request("DELETE", objectKey);
 
-    if (!response.ok && response.status !== 404)
+    if (!response.ok && response.status !== 404) {
       throw new Error(`R2 deletion failed (${response.status})`);
+    }
   }
 }
 
@@ -300,8 +330,9 @@ export function getAudioObjectStore(): AudioObjectStore {
   const environment = getServerEnvironment();
   const localDirectory = environment.AUDIO_OBJECT_DIRECTORY;
 
-  if (localDirectory && environment.R2_ENVIRONMENT)
+  if (localDirectory && environment.R2_ENVIRONMENT) {
     throw new Error("Local audio storage cannot be combined with deployed R2 configuration");
+  }
 
   audioObjectStore ??= localDirectory
     ? new LocalAudioObjectStore(localDirectory)

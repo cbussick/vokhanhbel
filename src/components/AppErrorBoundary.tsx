@@ -1,4 +1,5 @@
-import { Component, type ErrorInfo, type ReactNode } from "react";
+import { Component } from "react";
+import type { ErrorInfo, ReactNode } from "react";
 import { de } from "../i18n/resources";
 import { ErrorScreen } from "./ErrorScreen";
 
@@ -20,6 +21,7 @@ export class AppErrorBoundary extends Component<AppErrorBoundaryProps, AppErrorB
   }
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+    // eslint-disable-next-line no-console -- Native React error boundary retains browser error diagnostics and component stack.
     console.error("Uncaught application error", error, errorInfo.componentStack);
   }
 

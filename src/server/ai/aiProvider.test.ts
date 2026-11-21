@@ -2,7 +2,28 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { resetServerEnvironmentForTests } from "../config/environment.js";
 import { createOpenAiProvider } from "./aiProvider.js";
 
-const { createResponse } = vi.hoisted(() => ({ createResponse: vi.fn() }));
+function promptContent(): string {
+  const first = createResponse.mock.calls[0]?.[0].input[0];
+  if (!first) {
+    throw new Error("Expected model input");
+  }
+
+  return first.content;
+}
+
+interface ResponseRequest {
+  instructions: string;
+  input: Array<{ role: string; content: string }>;
+}
+const { createResponse } = vi.hoisted(() => ({
+  createResponse:
+    vi.fn<
+      (
+        request: ResponseRequest,
+        options: { signal: AbortSignal },
+      ) => Promise<AsyncIterable<unknown>>
+    >(),
+}));
 
 // These tests cover the OpenAI adapter itself, which constructs the client. Injecting a seam here
 // would only move the boundary and leave the adapter untested. Consumers use AiProvider instead.
@@ -15,7 +36,7 @@ vi.mock("openai", () => ({
 
 const subjectCard = { front: "front", back: "back" };
 
-async function* stream(events: unknown[]) {
+async function* stream(events: Array<unknown>) {
   yield* events;
 }
 
@@ -24,10 +45,12 @@ async function drain(events: AsyncIterable<unknown>): Promise<void> {
   const iterator = events[Symbol.asyncIterator]();
   let step = await iterator.next();
 
-  while (!step.done) step = await iterator.next();
+  while (!step.done) {
+    step = await iterator.next();
+  }
 }
 
-async function collectProviderEvents(events: unknown[]) {
+async function collectProviderEvents(events: Array<unknown>) {
   createResponse.mockResolvedValue(stream(events));
   const provider = createOpenAiProvider();
   const collected = [];
@@ -110,15 +133,6 @@ describe("Exercise content reaches the model as untrusted data", () => {
     createResponse.mockReset();
     createResponse.mockResolvedValue(stream([]));
   });
-
-  function promptContent(): string {
-    const call = createResponse.mock.calls[0]?.[0] as {
-      instructions: string;
-      input: { role: string; content: string }[];
-    };
-
-    return call.input[0]!.content;
-  }
 
   it("marks a flip Card's Exercise as unbewertet, with no chosen option", async () => {
     const provider = createOpenAiProvider();

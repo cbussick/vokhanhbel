@@ -1,10 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import {
-  maximumAudioBytes,
-  maximumAudioDurationMs,
-  type AudioMetadata,
-} from "../../contracts/card";
+import { maximumAudioBytes, maximumAudioDurationMs } from "../../contracts/card";
+import type { AudioMetadata } from "../../contracts/card";
 import type { CollectionLanguage } from "../../contracts/collection";
 import { AudioPlayer } from "./AudioPlayer";
 import { stopApplicationPlayback } from "./playbackCoordinator";
@@ -20,6 +17,9 @@ export type AudioDraft =
   | { origin: "local"; blob: Blob; source: string; metadata: AudioMetadata }
   | { origin: "staged"; metadata: AudioMetadata };
 
+const hasDraggedFiles = (event: React.DragEvent) =>
+  Array.from(event.dataTransfer.types).includes("Files");
+
 const recorderTypes = [
   "audio/webm;codecs=opus",
   "audio/ogg;codecs=opus",
@@ -27,13 +27,23 @@ const recorderTypes = [
 ];
 
 function normalizeContentType(type: string): AudioMetadata["contentType"] | undefined {
-  const base = type.split(";", 1)[0]!.toLowerCase();
+  const base = (type.split(";", 1)[0] ?? "").toLowerCase();
 
-  if (base === "audio/mpeg" || base === "audio/mp3") return "audio/mpeg";
-  if (base === "audio/mp4" || base === "audio/x-m4a") return "audio/mp4";
-  if (base === "audio/webm") return "audio/webm";
-  if (base === "audio/ogg") return "audio/ogg";
-  if (base === "audio/wav" || base === "audio/x-wav") return "audio/wav";
+  if (base === "audio/mpeg" || base === "audio/mp3") {
+    return "audio/mpeg";
+  }
+  if (base === "audio/mp4" || base === "audio/x-m4a") {
+    return "audio/mp4";
+  }
+  if (base === "audio/webm") {
+    return "audio/webm";
+  }
+  if (base === "audio/ogg") {
+    return "audio/ogg";
+  }
+  if (base === "audio/wav" || base === "audio/x-wav") {
+    return "audio/wav";
+  }
 
   return undefined;
 }
@@ -82,27 +92,40 @@ function StopIcon() {
 async function readDuration(source: string): Promise<number> {
   return new Promise((resolve, reject) => {
     const audio = new Audio();
-    const timeout = window.setTimeout(() => reject(new Error("metadata-timeout")), 8_000);
+    const timeout = window.setTimeout(() => reject(new Error("metadata-timeout")), 8000);
     const finish = () => window.clearTimeout(timeout);
 
     audio.preload = "metadata";
-    audio.onloadedmetadata = () => {
-      finish();
-      const duration = Math.round(audio.duration * 1_000);
+    audio.addEventListener(
+      "loadedmetadata",
+      () => {
+        finish();
+        const duration = Math.round(audio.duration * 1000);
 
-      if (!Number.isFinite(duration) || duration <= 0) reject(new Error("invalid-duration"));
-      else resolve(duration);
-    };
-    audio.onerror = () => {
-      finish();
-      reject(new Error("invalid-audio"));
-    };
+        if (!Number.isFinite(duration) || duration <= 0) {
+          reject(new Error("invalid-duration"));
+        } else {
+          resolve(duration);
+        }
+      },
+      { once: true },
+    );
+    audio.addEventListener(
+      "error",
+      () => {
+        finish();
+        reject(new Error("invalid-audio"));
+      },
+      { once: true },
+    );
     audio.src = source;
   });
 }
 
 export function releaseAudioDraft(draft: AudioDraft | null): void {
-  if (draft?.origin === "local") URL.revokeObjectURL(draft.source);
+  if (draft?.origin === "local") {
+    URL.revokeObjectURL(draft.source);
+  }
 }
 
 export function AudioInput({
@@ -134,7 +157,7 @@ export function AudioInput({
   const timerRef = useRef<number | undefined>(undefined);
   const intervalRef = useRef<number | undefined>(undefined);
   const startedAtRef = useRef(0);
-  const chunksRef = useRef<Blob[]>([]);
+  const chunksRef = useRef<Array<Blob>>([]);
   const dragDepthRef = useRef(0);
   const [recordingState, setRecordingState] = useState<
     "idle" | "requesting" | "recording" | "denied" | "missing" | "unsupported"
@@ -155,8 +178,12 @@ export function AudioInput({
   };
 
   const clearTimers = () => {
-    if (timerRef.current) window.clearTimeout(timerRef.current);
-    if (intervalRef.current) window.clearInterval(intervalRef.current);
+    if (timerRef.current) {
+      window.clearTimeout(timerRef.current);
+    }
+    if (intervalRef.current) {
+      window.clearInterval(intervalRef.current);
+    }
     timerRef.current = undefined;
     intervalRef.current = undefined;
   };
@@ -166,7 +193,9 @@ export function AudioInput({
   useEffect(
     () => () => {
       clearTimers();
-      if (recorderRef.current?.state === "recording") recorderRef.current.stop();
+      if (recorderRef.current?.state === "recording") {
+        recorderRef.current.stop();
+      }
       stopTracks();
     },
     // oxlint-disable-next-line react/exhaustive-effect-dependencies -- unmount-only cleanup
@@ -177,7 +206,9 @@ export function AudioInput({
     releaseAudioDraft(draft);
     setHasGenerated(false);
     onDraftChange(value);
-    if (value) onExistingRemovedChange(true);
+    if (value) {
+      onExistingRemovedChange(true);
+    }
   };
 
   const acceptBlob = async (blob: Blob, knownDuration?: number) => {
@@ -233,12 +264,13 @@ export function AudioInput({
   };
 
   const chooseFile = async (file: File | undefined) => {
-    if (file) await acceptBlob(file);
-    if (inputRef.current) inputRef.current.value = "";
+    if (file) {
+      await acceptBlob(file);
+    }
+    if (inputRef.current) {
+      inputRef.current.value = "";
+    }
   };
-
-  const hasDraggedFiles = (event: React.DragEvent) =>
-    Array.from(event.dataTransfer.types).includes("Files");
 
   const resetDragState = () => {
     dragDepthRef.current = 0;
@@ -247,7 +279,9 @@ export function AudioInput({
 
   const stopRecording = () => {
     clearTimers();
-    if (recorderRef.current?.state === "recording") recorderRef.current.stop();
+    if (recorderRef.current?.state === "recording") {
+      recorderRef.current.stop();
+    }
   };
 
   const startRecording = async () => {
@@ -274,7 +308,9 @@ export function AudioInput({
       recorderRef.current = recorder;
       chunksRef.current = [];
       recorder.ondataavailable = (event) => {
-        if (event.data.size) chunksRef.current.push(event.data);
+        if (event.data.size) {
+          chunksRef.current.push(event.data);
+        }
       };
       recorder.onstop = () => {
         clearTimers();
@@ -291,9 +327,9 @@ export function AudioInput({
         setRemainingMs(Math.max(0, maximumAudioDurationMs - (Date.now() - startedAtRef.current)));
       }, 100);
       timerRef.current = window.setTimeout(stopRecording, maximumAudioDurationMs);
-    } catch (value) {
+    } catch (error_) {
       stopTracks();
-      const name = value instanceof DOMException ? value.name : "";
+      const name = error_ instanceof DOMException ? error_.name : "";
       setRecordingState(name === "NotFoundError" ? "missing" : "denied");
     }
   };
@@ -320,25 +356,35 @@ export function AudioInput({
       className={styles.input}
       data-dragging={dragging ? "true" : undefined}
       onDragEnter={(event) => {
-        if (!hasDraggedFiles(event)) return;
+        if (!hasDraggedFiles(event)) {
+          return;
+        }
         event.preventDefault();
         dragDepthRef.current += 1;
         setRecordingOptionsOpen(true);
         setDragging(true);
       }}
       onDragOver={(event) => {
-        if (!hasDraggedFiles(event)) return;
+        if (!hasDraggedFiles(event)) {
+          return;
+        }
         event.preventDefault();
         event.dataTransfer.dropEffect = "copy";
       }}
       onDragLeave={(event) => {
-        if (!hasDraggedFiles(event)) return;
+        if (!hasDraggedFiles(event)) {
+          return;
+        }
         event.preventDefault();
         dragDepthRef.current = Math.max(0, dragDepthRef.current - 1);
-        if (dragDepthRef.current === 0) setDragging(false);
+        if (dragDepthRef.current === 0) {
+          setDragging(false);
+        }
       }}
       onDrop={(event) => {
-        if (!hasDraggedFiles(event)) return;
+        if (!hasDraggedFiles(event)) {
+          return;
+        }
         event.preventDefault();
         resetDragState();
         void chooseFile(event.dataTransfer.files[0]);
@@ -359,7 +405,7 @@ export function AudioInput({
             {isRecording ? (
               <>
                 <span className={styles.recordingDot} />
-                {t("audio.recording", { seconds: (remainingMs / 1_000).toFixed(1) })}
+                {t("audio.recording", { seconds: (remainingMs / 1000).toFixed(1) })}
               </>
             ) : null}
           </span>

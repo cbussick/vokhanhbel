@@ -12,7 +12,7 @@ export interface TutorExerciseCardContent {
 export interface TutorProviderRequest {
   /** The Card the Tutor dialog is anchored to — always present in `exerciseCards` too. */
   subjectCard: { front: string; back: string };
-  exerciseCards: TutorExerciseCardContent[];
+  exerciseCards: Array<TutorExerciseCardContent>;
   chosenOptionText: string | null;
   input: TutorInput;
   signal: AbortSignal;
@@ -78,9 +78,11 @@ export function createOpenAiProvider(): AiProvider {
       );
 
       for await (const event of stream) {
-        if (event.type === "response.output_text.delta") yield { type: "delta", text: event.delta };
-        else if (event.type === "response.completed") yield { type: "done", truncated: false };
-        else if (event.type === "response.incomplete") {
+        if (event.type === "response.output_text.delta") {
+          yield { type: "delta", text: event.delta };
+        } else if (event.type === "response.completed") {
+          yield { type: "done", truncated: false };
+        } else if (event.type === "response.incomplete") {
           if (event.response.incomplete_details?.reason === "max_output_tokens") {
             yield { type: "done", truncated: true };
           } else {

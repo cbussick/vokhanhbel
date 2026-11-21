@@ -77,15 +77,16 @@ function CollectionCardsRoute() {
 
   let content;
 
-  if (cards.isPending || collections.isPending) content = <DelayedSkeleton />;
-  else if (!collection)
+  if (cards.isPending || collections.isPending) {
+    content = <DelayedSkeleton />;
+  } else if (!collection) {
     content = (
       <div className={styles.center}>
         <p>{t("collections.notFound")}</p>
         <Link to="/cards">{t("collections.backToAll")}</Link>
       </div>
     );
-  else if (cards.isError && !cards.data)
+  } else if (cards.isError && !cards.data) {
     content = (
       <div className={styles.center}>
         <p>{t("errors.load")}</p>
@@ -94,7 +95,7 @@ function CollectionCardsRoute() {
         </button>
       </div>
     );
-  else
+  } else {
     content = (
       <>
         <div className={styles.toolbar}>
@@ -268,13 +269,16 @@ function CollectionCardsRoute() {
             topic={topicBeingEdited}
             onClose={() => setEditingTopicId(null)}
             onDeleted={() => {
-              if (topicFilter === topicBeingEdited.id) setTopicFilter(null);
+              if (topicFilter === topicBeingEdited.id) {
+                setTopicFilter(null);
+              }
             }}
           />
         )}
         <Outlet />
       </>
     );
+  }
 
   return (
     <AppShell

@@ -39,7 +39,9 @@ function ReviewSessionRoute() {
   const [backAudioAvailable, setBackAudioAvailable] = useState(true);
   const [unavailableOptionIds, setUnavailableOptionIds] = useState<ReadonlySet<string>>(new Set());
 
-  if (reviewSession.view.kind === "idle") return <Navigate to="/review" />;
+  if (reviewSession.view.kind === "idle") {
+    return <Navigate to="/review" />;
+  }
 
   const close = () => {
     reviewSession.leaveReviewSession();
@@ -59,15 +61,20 @@ function ReviewSessionRoute() {
     setUnavailableOptionIds((current) => {
       const next = new Set(current);
 
-      if (available) next.delete(optionId);
-      else next.add(optionId);
+      if (available) {
+        next.delete(optionId);
+      } else {
+        next.add(optionId);
+      }
 
       return next;
     });
   };
 
   const reveal = () => {
-    if (reviewSession.view.kind !== "flip" || reviewSession.view.revealed) return;
+    if (reviewSession.view.kind !== "flip" || reviewSession.view.revealed) {
+      return;
+    }
 
     reviewSession.revealAnswer();
 

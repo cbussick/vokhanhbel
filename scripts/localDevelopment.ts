@@ -12,8 +12,8 @@ export function composeProjectName(checkoutPath: string): string {
   const canonicalPath = resolve(checkoutPath);
   const readableName = basename(canonicalPath)
     .toLowerCase()
-    .replace(/[^a-z0-9_-]+/g, "-")
-    .replace(/^-+|-+$/g, "")
+    .replaceAll(/[^a-z0-9_-]+/g, "-")
+    .replaceAll(/^-+|-+$/g, "")
     .slice(0, 24);
   const pathHash = createHash("sha256").update(canonicalPath).digest("hex").slice(0, 10);
 
@@ -37,11 +37,11 @@ export function databaseUrlFromPublishedPort(output: string): string {
   return `postgresql://postgres:postgres@127.0.0.1:${port}/${databaseName}`;
 }
 
-function dockerArguments(project: string, ...args: string[]): string[] {
+function dockerArguments(project: string, ...args: Array<string>): Array<string> {
   return ["compose", "--project-name", project, "--file", composeFile, ...args];
 }
 
-function runDocker(project: string, ...args: string[]): string {
+function runDocker(project: string, ...args: Array<string>): string {
   return execFileSync("docker", dockerArguments(project, ...args), {
     cwd: repositoryRoot,
     encoding: "utf8",
@@ -85,7 +85,11 @@ export function vercelDevelopmentEnvironment(
   return runtimeEnvironment;
 }
 
-function runNode(script: string, args: string[], environment: NodeJS.ProcessEnv): Promise<number> {
+function runNode(
+  script: string,
+  args: Array<string>,
+  environment: NodeJS.ProcessEnv,
+): Promise<number> {
   return new Promise((resolveExit, reject) => {
     const child = spawn(process.execPath, [script, ...args], {
       cwd: repositoryRoot,
@@ -128,12 +132,17 @@ async function runApplication(project: string, databaseUrl: string): Promise<num
   const environment = developmentEnvironment(databaseUrl);
   const drizzle = resolve(repositoryRoot, "node_modules/drizzle-kit/bin.cjs");
   const migrationExit = await runNode(drizzle, ["migrate"], environment);
-  if (migrationExit !== 0) return migrationExit;
+  if (migrationExit !== 0) {
+    return migrationExit;
+  }
 
   const port = await availableApplicationPort();
   const applicationUrl = `http://127.0.0.1:${port}`;
+  // eslint-disable-next-line no-console -- Native CLI boundary prints the allocated local application URL.
   console.log(`\nApplication: ${applicationUrl}`);
+  // eslint-disable-next-line no-console -- Native CLI boundary prints the isolated database identity.
   console.log(`Database: project=${project}, host=127.0.0.1, port=${new URL(databaseUrl).port}`);
+  // eslint-disable-next-line no-console -- Native CLI boundary prints the persistent volume identity.
   console.log(`Data volume: ${project}_vokhanhbel-postgres-data-v1\n`);
 
   const vercel = resolve(repositoryRoot, "node_modules/vercel/dist/index.js");
@@ -161,6 +170,7 @@ async function main(): Promise<void> {
     return;
   }
   if (command === "inspect") {
+    // eslint-disable-next-line no-console -- Native CLI inspect boundary prints the selected Compose project.
     console.log(`Compose project: ${project}`);
     process.stdout.write(runDocker(project, "ps"));
 
@@ -168,23 +178,31 @@ async function main(): Promise<void> {
   }
 
   const databaseUrl = startDatabase(project);
+  // eslint-disable-next-line no-console -- Native CLI startup boundary prints the isolated database identity.
   console.log(`Database: project=${project}, host=127.0.0.1, port=${new URL(databaseUrl).port}`);
 
-  if (command === "up") return;
+  if (command === "up") {
+    return;
+  }
   if (command === "studio") {
     const drizzle = resolve(repositoryRoot, "node_modules/drizzle-kit/bin.cjs");
     process.exitCode = await runNode(drizzle, ["studio"], developmentEnvironment(databaseUrl));
 
     return;
   }
-  if (command !== "app") throw new Error(`Unknown local development command: ${command}`);
+  if (command !== "app") {
+    throw new Error(`Unknown local development command: ${command}`);
+  }
 
   process.exitCode = await runApplication(project, databaseUrl);
 }
 
 if (basename(process.argv[1] ?? "") === "localDevelopment.ts") {
-  main().catch((error: unknown) => {
+  try {
+    await main();
+  } catch (error) {
+    // eslint-disable-next-line no-console -- Native CLI failure boundary preserves stderr diagnostics and console inspection of non-Error failures.
     console.error(error instanceof Error ? error.message : error);
     process.exitCode = 1;
-  });
+  }
 }

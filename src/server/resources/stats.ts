@@ -1,5 +1,6 @@
 import { z } from "zod";
-import { statsSchema, type Stats } from "../../contracts/stats.js";
+import { statsSchema } from "../../contracts/stats.js";
+import type { Stats } from "../../contracts/stats.js";
 import { boxSchema } from "../../domain/review.js";
 import { calculateStreak } from "../../domain/streak.js";
 import { berlinTimeZone, toBerlinDay } from "../../domain/time.js";

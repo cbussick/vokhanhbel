@@ -2,10 +2,10 @@ import { z } from "zod";
 import { boxSchema } from "../domain/review.js";
 import { createNormalizedTextSchema, utcTimestampSchema, uuidSchema } from "./common.js";
 
-export const maximumCardTextLength = 1_000;
+export const maximumCardTextLength = 1000;
 
 /** What any clip on a Card face has to fit in, however it was produced. */
-export const maximumAudioDurationMs = 7_000;
+export const maximumAudioDurationMs = 7000;
 export const maximumAudioBytes = 2_000_000;
 
 export const audioMetadataSchema = z.object({
@@ -61,23 +61,18 @@ const structuredCardSchema = z.object({
 });
 
 export const cardSchema = z.preprocess((value) => {
-  if (!value || typeof value !== "object") return value;
-  // This preprocessor is the boundary parser itself, so the payload has no contract yet;
-  // cardSchema imposes one below.
-  // SAFETY: the guard above established that value is a non-null object, so indexing it by string
-  // is sound. cardSchema validates every field immediately after this preprocessing step.
-  // oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type -- boundary parser
-  const candidate = value as Record<string, unknown>;
+  if (!value || typeof value !== "object") {
+    return value;
+  }
+  const topicIds = "topicIds" in value ? value.topicIds : undefined;
+  const front = "front" in value ? value.front : undefined;
+  const back = "back" in value ? value.back : undefined;
 
   return {
-    ...candidate,
-    topicIds: Array.isArray(candidate.topicIds) ? candidate.topicIds : [],
-    front:
-      typeof candidate.front === "string"
-        ? { text: candidate.front, audio: null }
-        : candidate.front,
-    back:
-      typeof candidate.back === "string" ? { text: candidate.back, audio: null } : candidate.back,
+    ...value,
+    topicIds: Array.isArray(topicIds) ? topicIds : [],
+    front: typeof front === "string" ? { text: front, audio: null } : front,
+    back: typeof back === "string" ? { text: back, audio: null } : back,
   };
 }, structuredCardSchema);
 

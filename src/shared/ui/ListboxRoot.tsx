@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useRef, type ReactNode } from "react";
+import { useCallback, useEffect, useRef } from "react";
+import type { ReactNode } from "react";
 
 export function ListboxRoot({
   rootRef,
@@ -18,7 +19,9 @@ export function ListboxRoot({
 
   useEffect(() => {
     const clearAfterMouseRelease = (event: PointerEvent) => {
-      if (event.pointerType === "mouse") clearPointerStart();
+      if (event.pointerType === "mouse") {
+        clearPointerStart();
+      }
     };
 
     window.addEventListener("pointerup", clearAfterMouseRelease, { passive: true });
@@ -41,8 +44,9 @@ export function ListboxRoot({
         window.setTimeout(clearPointerStart, 0);
       }}
       onBlur={(event) => {
-        if (!pointerStartedInside.current && !event.currentTarget.contains(event.relatedTarget))
+        if (!pointerStartedInside.current && !event.currentTarget.contains(event.relatedTarget)) {
           onFocusLeave();
+        }
       }}
     >
       {children}

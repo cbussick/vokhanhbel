@@ -4,7 +4,16 @@ import { resetServerEnvironmentForTests } from "../config/environment.js";
 import { createGoogleSpeechProvider, synthesizePronunciation } from "./speechProvider.js";
 import { RecordingSpeechProvider } from "./speechProvider.test-helper.js";
 
-const { synthesizeSpeech } = vi.hoisted(() => ({ synthesizeSpeech: vi.fn() }));
+const { synthesizeSpeech } = vi.hoisted(() => ({
+  synthesizeSpeech:
+    vi.fn<
+      (request: {
+        input: { text: string };
+        voice: { languageCode: string; name: string };
+        audioConfig: { audioEncoding: string };
+      }) => Promise<[{ audioContent: Uint8Array | string | null }]>
+    >(),
+}));
 
 // These tests cover the Google adapter itself, which constructs the client. Injecting a seam here
 // would only move the boundary and leave the adapter untested. Consumers use SpeechProvider.
@@ -15,7 +24,7 @@ vi.mock("@google-cloud/text-to-speech", () => ({
   },
 }));
 
-const pinnedVoices: [CollectionLanguage, string][] = [
+const pinnedVoices: Array<[CollectionLanguage, string]> = [
   ["vi-VN", "vi-VN-Chirp3-HD-Gacrux"],
   ["de-DE", "de-DE-Chirp3-HD-Achernar"],
   ["en-US", "en-US-Chirp3-HD-Despina"],
@@ -64,7 +73,7 @@ describe("Google Text-to-Speech adapter", () => {
       RATE_LIMIT_HMAC_SECRET: "test-only-secret-at-least-thirty-two-characters",
       GOOGLE_TTS_PROJECT_ID: "test-project",
       GOOGLE_TTS_CLIENT_EMAIL: "tts@test-project.iam.gserviceaccount.com",
-      GOOGLE_TTS_PRIVATE_KEY: "-----BEGIN PRIVATE KEY-----\\ntest\\n-----END PRIVATE KEY-----\\n",
+      GOOGLE_TTS_PRIVATE_KEY: String.raw`-----BEGIN PRIVATE KEY-----\ntest\n-----END PRIVATE KEY-----\n`,
     });
     resetServerEnvironmentForTests();
     synthesizeSpeech.mockReset();

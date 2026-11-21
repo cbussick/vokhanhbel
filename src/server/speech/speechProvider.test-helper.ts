@@ -7,7 +7,7 @@ import type { SpeechProvider, SpeechRequest, SynthesizedSpeech } from "./speechP
  */
 export class RecordingSpeechProvider implements SpeechProvider {
   readonly name = "recording-speech-provider";
-  readonly requests: SpeechRequest[] = [];
+  readonly requests: Array<SpeechRequest> = [];
   speech: SynthesizedSpeech = { bytes: createMp3Fixture(), contentType: "audio/mpeg" };
   failure: Error | undefined;
 

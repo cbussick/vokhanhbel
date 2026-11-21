@@ -82,7 +82,7 @@ describe("CollectionSelect", () => {
 
   it("offers Sammlung erstellen without changing the selected Collection", async () => {
     const user = userEvent.setup();
-    const onCreate = vi.fn();
+    const onCreate = vi.fn<() => void>();
     render(
       <>
         <label htmlFor="collection">Sammlung</label>

@@ -6,9 +6,9 @@ import { AudioPlayer } from "./AudioPlayer";
 
 const firstAudio = {
   id: "11111111-1111-4111-8111-111111111111",
-  durationMs: 2_000,
+  durationMs: 2000,
   contentType: "audio/wav" as const,
-  byteSize: 1_000,
+  byteSize: 1000,
   synthesizedText: null,
 };
 const secondAudio = { ...firstAudio, id: "22222222-2222-4222-8222-222222222222" };
@@ -60,7 +60,10 @@ describe("AudioPlayer", () => {
 
   it("moves the loading state into the play control without showing an error", async () => {
     vi.spyOn(HTMLMediaElement.prototype, "play").mockImplementation(
-      () => new Promise(() => undefined),
+      () =>
+        new Promise<void>(() => {
+          // Intentionally pending: exercise the native loading state without settling playback.
+        }),
     );
     const user = userEvent.setup();
     render(<AudioPlayer audio={firstAudio} label="Audio Vorderseite" />);

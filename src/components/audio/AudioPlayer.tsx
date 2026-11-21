@@ -8,7 +8,7 @@ import { beginPlayback, endPlayback } from "./playbackCoordinator";
 import styles from "./AudioPlayer.module.css";
 
 export function formatAudioDuration(durationMs: number): string {
-  const seconds = Math.max(0, Math.ceil(durationMs / 1_000));
+  const seconds = Math.max(0, Math.ceil(durationMs / 1000));
 
   return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`;
 }
@@ -94,7 +94,9 @@ export function AudioPlayer({
   const previousSourceRef = useRef(resolvedSource);
 
   useEffect(() => {
-    if (previousSourceRef.current === resolvedSource) return;
+    if (previousSourceRef.current === resolvedSource) {
+      return;
+    }
     previousSourceRef.current = resolvedSource;
     const element = elementRef.current;
 
@@ -123,14 +125,18 @@ export function AudioPlayer({
   const play = async (reload = false) => {
     const element = elementRef.current;
 
-    if (!element) return;
+    if (!element) {
+      return;
+    }
     beginPlayback(participantRef.current);
     if (!loadedSource || reload) {
       setLoadedSource(resolvedSource);
       element.src = resolvedSource;
       element.load();
     }
-    if (state === "ended") element.currentTime = 0;
+    if (state === "ended") {
+      element.currentTime = 0;
+    }
     setState("loading");
 
     try {
@@ -157,7 +163,7 @@ export function AudioPlayer({
 
   // One playback control is rendered per state; what every one of them carries belongs here, so a
   // shared attribute is added once instead of in four places.
-  const controlProps = { type: "button", "aria-describedby": describedBy } as const;
+  const controlProps = { "aria-describedby": describedBy };
 
   return (
     <div className={styles.playerContainer}>
@@ -170,7 +176,7 @@ export function AudioPlayer({
             onAvailabilityChange?.(true);
           }}
           onPause={() => setState((value) => (value === "ended" ? value : "paused"))}
-          onTimeUpdate={(event) => setCurrentTime(event.currentTarget.currentTime * 1_000)}
+          onTimeUpdate={(event) => setCurrentTime(event.currentTarget.currentTime * 1000)}
           onEnded={() => {
             setState("ended");
             endPlayback(participantRef.current);
@@ -183,6 +189,7 @@ export function AudioPlayer({
         />
         {state === "loading" ? (
           <button
+            type="button"
             {...controlProps}
             aria-busy="true"
             aria-disabled="true"
@@ -191,15 +198,26 @@ export function AudioPlayer({
             <span className={styles.spinner} aria-hidden="true" />
           </button>
         ) : state === "playing" ? (
-          <button {...controlProps} onClick={pause} aria-label={`${label}: ${t("audio.pause")}`}>
+          <button
+            type="button"
+            {...controlProps}
+            onClick={pause}
+            aria-label={`${label}: ${t("audio.pause")}`}
+          >
             <FilledPlaybackIcon kind="pause" />
           </button>
         ) : state === "error" ? (
-          <button {...controlProps} onClick={retry} aria-label={`${label}: ${t("audio.retry")}`}>
+          <button
+            type="button"
+            {...controlProps}
+            onClick={retry}
+            aria-label={`${label}: ${t("audio.retry")}`}
+          >
             <RotateCcw aria-hidden="true" />
           </button>
         ) : (
           <button
+            type="button"
             {...controlProps}
             onClick={() => void play()}
             aria-label={`${label}: ${state === "ended" ? t("audio.replay") : t("audio.play")}`}

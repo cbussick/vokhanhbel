@@ -1,6 +1,14 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
-import { handleRequest } from "./handler.js";
+import { problemSchema } from "../../contracts/problem.js";
+import { handleJsonRequest, handleRequest } from "./handler.js";
+
+const createRequest = (headers: Record<string, string>, body: string) =>
+  new Request("https://cards.example/api/test", {
+    method: "POST",
+    headers: { origin: "https://cards.example", "sec-fetch-site": "same-origin", ...headers },
+    body,
+  });
 
 const schema = z.object({ name: z.string() });
 
@@ -9,7 +17,7 @@ afterEach(() => vi.restoreAllMocks());
 describe("public HTTP envelope", () => {
   it("rejects an unsafe cross-site request before invoking its handler", async () => {
     vi.spyOn(console, "info").mockImplementation(() => undefined);
-    const callback = vi.fn(async () => Response.json({ ok: true }));
+    const callback = vi.fn<() => Promise<Response>>(async () => Response.json({ ok: true }));
     const request = new Request("https://cards.example/api/session", {
       method: "POST",
       headers: {
@@ -20,8 +28,12 @@ describe("public HTTP envelope", () => {
       body: '{"name":"Khanh"}',
     });
 
-    const response = await handleRequest(request, { unsafe: true, bodySchema: schema }, callback);
-    const problem = (await response.json()) as { type: string; instance: string };
+    const response = await handleJsonRequest(
+      request,
+      { unsafe: true, bodySchema: schema },
+      callback,
+    );
+    const problem = problemSchema.parse(await response.json());
 
     expect(response.status).toBe(403);
     expect(problem.type).toBe("/problems/invalid-origin");
@@ -33,25 +45,19 @@ describe("public HTTP envelope", () => {
 
   it("returns stable problems for wrong content type, oversized JSON, and bad fields", async () => {
     vi.spyOn(console, "info").mockImplementation(() => undefined);
-    const callback = vi.fn(async () => Response.json({ ok: true }));
-    const createRequest = (headers: Record<string, string>, body: string) =>
-      new Request("https://cards.example/api/test", {
-        method: "POST",
-        headers: { origin: "https://cards.example", "sec-fetch-site": "same-origin", ...headers },
-        body,
-      });
+    const callback = vi.fn<() => Promise<Response>>(async () => Response.json({ ok: true }));
 
-    const wrongType = await handleRequest(
+    const wrongType = await handleJsonRequest(
       createRequest({ "content-type": "text/plain" }, "{}"),
       { unsafe: true, bodySchema: schema },
       callback,
     );
-    const oversized = await handleRequest(
+    const oversized = await handleJsonRequest(
       createRequest({ "content-type": "application/json", "content-length": "32769" }, "{}"),
       { unsafe: true, bodySchema: schema },
       callback,
     );
-    const invalid = await handleRequest(
+    const invalid = await handleJsonRequest(
       createRequest({ "content-type": "application/json" }, '{"name":1}'),
       { unsafe: true, bodySchema: schema },
       callback,

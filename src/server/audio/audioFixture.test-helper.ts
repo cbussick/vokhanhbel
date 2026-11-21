@@ -1,11 +1,12 @@
-export function createWavFixture(durationMs = 1_000): Uint8Array {
-  const sampleRate = 8_000;
-  const dataSize = Math.round((sampleRate * durationMs) / 1_000);
+export function createWavFixture(durationMs = 1000): Uint8Array {
+  const sampleRate = 8000;
+  const dataSize = Math.round((sampleRate * durationMs) / 1000);
   const bytes = new Uint8Array(44 + dataSize);
   const view = new DataView(bytes.buffer);
   const write = (offset: number, value: string) => {
-    for (let index = 0; index < value.length; index += 1)
+    for (let index = 0; index < value.length; index += 1) {
       bytes[offset + index] = value.charCodeAt(index);
+    }
   };
 
   write(0, "RIFF");
@@ -29,9 +30,9 @@ export function createWavFixture(durationMs = 1_000): Uint8Array {
  * Stands in for a synthesized clip: one MPEG-1 Layer III frame header at 128 kbit/s followed by
  * silence, which is what the inspector reads the duration from.
  */
-export function createMp3Fixture(durationMs = 1_000): Uint8Array {
+export function createMp3Fixture(durationMs = 1000): Uint8Array {
   const bitsPerSecond = 128_000;
-  const bytes = new Uint8Array(Math.round((bitsPerSecond * durationMs) / 8 / 1_000));
+  const bytes = new Uint8Array(Math.round((bitsPerSecond * durationMs) / 8 / 1000));
 
   bytes.set([0xff, 0xfb, 0x90, 0x00]);
 

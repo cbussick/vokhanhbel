@@ -53,18 +53,18 @@ function submission(
   return {
     input: {
       id: `${exercise.id}-submission`,
-      cardId: exercise.cards[0]!.id,
+      cardId: exercise.cards[0].id,
       grade,
       reviewedAt: new Date().toISOString(),
     },
     reviewSessionId: "session",
-    card: exercise.cards[0]!,
+    card: exercise.cards[0],
     optimisticPoints: grade === "knew_it" ? 10 : grade === "almost" ? 5 : 1,
     exerciseIndex,
   };
 }
 
-function matching(ids: string[]): MatchingExercise {
+function matching(ids: Array<string>): MatchingExercise {
   return {
     kind: "matching",
     id: ids.join(":"),
@@ -135,11 +135,12 @@ describe("Review Session Skip", () => {
         roundSubmissions: [],
       },
     });
-    if (skipped.status === "reviewing") {
-      expect(skipped.reviewSession.exercises.map((exercise) => exercise.id)).toEqual([
-        "22222222-2222-4222-8222-222222222222",
-      ]);
+    if (skipped.status !== "reviewing") {
+      throw new Error("expected reviewing");
     }
+    expect(skipped.reviewSession.exercises.map((exercise) => exercise.id)).toEqual([
+      "22222222-2222-4222-8222-222222222222",
+    ]);
   });
 });
 
@@ -250,10 +251,11 @@ describe("Rejection during an open Exercise", () => {
       currentIndex: 0,
       reviewSession: { totalReviewSubmissions: 0, optimisticPoints: 0 },
     });
-    if (rejected.status === "reviewing") {
-      expect(rejected.reviewSession.exercises.map((planned) => planned.id)).toEqual(["2", "1"]);
-      expect(rejected.reviewSession.exercises[1]).toBe(exercise);
+    if (rejected.status !== "reviewing") {
+      throw new Error("expected reviewing");
     }
+    expect(rejected.reviewSession.exercises.map((planned) => planned.id)).toEqual(["2", "1"]);
+    expect(rejected.reviewSession.exercises[1]).toBe(exercise);
   });
 
   it("shows a clock rejection on the still-open multiple-choice Exercise without losing its retry state", () => {
@@ -313,9 +315,10 @@ describe("Rejection during an open Exercise", () => {
     });
 
     expect(rejected).toMatchObject({ status: "reviewing", currentIndex: 0 });
-    if (rejected.status === "reviewing") {
-      expect(rejected.reviewSession.exercises.map((planned) => planned.id)).toEqual(["2"]);
+    if (rejected.status !== "reviewing") {
+      throw new Error("expected reviewing");
     }
+    expect(rejected.reviewSession.exercises.map((planned) => planned.id)).toEqual(["2"]);
   });
 });
 
@@ -418,14 +421,18 @@ describe("Matching Exercise", () => {
       matching: { resolvedCardIds: [] },
       reviewSession: { totalReviewSubmissions: 0, optimisticPoints: 0 },
     });
-    if (rejected.status === "reviewing") {
-      const board = rejected.reviewSession.exercises[0] as MatchingExercise;
-
-      // The Exercise total is untouched — the board shrinks, it doesn't disappear or requeue.
-      expect(rejected.reviewSession.exercises).toHaveLength(2);
-      expect(board.kind).toBe("matching");
-      expect(board.cards.map((c) => c.id)).toEqual(["2", "3", "4"]);
+    if (rejected.status !== "reviewing") {
+      throw new Error("expected reviewing");
     }
+    const board = rejected.reviewSession.exercises[0];
+    if (board?.kind !== "matching") {
+      throw new Error("Expected matching Exercise");
+    }
+
+    // The Exercise total is untouched — the board shrinks, it doesn't disappear or requeue.
+    expect(rejected.reviewSession.exercises).toHaveLength(2);
+    expect(board.kind).toBe("matching");
+    expect(board.cards.map((c) => c.id)).toEqual(["2", "3", "4"]);
   });
 
   it("sends the board to a flip Card once a deleted rejection drops it below two pairs", () => {
@@ -444,11 +451,12 @@ describe("Matching Exercise", () => {
     });
 
     expect(rejected).toMatchObject({ status: "reviewing", currentIndex: 0, matching: undefined });
-    if (rejected.status === "reviewing") {
-      expect(rejected.reviewSession.exercises).toMatchObject([
-        { kind: "flip", id: "2", cards: [{ id: "2" }] },
-      ]);
+    if (rejected.status !== "reviewing") {
+      throw new Error("expected reviewing");
     }
+    expect(rejected.reviewSession.exercises).toMatchObject([
+      { kind: "flip", id: "2", cards: [{ id: "2" }] },
+    ]);
   });
 
   it("removes the board once a rejection lands on its last still-credited Card", () => {
@@ -477,7 +485,9 @@ describe("Matching Exercise", () => {
     });
 
     expect(rejected).toMatchObject({ status: "reviewing", currentIndex: 0 });
-    if (rejected.status !== "reviewing") throw new Error("expected reviewing");
+    if (rejected.status !== "reviewing") {
+      throw new Error("expected reviewing");
+    }
     expect(rejected.reviewSession.exercises.map((planned) => planned.id)).toEqual(["5"]);
   });
 
@@ -490,7 +500,9 @@ describe("Matching Exercise", () => {
     });
 
     expect(started).toMatchObject({ reviewSession: { exercises: [{}, {}, {}] } });
-    if (started.status !== "reviewing") throw new Error("expected reviewing");
+    if (started.status !== "reviewing") {
+      throw new Error("expected reviewing");
+    }
     expect(started.reviewSession.exercises).toHaveLength(3);
   });
 
@@ -518,7 +530,9 @@ describe("Matching Exercise", () => {
     const repeated = reviewSessionReducer(summary, { type: "forgottenRepeated" });
 
     expect(repeated).toMatchObject({ status: "reviewing", currentIndex: 0 });
-    if (repeated.status !== "reviewing") throw new Error("expected reviewing");
+    if (repeated.status !== "reviewing") {
+      throw new Error("expected reviewing");
+    }
     expect(repeated.reviewSession.exercises).toMatchObject([
       { kind: "flip", id: "3", cards: [{ id: "3" }] },
     ]);
@@ -608,7 +622,9 @@ describe("Swipe Exercise", () => {
       swipe: undefined,
       reviewSession: { totalReviewSubmissions: 0, optimisticPoints: 0 },
     });
-    if (rejected.status !== "reviewing") throw new Error("expected reviewing");
+    if (rejected.status !== "reviewing") {
+      throw new Error("expected reviewing");
+    }
     // Moved to the back of the queue rather than dropped, so the Card is asked again later.
     expect(rejected.reviewSession.exercises.map((planned) => planned.id)).toEqual(["5", "1"]);
   });
@@ -633,7 +649,9 @@ describe("Swipe Exercise", () => {
     });
 
     expect(rejected).toMatchObject({ status: "reviewing", currentIndex: 0 });
-    if (rejected.status !== "reviewing") throw new Error("expected reviewing");
+    if (rejected.status !== "reviewing") {
+      throw new Error("expected reviewing");
+    }
     expect(rejected.reviewSession.exercises.map((planned) => planned.id)).toEqual(["5"]);
   });
 
@@ -655,7 +673,9 @@ describe("Swipe Exercise", () => {
     const repeated = reviewSessionReducer(advanced, { type: "forgottenRepeated" });
 
     expect(repeated).toMatchObject({ status: "reviewing", currentIndex: 0 });
-    if (repeated.status !== "reviewing") throw new Error("expected reviewing");
+    if (repeated.status !== "reviewing") {
+      throw new Error("expected reviewing");
+    }
     expect(repeated.reviewSession.exercises).toMatchObject([
       { kind: "flip", id: "1", cards: [{ id: "1" }] },
     ]);

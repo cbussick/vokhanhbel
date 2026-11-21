@@ -2,7 +2,7 @@ import type { ZodType } from "zod";
 import { problemTypes } from "../../contracts/problem.js";
 import { getAuthenticatedSessionHash } from "../auth/session.js";
 import { isAllowedPrivateMediaRequest, isAllowedUnsafeRequest } from "./origin.js";
-import { AppProblem, problemResponse } from "./problem.js";
+import { AppProblemError, problemResponse } from "./problem.js";
 
 const maximumJsonBodyBytes = 32 * 1024;
 
@@ -13,10 +13,9 @@ export interface RequestContext<TBody = undefined> {
   body: TBody;
 }
 
-interface HandlerOptions<TBody> {
+interface HandlerOptions {
   unsafe?: boolean;
   protected?: boolean;
-  bodySchema?: ZodType<TBody>;
   cacheControl?: string;
   privateMedia?: boolean;
 }
@@ -42,23 +41,25 @@ function applyHeaders(response: Response, requestId: string, cacheControl: strin
 
 async function parseBody<TBody>(request: Request, schema: ZodType<TBody>): Promise<TBody> {
   if (!request.headers.get("content-type")?.toLowerCase().startsWith("application/json")) {
-    throw new AppProblem(415, problemTypes.unsupportedContentType, "JSON erforderlich");
+    throw new AppProblemError(415, problemTypes.unsupportedContentType, "JSON erforderlich");
   }
 
   const contentLength = Number(request.headers.get("content-length") ?? 0);
 
-  if (contentLength > maximumJsonBodyBytes)
-    throw new AppProblem(413, problemTypes.requestTooLarge, "Anfrage zu groß");
+  if (contentLength > maximumJsonBodyBytes) {
+    throw new AppProblemError(413, problemTypes.requestTooLarge, "Anfrage zu groß");
+  }
   const bytes = await request.arrayBuffer();
 
-  if (bytes.byteLength > maximumJsonBodyBytes)
-    throw new AppProblem(413, problemTypes.requestTooLarge, "Anfrage zu groß");
+  if (bytes.byteLength > maximumJsonBodyBytes) {
+    throw new AppProblemError(413, problemTypes.requestTooLarge, "Anfrage zu groß");
+  }
   let value: unknown;
 
   try {
     value = JSON.parse(new TextDecoder().decode(bytes));
   } catch {
-    throw new AppProblem(
+    throw new AppProblemError(
       400,
       problemTypes.unreadableRequest,
       "Anfrage konnte nicht gelesen werden",
@@ -73,16 +74,22 @@ async function parseBody<TBody>(request: Request, schema: ZodType<TBody>): Promi
       code: issue.code,
     }));
 
-    throw new AppProblem(422, problemTypes.invalidRequest, "Eingaben prüfen", undefined, errors);
+    throw new AppProblemError(
+      422,
+      problemTypes.invalidRequest,
+      "Eingaben prüfen",
+      undefined,
+      errors,
+    );
   }
 
   return result.data;
 }
 
-export async function handleRequest<TBody = undefined>(
+async function runRequest(
   request: Request,
-  options: HandlerOptions<TBody>,
-  handler: (context: RequestContext<TBody>) => Promise<Response>,
+  options: HandlerOptions,
+  handler: (context: Omit<RequestContext, "body">) => Promise<Response>,
 ): Promise<Response> {
   const requestId = crypto.randomUUID();
   const startedAt = performance.now();
@@ -91,23 +98,19 @@ export async function handleRequest<TBody = undefined>(
 
   try {
     if (options.unsafe && !isAllowedUnsafeRequest(request)) {
-      throw new AppProblem(403, problemTypes.invalidOrigin, "Anfrage nicht erlaubt");
+      throw new AppProblemError(403, problemTypes.invalidOrigin, "Anfrage nicht erlaubt");
     }
     if (options.privateMedia && !isAllowedPrivateMediaRequest(request)) {
-      throw new AppProblem(403, problemTypes.invalidOrigin, "Anfrage nicht erlaubt");
+      throw new AppProblemError(403, problemTypes.invalidOrigin, "Anfrage nicht erlaubt");
     }
 
     const sessionHash = options.protected ? await getAuthenticatedSessionHash(request) : undefined;
 
-    if (options.protected && !sessionHash)
-      throw new AppProblem(401, problemTypes.unauthenticated, "Anmeldung erforderlich");
+    if (options.protected && !sessionHash) {
+      throw new AppProblemError(401, problemTypes.unauthenticated, "Anmeldung erforderlich");
+    }
 
-    // SAFETY: the false branch runs only when no bodySchema was supplied, and TBody is inferred as
-    // undefined for those routes.
-    const body = options.bodySchema
-      ? await parseBody(request, options.bodySchema)
-      : (undefined as TBody);
-    const response = await handler({ request, requestId, sessionHash, body });
+    const response = await handler({ request, requestId, sessionHash });
 
     status = response.status;
     errorCategory = "none";
@@ -115,20 +118,22 @@ export async function handleRequest<TBody = undefined>(
     return applyHeaders(response, requestId, options.cacheControl ?? "no-store");
   } catch (error) {
     const problem =
-      error instanceof AppProblem
+      error instanceof AppProblemError
         ? error
-        : new AppProblem(500, problemTypes.unexpected, "Da ist etwas schiefgegangen");
+        : new AppProblemError(500, problemTypes.unexpected, "Da ist etwas schiefgegangen");
 
     status = problem.status;
     errorCategory = problem.type;
 
     const response = problemResponse(problem, requestId);
 
-    if (problem.status === 429 && problem.retryAfter !== undefined)
+    if (problem.status === 429 && problem.retryAfter !== undefined) {
       response.headers.set("Retry-After", String(Math.max(1, Math.ceil(problem.retryAfter))));
+    }
 
     return applyHeaders(response, requestId, "no-store");
   } finally {
+    // eslint-disable-next-line no-console -- Native server request-log boundary preserves correlation IDs, severity, and structured platform diagnostics.
     console.info(
       JSON.stringify({
         requestId,
@@ -139,4 +144,52 @@ export async function handleRequest<TBody = undefined>(
       }),
     );
   }
+}
+
+export function handleRequest(
+  request: Request,
+  options: HandlerOptions,
+  handler: (context: RequestContext) => Promise<Response>,
+): Promise<Response> {
+  return runRequest(request, options, (context) => handler({ ...context, body: undefined }));
+}
+
+export function handleJsonRequest<TBody>(
+  request: Request,
+  options: HandlerOptions & { bodySchema: ZodType<TBody> },
+  handler: (context: RequestContext<TBody>) => Promise<Response>,
+): Promise<Response> {
+  return runRequest(request, options, async (context) =>
+    handler({ ...context, body: await parseBody(request, options.bodySchema) }),
+  );
+}
+
+type AuthenticatedContext<TBody = undefined> = RequestContext<TBody> & { sessionHash: string };
+
+function authenticatedContext<TBody>(context: RequestContext<TBody>): AuthenticatedContext<TBody> {
+  if (!context.sessionHash) {
+    throw new AppProblemError(401, problemTypes.unauthenticated, "Anmeldung erforderlich");
+  }
+
+  return { ...context, sessionHash: context.sessionHash };
+}
+
+export function handleAuthenticatedRequest(
+  request: Request,
+  options: HandlerOptions,
+  handler: (context: AuthenticatedContext) => Promise<Response>,
+): Promise<Response> {
+  return handleRequest(request, { ...options, protected: true }, (context) =>
+    handler(authenticatedContext(context)),
+  );
+}
+
+export function handleAuthenticatedJsonRequest<TBody>(
+  request: Request,
+  options: HandlerOptions & { bodySchema: ZodType<TBody> },
+  handler: (context: AuthenticatedContext<TBody>) => Promise<Response>,
+): Promise<Response> {
+  return handleJsonRequest(request, { ...options, protected: true }, (context) =>
+    handler(authenticatedContext(context)),
+  );
 }

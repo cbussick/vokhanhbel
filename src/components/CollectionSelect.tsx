@@ -17,7 +17,7 @@ export function CollectionSelect({
   disabled = false,
 }: {
   id: string;
-  collections: readonly Collection[];
+  collections: ReadonlyArray<Collection>;
   value: string;
   onChange: (collectionId: string) => void;
   onCreate?: () => void;
@@ -33,7 +33,7 @@ export function CollectionSelect({
     optionCount: canCreate ? collections.length + 1 : collections.length,
     selectedIndex,
     onActivate: (index) => select(index),
-    typeAhead: { count: collections.length, labelAt: (index) => collections[index]!.name },
+    typeAhead: { labels: collections.map((entry) => entry.name) },
     disabled,
   });
 
@@ -47,7 +47,9 @@ export function CollectionSelect({
 
     const collection = collections[index];
 
-    if (!collection) return;
+    if (!collection) {
+      return;
+    }
 
     onChange(collection.id);
     listbox.setActiveIndex(index);

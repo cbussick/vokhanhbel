@@ -19,7 +19,7 @@ const speechCharactersPerSecond = 25;
  * spoken onto it.
  */
 export const maximumPronunciationTextLength = Math.floor(
-  (maximumAudioDurationMs / 1_000) * speechCharactersPerSecond,
+  (maximumAudioDurationMs / 1000) * speechCharactersPerSecond,
 );
 
 /**

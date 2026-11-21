@@ -18,18 +18,24 @@ export interface StreakReview {
   boxAfter: number;
 }
 
-function groupReviewsByCard(reviews: readonly StreakReview[]): Map<string, StreakReview[]> {
-  const byCard = new Map<string, StreakReview[]>();
+function groupReviewsByCard(
+  reviews: ReadonlyArray<StreakReview>,
+): Map<string, Array<StreakReview>> {
+  const byCard = new Map<string, Array<StreakReview>>();
 
   for (const review of reviews) {
     const forCard = byCard.get(review.cardId);
 
-    if (forCard) forCard.push(review);
-    else byCard.set(review.cardId, [review]);
+    if (forCard) {
+      forCard.push(review);
+    } else {
+      byCard.set(review.cardId, [review]);
+    }
   }
 
-  for (const forCard of byCard.values())
+  for (const forCard of byCard.values()) {
     forCard.sort((a, b) => a.reviewedAt.getTime() - b.reviewedAt.getTime());
+  }
 
   return byCard;
 }
@@ -40,7 +46,7 @@ function groupReviewsByCard(reviews: readonly StreakReview[]): Map<string, Strea
  */
 function dueDayForCard(
   card: StreakCard,
-  reviewHistory: readonly StreakReview[],
+  reviewHistory: ReadonlyArray<StreakReview>,
   day: string,
 ): string {
   let dueDay = toBerlinDay(card.createdAt);
@@ -48,7 +54,9 @@ function dueDayForCard(
   for (const review of reviewHistory) {
     const reviewedDay = toBerlinDay(review.reviewedAt);
 
-    if (reviewedDay > day) break;
+    if (reviewedDay > day) {
+      break;
+    }
     dueDay = shiftCalendarDay(reviewedDay, getIntervalDays(review.boxAfter));
   }
 
@@ -57,18 +65,22 @@ function dueDayForCard(
 
 function isCardDueOnDay(
   card: StreakCard,
-  reviewHistory: readonly StreakReview[],
+  reviewHistory: ReadonlyArray<StreakReview>,
   day: string,
 ): boolean {
-  if (toBerlinDay(card.createdAt) > day) return false; // created after day: drops out
-  if (card.deletedAt && toBerlinDay(card.deletedAt) < day) return false; // deleted before day: drops out
+  if (toBerlinDay(card.createdAt) > day) {
+    return false;
+  } // created after day: drops out
+  if (card.deletedAt && toBerlinDay(card.deletedAt) < day) {
+    return false;
+  } // deleted before day: drops out
 
   return dueDayForCard(card, reviewHistory, day) <= day;
 }
 
 function anyCardDueOnDay(
-  cards: readonly StreakCard[],
-  reviewsByCard: Map<string, StreakReview[]>,
+  cards: ReadonlyArray<StreakCard>,
+  reviewsByCard: Map<string, Array<StreakReview>>,
   day: string,
 ): boolean {
   return cards.some((card) => isCardDueOnDay(card, reviewsByCard.get(card.id) ?? [], day));
@@ -84,11 +96,13 @@ function anyCardDueOnDay(
  * log plus each Card's creation and deletion, with nothing stored in between.
  */
 export function calculateStreak(
-  cards: readonly StreakCard[],
-  reviews: readonly StreakReview[],
+  cards: ReadonlyArray<StreakCard>,
+  reviews: ReadonlyArray<StreakReview>,
   now: Date,
 ): number {
-  if (cards.length === 0) return 0;
+  if (cards.length === 0) {
+    return 0;
+  }
 
   const reviewedDays = new Set(reviews.map((review) => toBerlinDay(review.reviewedAt)));
   const reviewsByCard = groupReviewsByCard(reviews);
@@ -104,8 +118,11 @@ export function calculateStreak(
   let isCurrentDay = true;
 
   while (day >= earliestDay) {
-    if (reviewedDays.has(day)) streak += 1;
-    else if (!isCurrentDay && anyCardDueOnDay(cards, reviewsByCard, day)) break;
+    if (reviewedDays.has(day)) {
+      streak += 1;
+    } else if (!isCurrentDay && anyCardDueOnDay(cards, reviewsByCard, day)) {
+      break;
+    }
 
     isCurrentDay = false;
     day = shiftCalendarDay(day, -1);

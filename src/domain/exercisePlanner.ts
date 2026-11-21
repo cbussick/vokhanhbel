@@ -23,15 +23,15 @@ export interface FlipExercise {
   kind: "flip";
   id: string;
   /** The Cards this Exercise grades. Always one here; a grouped Exercise (matching, Swipe) has more. */
-  cards: Card[];
+  cards: [Card];
 }
 
 export interface MultipleChoiceExercise {
   kind: "multipleChoice";
   id: string;
-  cards: Card[];
+  cards: [Card];
   /** Four options in presentation order, already shuffled. Exactly one has `correct: true`. */
-  options: MultipleChoiceOption[];
+  options: Array<MultipleChoiceOption>;
 }
 
 export interface MatchingExercise {
@@ -39,12 +39,12 @@ export interface MatchingExercise {
   id: string;
   /** The Cards being matched. Four when freshly planned; a reducer-level rejection (VOK-18) may
    * shrink this below four as the board loses a pair, down to the two-pair minimum. */
-  cards: Card[];
+  cards: Array<Card>;
   /** Card ids in the shuffled order their fronts are shown, left column. */
-  frontOrder: string[];
+  frontOrder: Array<string>;
   /** Card ids in the shuffled order their backs are shown, right column — shuffled independently
    * of `frontOrder`, so a front and its back never land on the same row. */
-  backOrder: string[];
+  backOrder: Array<string>;
 }
 
 export interface SwipeOption {
@@ -59,9 +59,9 @@ export interface SwipeExercise {
   kind: "swipe";
   id: string;
   /** The one Card this Exercise grades, as a single-element list like every other Exercise's. */
-  cards: Card[];
+  cards: [Card];
   /** The two text options shown left and right, already shuffled — exactly one has `correct: true`. */
-  options: SwipeOption[];
+  options: Array<SwipeOption>;
 }
 
 export type PlannedExercise =
@@ -78,13 +78,25 @@ const optionCount = 4;
 const requiredDistractorCount = optionCount - 1;
 const matchingGroupSize = 4;
 
-function shuffle<T>(items: T[], random: RandomSource): T[] {
+function shuffle<T>(items: Array<T>, random: RandomSource): Array<T> {
   const shuffled = [...items];
 
   for (let index = shuffled.length - 1; index > 0; index -= 1) {
     const swapIndex = Math.floor(random() * (index + 1));
 
-    [shuffled[index], shuffled[swapIndex]] = [shuffled[swapIndex]!, shuffled[index]!];
+    const current = shuffled[index];
+    const swapped = shuffled[swapIndex];
+    if (
+      !Number.isInteger(swapIndex) ||
+      swapIndex < 0 ||
+      swapIndex > index ||
+      current === undefined ||
+      swapped === undefined
+    ) {
+      throw new Error("Invalid shuffle source or missing item");
+    }
+    shuffled[index] = swapped;
+    shuffled[swapIndex] = current;
   }
 
   return shuffled;
@@ -100,7 +112,14 @@ function hasBack(card: Card, modality: Modality): boolean {
  * an audio one. Two Cards may legitimately share either.
  */
 function backIdentity(card: Card, modality: Modality): string {
-  return modality === "text" ? normalizeCardText(card.back.text ?? "") : card.back.audio!.id;
+  if (modality === "text") {
+    return normalizeCardText(card.back.text ?? "");
+  }
+  if (!card.back.audio) {
+    throw new Error("Expected audio back for an audio option");
+  }
+
+  return card.back.audio.id;
 }
 
 /**
@@ -112,7 +131,7 @@ function backIdentity(card: Card, modality: Modality): string {
  * audio back draws audio-back siblings — so text and audio options never appear in the same
  * Exercise.
  */
-function distractorTiers(card: Card, pool: Card[], modality: Modality) {
+function distractorTiers(card: Card, pool: Array<Card>, modality: Modality) {
   const eligible = pool.filter(
     (candidate) =>
       candidate.id !== card.id &&
@@ -137,23 +156,27 @@ function distractorTiers(card: Card, pool: Card[], modality: Modality) {
  */
 function findDistractors(
   card: Card,
-  pool: Card[],
+  pool: Array<Card>,
   random: RandomSource,
   modality: Modality,
-): Card[] {
+): Array<Card> {
   const seenBacks = new Set([backIdentity(card, modality)]);
   const { thema, sammlung } = distractorTiers(card, pool, modality);
   // Each tier is shuffled on its own, so a candidate from the Sammlung can never be drawn ahead of
   // one from the Thema — only within-tier order is random.
   const candidates = [...shuffle(thema, random), ...shuffle(sammlung, random)];
-  const distractors: Card[] = [];
+  const distractors: Array<Card> = [];
 
   for (const candidate of candidates) {
-    if (distractors.length === requiredDistractorCount) break;
+    if (distractors.length === requiredDistractorCount) {
+      break;
+    }
 
     const back = backIdentity(candidate, modality);
 
-    if (seenBacks.has(back)) continue;
+    if (seenBacks.has(back)) {
+      continue;
+    }
 
     seenBacks.add(back);
     distractors.push(candidate);
@@ -167,13 +190,15 @@ function toFlipExercise(card: Card): FlipExercise {
 }
 
 function toOption(card: Card, correct: boolean, modality: Modality): MultipleChoiceOption {
-  // SAFETY: `hasBack` was checked non-null by the caller for both the correct Card (in
-  // planExercises) and every distractor (in distractorTiers) before this is called.
+  if (modality === "text" ? !card.back.text : !card.back.audio) {
+    throw new Error("Expected an option matching the selected modality");
+  }
+
   return {
     cardId: card.id,
     correct,
-    text: modality === "text" ? card.back.text! : null,
-    audio: modality === "audio" ? card.back.audio! : null,
+    text: modality === "text" ? card.back.text : null,
+    audio: modality === "audio" ? card.back.audio : null,
   };
 }
 
@@ -187,25 +212,35 @@ function toOption(card: Card, correct: boolean, modality: Modality): MultipleCho
  * disqualifying the whole group — one repeated back doesn't cost matching to the rest of the due
  * queue.
  */
-function selectMatchingGroup(dueCards: Card[]): Card[] | undefined {
-  const chosen: Card[] = [];
+function selectMatchingGroup(dueCards: Array<Card>): Array<Card> | undefined {
+  const chosen: Array<Card> = [];
+  let collectionId: string | undefined;
   const seenFronts = new Set<string>();
   const seenBacks = new Set<string>();
 
   for (const card of dueCards) {
-    if (!card.front.text || !card.back.text) continue;
-    if (chosen.length > 0 && card.collectionId !== chosen[0]!.collectionId) continue;
+    if (!card.front.text || !card.back.text) {
+      continue;
+    }
+    if (collectionId !== undefined && card.collectionId !== collectionId) {
+      continue;
+    }
 
     const front = normalizeCardText(card.front.text);
     const back = normalizeCardText(card.back.text);
 
-    if (seenFronts.has(front) || seenBacks.has(back)) continue;
+    if (seenFronts.has(front) || seenBacks.has(back)) {
+      continue;
+    }
 
     chosen.push(card);
+    collectionId = card.collectionId;
     seenFronts.add(front);
     seenBacks.add(back);
 
-    if (chosen.length === matchingGroupSize) return chosen;
+    if (chosen.length === matchingGroupSize) {
+      return chosen;
+    }
   }
 
   return undefined;
@@ -230,25 +265,31 @@ function selectMatchingGroup(dueCards: Card[]): Card[] | undefined {
  * qualifies.
  */
 function selectSwipeExercise(
-  dueCards: Card[],
-  pool: Card[],
+  dueCards: Array<Card>,
+  pool: Array<Card>,
   random: RandomSource,
   leading: boolean,
 ): SwipeExercise | undefined {
   for (const card of dueCards) {
-    if (!hasBack(card, "text")) continue;
+    if (!card.back.text) {
+      continue;
+    }
 
     const distractors = findDistractors(card, pool, random, "text");
     const distractor = distractors[0];
 
-    if (!distractor) continue;
-    if (!leading && distractors.length >= requiredDistractorCount) continue;
+    if (!distractor?.back.text) {
+      continue;
+    }
+    if (!leading && distractors.length >= requiredDistractorCount) {
+      continue;
+    }
 
-    const correctOption: SwipeOption = { cardId: card.id, correct: true, text: card.back.text! };
+    const correctOption: SwipeOption = { cardId: card.id, correct: true, text: card.back.text };
     const distractorOption: SwipeOption = {
       cardId: distractor.id,
       correct: false,
-      text: distractor.back.text!,
+      text: distractor.back.text,
     };
 
     return {
@@ -262,7 +303,7 @@ function selectSwipeExercise(
   return undefined;
 }
 
-function toMatchingExercise(cards: Card[], random: RandomSource): MatchingExercise {
+function toMatchingExercise(cards: Array<Card>, random: RandomSource): MatchingExercise {
   const cardIds = cards.map((card) => card.id);
 
   return {
@@ -277,7 +318,7 @@ function toMatchingExercise(cards: Card[], random: RandomSource): MatchingExerci
 
 function toMultipleChoiceExercise(
   card: Card,
-  distractors: Card[],
+  distractors: Array<Card>,
   random: RandomSource,
   modality: Modality,
 ): MultipleChoiceExercise {
@@ -299,18 +340,18 @@ function toMultipleChoiceExercise(
  * Card wasn't eligible for. Where every Card is flip-only (a tiny Sammlung), a run of flip Cards
  * stands — completing the Session correctly wins over variety.
  */
-function limitRepeatedKind(exercises: PlannedExercise[]): PlannedExercise[] {
-  const limited: PlannedExercise[] = [];
+function limitRepeatedKind(exercises: Array<PlannedExercise>): Array<PlannedExercise> {
+  const limited: Array<PlannedExercise> = [];
 
   for (const exercise of exercises) {
     const wouldRunThree =
       limited.length >= 2 &&
-      limited[limited.length - 1]!.kind === exercise.kind &&
-      limited[limited.length - 2]!.kind === exercise.kind;
+      limited.at(-1)?.kind === exercise.kind &&
+      limited.at(-2)?.kind === exercise.kind;
 
     limited.push(
       wouldRunThree && exercise.kind === "multipleChoice"
-        ? toFlipExercise(exercise.cards[0]!)
+        ? toFlipExercise(exercise.cards[0])
         : exercise,
     );
   }
@@ -327,7 +368,7 @@ function limitRepeatedKind(exercises: PlannedExercise[]): PlannedExercise[] {
  */
 function groupedExerciseOrder(
   previousGroupedKind: GroupedExerciseKind | undefined,
-): GroupedExerciseKind[] {
+): [GroupedExerciseKind, GroupedExerciseKind] {
   return previousGroupedKind === "matching" ? ["swipe", "matching"] : ["matching", "swipe"];
 }
 
@@ -341,7 +382,7 @@ function groupedExerciseOrder(
 export function leadingGroupedExerciseKind(
   previousGroupedKind: GroupedExerciseKind | undefined,
 ): GroupedExerciseKind {
-  return groupedExerciseOrder(previousGroupedKind)[0]!;
+  return groupedExerciseOrder(previousGroupedKind)[0];
 }
 
 /**
@@ -366,12 +407,12 @@ export function leadingGroupedExerciseKind(
  * consecutive multiple-choice Exercise is demoted to a flip Card too.
  */
 export function planExercises(
-  dueCards: Card[],
-  pool: Card[],
+  dueCards: Array<Card>,
+  pool: Array<Card>,
   random: RandomSource,
   previousGroupedKind?: GroupedExerciseKind,
-): PlannedExercise[] {
-  let matchingGroup: Card[] | undefined;
+): Array<PlannedExercise> {
+  let matchingGroup: Array<Card> | undefined;
   let swipeExercise: SwipeExercise | undefined;
 
   const order = groupedExerciseOrder(previousGroupedKind);
@@ -379,10 +420,14 @@ export function planExercises(
   for (const [index, kind] of order.entries()) {
     if (kind === "matching") {
       matchingGroup = selectMatchingGroup(dueCards);
-      if (matchingGroup) break;
+      if (matchingGroup) {
+        break;
+      }
     } else {
       swipeExercise = selectSwipeExercise(dueCards, pool, random, index === 0);
-      if (swipeExercise) break;
+      if (swipeExercise) {
+        break;
+      }
     }
   }
 
@@ -391,21 +436,25 @@ export function planExercises(
   let matchingPlanned = false;
   let swipePlanned = false;
 
-  const planned = dueCards.flatMap((card): PlannedExercise[] => {
-    if (matchingCardIds.has(card.id)) {
-      if (matchingPlanned) return [];
+  const planned = dueCards.flatMap((card): Array<PlannedExercise> => {
+    if (matchingGroup && matchingCardIds.has(card.id)) {
+      if (matchingPlanned) {
+        return [];
+      }
 
       matchingPlanned = true;
 
-      return [toMatchingExercise(matchingGroup!, random)];
+      return [toMatchingExercise(matchingGroup, random)];
     }
 
-    if (swipeCardIds.has(card.id)) {
-      if (swipePlanned) return [];
+    if (swipeExercise && swipeCardIds.has(card.id)) {
+      if (swipePlanned) {
+        return [];
+      }
 
       swipePlanned = true;
 
-      return [swipeExercise!];
+      return [swipeExercise];
     }
 
     const modality: Modality | undefined = card.back.text
@@ -414,11 +463,15 @@ export function planExercises(
         ? "audio"
         : undefined;
 
-    if (!modality) return [toFlipExercise(card)];
+    if (!modality) {
+      return [toFlipExercise(card)];
+    }
 
     const distractors = findDistractors(card, pool, random, modality);
 
-    if (distractors.length < requiredDistractorCount) return [toFlipExercise(card)];
+    if (distractors.length < requiredDistractorCount) {
+      return [toFlipExercise(card)];
+    }
 
     return [toMultipleChoiceExercise(card, distractors, random, modality)];
   });

@@ -117,12 +117,16 @@ export function MatchingExercise({
     // A matched entry only responds once the whole board has resolved, and then it opens Tutopher
     // instead of attempting another pair — the Learner has nothing left to match it against.
     if (entry.matched) {
-      if (view.resolved && online) onOpenTutor(entry.cardId);
+      if (view.resolved && online) {
+        onOpenTutor(entry.cardId);
+      }
 
       return;
     }
 
-    if (inputBlocked) return;
+    if (inputBlocked) {
+      return;
+    }
 
     setMismatch(undefined);
 
@@ -138,10 +142,12 @@ export function MatchingExercise({
 
     reviewSession.attemptMatchingPair(frontCardId, backCardId);
     setSelection(undefined);
-    if (frontCardId !== backCardId) setMismatch({ frontCardId, backCardId });
+    if (frontCardId !== backCardId) {
+      setMismatch({ frontCardId, backCardId });
+    }
   };
 
-  const renderColumn = (entries: MatchingEntryView[], side: MatchingSide, legend: string) => (
+  const renderColumn = (entries: Array<MatchingEntryView>, side: MatchingSide, legend: string) => (
     <fieldset className={styles.matchingColumn} disabled={inputBlocked}>
       <legend>{legend}</legend>
       {entries.map((entry) => (

@@ -17,9 +17,9 @@ export function TopicSelect({
   disabled = false,
 }: {
   id: string;
-  topics: readonly Topic[];
-  value: readonly string[];
-  onChange: (topicIds: string[]) => void;
+  topics: ReadonlyArray<Topic>;
+  value: ReadonlyArray<string>;
+  onChange: (topicIds: Array<string>) => void;
   onCreate?: () => void;
   disabled?: boolean;
 }) {
@@ -35,7 +35,7 @@ export function TopicSelect({
     onActivate: (index) => toggle(index),
     // Topic membership changes immediately; Tab only dismisses the open list.
     commitOnTab: false,
-    typeAhead: { count: topics.length, labelAt: (index) => topics[index]!.name },
+    typeAhead: { labels: topics.map((entry) => entry.name) },
     disabled,
   });
 
@@ -49,7 +49,9 @@ export function TopicSelect({
 
     const topic = topics[index];
 
-    if (!topic) return;
+    if (!topic) {
+      return;
+    }
 
     onChange(
       selected.has(topic.id)

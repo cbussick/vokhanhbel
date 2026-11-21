@@ -7,7 +7,7 @@ import { SessionErrorScreen } from "../components/SessionErrorScreen";
 import { TutopherAvatar } from "../components/TutopherAvatar";
 import { apiPaths } from "../contracts/apiPaths";
 import { problemTypes } from "../contracts/problem";
-import { apiRequest, ApiError } from "../lib/apiClient";
+import { ApiError, apiCommand } from "../lib/apiClient";
 import { useOnlineStatus } from "../lib/browserState";
 import { useAuth } from "../state/AuthContext";
 import styles from "./login.module.css";
@@ -30,7 +30,7 @@ function LoginRoute() {
 
   const mutation = useMutation({
     mutationFn: async () =>
-      apiRequest<void>(apiPaths.session, { method: "POST", body: JSON.stringify({ password }) }),
+      apiCommand(apiPaths.session, { method: "POST", body: JSON.stringify({ password }) }),
     onSuccess: async () => {
       auth.markAuthenticated();
       setPassword("");
@@ -49,14 +49,18 @@ function LoginRoute() {
       } else if (error instanceof ApiError) {
         setErrorKey("login.failed");
         setErrorRequestId(error.requestId);
-      } else setErrorKey("login.network");
+      } else {
+        setErrorKey("login.network");
+      }
     },
   });
 
   useEffect(() => {
-    if (seconds <= 0) return;
+    if (seconds <= 0) {
+      return;
+    }
 
-    const timer = window.setInterval(() => setSeconds((value) => Math.max(0, value - 1)), 1_000);
+    const timer = window.setInterval(() => setSeconds((value) => Math.max(0, value - 1)), 1000);
 
     return () => window.clearInterval(timer);
   }, [seconds]);
@@ -65,9 +69,15 @@ function LoginRoute() {
     document.title = `${t("login.title")} | ${t("appName")}`;
   }, [t]);
 
-  if (auth.status === "checking") return <LoadingScreen />;
-  if (auth.status === "error") return <SessionErrorScreen />;
-  if (auth.status === "authenticated") return <Navigate to="/review" />;
+  if (auth.status === "checking") {
+    return <LoadingScreen />;
+  }
+  if (auth.status === "error") {
+    return <SessionErrorScreen />;
+  }
+  if (auth.status === "authenticated") {
+    return <Navigate to="/review" />;
+  }
 
   const visibleErrorKey = errorKey === "login.throttled" && seconds === 0 ? undefined : errorKey;
 

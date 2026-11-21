@@ -13,11 +13,8 @@ import { TopicIcon } from "../components/TopicIcon";
 import type { Card } from "../contracts/card";
 import { useDueTime } from "../lib/browserState";
 import { cardsQuery, collectionsQuery, topicsQuery } from "../lib/queries";
-import {
-  ReviewSessionProvider,
-  type ReviewScope,
-  useReviewSession,
-} from "../state/ReviewSessionContext";
+import { ReviewSessionProvider, useReviewSession } from "../state/ReviewSessionContext";
+import type { ReviewScope } from "../state/ReviewSessionContext";
 import styles from "./review.module.css";
 
 export const Route = createFileRoute("/review")({ component: ReviewRouteProvider });
@@ -35,14 +32,14 @@ function byDueDate(left: Card, right: Card): number {
 }
 
 /** Due Cards when there are any, otherwise the ones coming up soonest. */
-function selectQueue(cards: Card[], now: number): Card[] {
-  const ordered = [...cards].sort(byDueDate);
+function selectQueue(cards: Array<Card>, now: number): Array<Card> {
+  const ordered = cards.toSorted(byDueDate);
   const due = ordered.filter((card) => new Date(card.dueAt).getTime() <= now);
 
   return due.length > 0 ? due : ordered;
 }
 
-function countDue(cards: Card[], now: number): number {
+function countDue(cards: Array<Card>, now: number): number {
   return cards.filter((card) => new Date(card.dueAt).getTime() <= now).length;
 }
 
@@ -56,7 +53,7 @@ function GroupRow({
 }: {
   icon: React.ReactNode;
   name: string;
-  cards: Card[];
+  cards: Array<Card>;
   now: number;
   onStart: () => void;
 }) {
@@ -98,17 +95,20 @@ function ReviewRoute() {
     document.title = `${t("review.title")} | ${t("appName")}`;
   }, [t]);
 
-  const begin = (selected: Card[], scope: ReviewScope = { kind: "all" }) => {
+  const begin = (selected: Array<Card>, scope: ReviewScope = { kind: "all" }) => {
     reviewSession.startReviewSession(selected, scope);
     window.setTimeout(() => void navigate({ to: "/review/session" }), 0);
   };
 
-  if (pathname === "/review/session") return <Outlet />;
+  if (pathname === "/review/session") {
+    return <Outlet />;
+  }
 
   let content;
 
-  if (cards.isPending || collections.isPending || topics.isPending) content = <DelayedSkeleton />;
-  else if (cards.isError && !cards.data)
+  if (cards.isPending || collections.isPending || topics.isPending) {
+    content = <DelayedSkeleton />;
+  } else if (cards.isError && !cards.data) {
     content = (
       <div className={styles.landing}>
         <p>{t("errors.load")}</p>
@@ -117,7 +117,7 @@ function ReviewRoute() {
         </button>
       </div>
     );
-  else {
+  } else {
     const active = cards.data ?? [];
     const collectionList = collections.data ?? [];
     const topicList = topics.data ?? [];

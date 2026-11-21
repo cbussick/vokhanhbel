@@ -1,4 +1,5 @@
-import { useRef, useState, type PointerEvent } from "react";
+import { useRef, useState } from "react";
+import type { PointerEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { issueBlocksInput } from "../../state/review/reviewSessionReducer";
 import type { SwipeExerciseView } from "../../state/ReviewSessionContext";
@@ -6,7 +7,8 @@ import { useReviewSession } from "../../state/ReviewSessionContext";
 import { CardFace } from "../audio/CardFace";
 import { TutorDialog } from "../TutorDialog";
 import { ExerciseScreen } from "./ExerciseScreen";
-import { OptionOutcome, optionModifierClassName, type OptionVerdict } from "./optionAppearance";
+import { OptionOutcome, optionModifierClassName } from "./optionAppearance";
+import type { OptionVerdict } from "./optionAppearance";
 import { ResolutionFooter } from "./ResolutionFooter";
 import styles from "./reviewSession.module.css";
 
@@ -90,10 +92,12 @@ export function SwipeExercise({
     // retargets the eventual click to the Card in Chromium, so an AudioPlayer never receives it.
     if (
       !interactive ||
+      // eslint-disable-next-line @nkzw/no-instanceof -- Native event targets need Element identity before invoking closest; arbitrary EventTargets have no DOM traversal API.
       (event.target instanceof Element &&
         event.target.closest("button, input, select, textarea, a"))
-    )
+    ) {
       return;
+    }
 
     event.currentTarget.setPointerCapture(event.pointerId);
     setDragging(true);
@@ -102,13 +106,17 @@ export function SwipeExercise({
   };
 
   const handlePointerMove = (event: PointerEvent<HTMLDivElement>) => {
-    if (!dragging) return;
+    if (!dragging) {
+      return;
+    }
 
     const requested = { x: event.clientX - dragStart.x, y: (event.clientY - dragStart.y) * 0.15 };
     const arena = arenaRef.current?.getBoundingClientRect();
     const card = cardRef.current?.getBoundingClientRect();
 
-    if (!arena || !card) return;
+    if (!arena || !card) {
+      return;
+    }
 
     // `card` is measured mid-drag, so the offset already applied to it comes back off to recover the
     // resting rect the new offset is measured against.
@@ -139,7 +147,9 @@ export function SwipeExercise({
   };
 
   const handlePointerUp = () => {
-    if (!dragging) return;
+    if (!dragging) {
+      return;
+    }
 
     const side = armedSide;
     const optionCardId =
@@ -162,7 +172,9 @@ export function SwipeExercise({
   const renderBucket = (index: number, side: "left" | "right") => {
     const option = view.options[index];
 
-    if (!option) return null;
+    if (!option) {
+      return null;
+    }
 
     const verdict: OptionVerdict = {
       dead: !option.correct && view.resolved && !view.correct,

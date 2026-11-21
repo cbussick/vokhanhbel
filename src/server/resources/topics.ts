@@ -4,11 +4,11 @@ import type { CreateTopicInput, TopicInput } from "../../contracts/topic.js";
 import { getDatabase } from "../database/client.js";
 import { isForeignKeyViolation, isUniqueViolation } from "../database/errors.js";
 import { cardTopics, collections, topics } from "../database/schema.js";
-import { AppProblem } from "../http/problem.js";
+import { AppProblemError } from "../http/problem.js";
 import { mapTopic } from "./topicMapper.js";
 
 function throwNameConflict(): never {
-  throw new AppProblem(
+  throw new AppProblemError(
     409,
     problemTypes.topicNameConflict,
     "Dieses Thema gibt es schon",
@@ -34,8 +34,9 @@ export async function createTopic(input: CreateTopicInput) {
     .where(and(eq(collections.id, input.collectionId), isNull(collections.deletedAt)))
     .limit(1);
 
-  if (!collection)
-    throw new AppProblem(404, problemTypes.collectionNotFound, "Sammlung nicht gefunden");
+  if (!collection) {
+    throw new AppProblemError(404, problemTypes.collectionNotFound, "Sammlung nicht gefunden");
+  }
 
   try {
     const rows = await getDatabase()
@@ -48,11 +49,19 @@ export async function createTopic(input: CreateTopicInput) {
       })
       .returning();
 
-    return mapTopic(rows[0]!);
+    const [row] = rows;
+    if (!row) {
+      throw new Error("Insert returned no resource");
+    }
+
+    return mapTopic(row);
   } catch (error) {
-    if (isUniqueViolation(error)) throwNameConflict();
-    if (isForeignKeyViolation(error))
-      throw new AppProblem(404, problemTypes.collectionNotFound, "Sammlung nicht gefunden");
+    if (isUniqueViolation(error)) {
+      throwNameConflict();
+    }
+    if (isForeignKeyViolation(error)) {
+      throw new AppProblemError(404, problemTypes.collectionNotFound, "Sammlung nicht gefunden");
+    }
     throw error;
   }
 }
@@ -70,11 +79,15 @@ export async function updateTopic(topicId: string, input: TopicInput) {
       .where(and(eq(topics.id, topicId), isNull(topics.deletedAt)))
       .returning();
 
-    if (!rows[0]) throw new AppProblem(404, problemTypes.topicNotFound, "Thema nicht gefunden");
+    if (!rows[0]) {
+      throw new AppProblemError(404, problemTypes.topicNotFound, "Thema nicht gefunden");
+    }
 
     return mapTopic(rows[0]);
   } catch (error) {
-    if (isUniqueViolation(error)) throwNameConflict();
+    if (isUniqueViolation(error)) {
+      throwNameConflict();
+    }
     throw error;
   }
 }
@@ -87,7 +100,9 @@ export async function deleteTopic(topicId: string): Promise<void> {
     .where(and(eq(topics.id, topicId), isNull(topics.deletedAt)))
     .returning({ id: topics.id });
 
-  if (!rows[0]) throw new AppProblem(404, problemTypes.topicNotFound, "Thema nicht gefunden");
+  if (!rows[0]) {
+    throw new AppProblemError(404, problemTypes.topicNotFound, "Thema nicht gefunden");
+  }
 
   await database.delete(cardTopics).where(eq(cardTopics.topicId, topicId));
 }

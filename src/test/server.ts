@@ -1,33 +1,33 @@
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
+import { pronunciationWireSchema, reviewWireSchema } from "./wireSchemas";
 
 const now = new Date().toISOString();
-export const testCollections = [
-  {
-    id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
-    name: "Vietnamesisch",
-    icon: "flag-vn",
-    frontLanguage: "vi-VN",
-    backLanguage: "de-DE",
-    createdAt: now,
-    updatedAt: now,
-    deletedAt: null,
-  },
-  {
-    id: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
-    name: "Englisch",
-    icon: "flag-gb",
-    frontLanguage: null,
-    backLanguage: null,
-    createdAt: now,
-    updatedAt: now,
-    deletedAt: null,
-  },
-];
+const vietnameseCollection = {
+  id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+  name: "Vietnamesisch",
+  icon: "flag-vn",
+  frontLanguage: "vi-VN",
+  backLanguage: "de-DE",
+  createdAt: now,
+  updatedAt: now,
+  deletedAt: null,
+};
+const englishCollection = {
+  id: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+  name: "Englisch",
+  icon: "flag-gb",
+  frontLanguage: null,
+  backLanguage: null,
+  createdAt: now,
+  updatedAt: now,
+  deletedAt: null,
+};
+export const testCollections = [vietnameseCollection, englishCollection];
 export const testTopics = [
   {
     id: "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
-    collectionId: testCollections[0]!.id,
+    collectionId: vietnameseCollection.id,
     name: "Tiere",
     icon: "animal" as const,
     createdAt: now,
@@ -38,7 +38,7 @@ export const testTopics = [
 export const testCards = [
   {
     id: "11111111-1111-4111-8111-111111111111",
-    collectionId: testCollections[0]!.id,
+    collectionId: vietnameseCollection.id,
     topicIds: ["cccccccc-cccc-4ccc-8ccc-cccccccccccc"],
     front: "Take care",
     back: "Pass auf",
@@ -51,7 +51,7 @@ export const testCards = [
   },
   {
     id: "22222222-2222-4222-8222-222222222222",
-    collectionId: testCollections[1]!.id,
+    collectionId: englishCollection.id,
     topicIds: [],
     front: "Café",
     back: "Kaffeehaus",
@@ -71,9 +71,9 @@ export const testCards = [
  */
 export const testGeneratedAudio = {
   id: "ffffffff-ffff-4fff-8fff-ffffffffffff",
-  durationMs: 1_200,
+  durationMs: 1200,
   contentType: "audio/mpeg",
-  byteSize: 9_600,
+  byteSize: 9600,
   synthesizedText: "xin chào",
 };
 
@@ -93,17 +93,12 @@ export const mockServer = setupServer(
     }),
   ),
   http.post("/api/pronunciations", async ({ request }) => {
-    const { text } = (await request.json()) as { text: string };
+    const { text } = pronunciationWireSchema.parse(await request.json());
 
     return HttpResponse.json({ ...testGeneratedAudio, synthesizedText: text }, { status: 201 });
   }),
   http.post("/api/reviews", async ({ request }) => {
-    const input = (await request.json()) as {
-      id: string;
-      cardId: string;
-      grade: string;
-      reviewedAt: string;
-    };
+    const input = reviewWireSchema.parse(await request.json());
 
     return HttpResponse.json({
       review: { ...input, pointsAwarded: 10, boxBefore: 0, boxAfter: 1, recordedAt: now },

@@ -1,0 +1,14 @@
+{
+  "extends": "../../tsconfig.node.json",
+  "compilerOptions": {
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
+    "tsBuildInfoFile": "../../node_modules/.tmp/tsconfig.e2e.tsbuildinfo"
+  },
+  "include": [
+    "**/*.ts",
+    "../../src/contracts",
+    "../../src/domain",
+    "../../src/test/wireSchemas.ts"
+  ],
+  "exclude": []
+}

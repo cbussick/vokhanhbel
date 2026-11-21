@@ -36,6 +36,7 @@ export const collectionSchema = z.object({
   id: uuidSchema,
   name: z.string().min(1).max(60),
   // An older client must render a Collection a newer one wrote, so an unknown icon degrades.
+  // eslint-disable-next-line unicorn/prefer-top-level-await -- Zod catch supplies a synchronous schema fallback, not a Promise rejection handler.
   icon: collectionIconSchema.catch(defaultCollectionIcon),
   /**
    * Kept verbatim rather than degraded the way the icon is. A locale this build cannot offer is

@@ -1,15 +1,23 @@
 import { and, desc, eq, inArray, isNull } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
-import type { PoolClient } from "pg";
+import type { QueryResult, QueryResultRow } from "pg";
 import { z } from "zod";
 import type { CreateCardInput, UpdateCardInput } from "../../contracts/card.js";
 import { problemTypes } from "../../contracts/problem.js";
 import { getDatabase, getPool } from "../database/client.js";
 import { isForeignKeyViolation, isUniqueViolation } from "../database/errors.js";
 import { audioAssets, cardTopics, cards, topics } from "../database/schema.js";
-import { AppProblem } from "../http/problem.js";
+import { AppProblemError } from "../http/problem.js";
 import { deleteAudioObject } from "./audio.js";
 import { mapCard } from "./cardMapper.js";
+
+interface CardWriteClient {
+  query<Row extends QueryResultRow>(
+    text: string,
+    values?: Array<unknown>,
+  ): Promise<QueryResult<Row>>;
+  release(): void;
+}
 
 interface LegacyCreateCardInput {
   collectionId: string;
@@ -28,30 +36,38 @@ const lockedCardSchema = z.object({
 const claimedAudioSchema = z.object({ id: z.uuid(), object_key: z.string() });
 
 function throwCardWriteProblem(error: unknown): never {
-  if (error instanceof AppProblem) throw error;
-  if (isUniqueViolation(error))
-    throw new AppProblem(
+  if (error instanceof AppProblemError) {
+    throw error;
+  }
+  if (isUniqueViolation(error)) {
+    throw new AppProblemError(
       409,
       problemTypes.cardFrontConflict,
       "Diese Vorderseite gibt es schon",
       undefined,
       [{ pointer: "/front/text", code: "not_unique" }],
     );
-  if (isForeignKeyViolation(error))
-    throw new AppProblem(404, problemTypes.collectionNotFound, "Sammlung nicht gefunden");
+  }
+  if (isForeignKeyViolation(error)) {
+    throw new AppProblemError(404, problemTypes.collectionNotFound, "Sammlung nicht gefunden");
+  }
   throw error;
+}
+
+function isLegacyInput(
+  input: CreateCardInput | LegacyCreateCardInput,
+): input is LegacyCreateCardInput {
+  return typeof input.front === "string";
 }
 
 function structuredInput(input: CreateCardInput | LegacyCreateCardInput): CreateCardInput {
   // The two input shapes differ only in `front`: a string means the legacy shape, an object means
   // the structured one. That makes this check a discriminator for the union.
-  if (typeof input.front !== "string") {
-    // SAFETY: a non-string `front` means the value is already the structured shape.
-    return input as CreateCardInput;
+  if (!isLegacyInput(input)) {
+    return input;
   }
 
-  // SAFETY: reaching this line means `front` is a string, so `input` is the legacy shape.
-  const legacy = input as LegacyCreateCardInput;
+  const legacy = input;
 
   return {
     collectionId: legacy.collectionId,
@@ -89,10 +105,12 @@ function selectCards() {
     .leftJoin(backAudio, eq(cards.backAudioId, backAudio.id));
 }
 
-async function topicIdsByCard(cardIds: string[]): Promise<Map<string, string[]>> {
-  const memberships = new Map<string, string[]>();
+async function topicIdsByCard(cardIds: Array<string>): Promise<Map<string, Array<string>>> {
+  const memberships = new Map<string, Array<string>>();
 
-  if (cardIds.length === 0) return memberships;
+  if (cardIds.length === 0) {
+    return memberships;
+  }
 
   const rows = await getDatabase()
     .select({ cardId: cardTopics.cardId, topicId: cardTopics.topicId })
@@ -110,13 +128,15 @@ async function topicIdsByCard(cardIds: string[]): Promise<Map<string, string[]>>
 }
 
 async function uniqueTopicIdsForCollection(
-  client: PoolClient,
+  client: CardWriteClient,
   collectionId: string,
-  topicIds: string[],
-): Promise<string[]> {
+  topicIds: Array<string>,
+): Promise<Array<string>> {
   const unique = [...new Set(topicIds)];
 
-  if (unique.length === 0) return unique;
+  if (unique.length === 0) {
+    return unique;
+  }
 
   const result = await client.query<{ id: string }>(
     `SELECT id FROM topics
@@ -124,20 +144,23 @@ async function uniqueTopicIdsForCollection(
     [unique, collectionId],
   );
 
-  if (result.rows.length !== unique.length)
-    throw new AppProblem(404, problemTypes.topicNotFound, "Thema nicht gefunden");
+  if (result.rows.length !== unique.length) {
+    throw new AppProblemError(404, problemTypes.topicNotFound, "Thema nicht gefunden");
+  }
 
   return unique;
 }
 
 async function replaceCardTopics(
-  client: PoolClient,
+  client: CardWriteClient,
   cardId: string,
-  topicIds: string[],
+  topicIds: Array<string>,
 ): Promise<void> {
   await client.query("DELETE FROM card_topics WHERE card_id=$1", [cardId]);
 
-  if (topicIds.length === 0) return;
+  if (topicIds.length === 0) {
+    return;
+  }
 
   await client.query("INSERT INTO card_topics (card_id, topic_id) SELECT $1, unnest($2::uuid[])", [
     cardId,
@@ -157,20 +180,29 @@ export async function getCard(cardId: string) {
     .where(and(eq(cards.id, cardId), isNull(cards.deletedAt)))
     .limit(1);
 
-  if (!rows[0]) throw new AppProblem(404, problemTypes.cardNotFound, "Karte nicht gefunden");
+  if (!rows[0]) {
+    throw new AppProblemError(404, problemTypes.cardNotFound, "Karte nicht gefunden");
+  }
   const memberships = await topicIdsByCard([cardId]);
 
   return mapCard(rows[0], memberships.get(cardId) ?? []);
 }
 
 async function lockStagedAudio(
-  client: PoolClient,
+  client: CardWriteClient,
   audioId: string | null,
   sessionHash: string | undefined,
 ): Promise<void> {
-  if (!audioId) return;
-  if (!sessionHash)
-    throw new AppProblem(409, problemTypes.audioNotOwned, "Audio gehört nicht zu dieser Sitzung");
+  if (!audioId) {
+    return;
+  }
+  if (!sessionHash) {
+    throw new AppProblemError(
+      409,
+      problemTypes.audioNotOwned,
+      "Audio gehört nicht zu dieser Sitzung",
+    );
+  }
   const result = await client.query(
     `SELECT id FROM audio_assets
      WHERE id=$1 AND owner_session_hash=$2 AND claimed_card_id IS NULL
@@ -179,17 +211,24 @@ async function lockStagedAudio(
     [audioId, sessionHash],
   );
 
-  if (!result.rows[0])
-    throw new AppProblem(409, problemTypes.audioNotOwned, "Audio gehört nicht zu dieser Sitzung");
+  if (!result.rows[0]) {
+    throw new AppProblemError(
+      409,
+      problemTypes.audioNotOwned,
+      "Audio gehört nicht zu dieser Sitzung",
+    );
+  }
 }
 
 async function claimAudio(
-  client: PoolClient,
+  client: CardWriteClient,
   audioId: string | null,
   cardId: string,
   face: "front" | "back",
 ): Promise<void> {
-  if (!audioId) return;
+  if (!audioId) {
+    return;
+  }
   await client.query("UPDATE audio_assets SET claimed_card_id=$1, claimed_face=$2 WHERE id=$3", [
     cardId,
     face,
@@ -197,56 +236,67 @@ async function claimAudio(
   ]);
 }
 
-export async function createCard(
-  inputValue: CreateCardInput | LegacyCreateCardInput,
-  sessionHash?: string,
-) {
-  const input = structuredInput(inputValue);
+export function createCardWriter(dependencies: {
+  connect: () => Promise<CardWriteClient>;
+  read: typeof getCard;
+}) {
+  return async function createCard(
+    inputValue: CreateCardInput | LegacyCreateCardInput,
+    sessionHash?: string,
+  ) {
+    const input = structuredInput(inputValue);
 
-  if (input.front.audioId && input.front.audioId === input.back.audioId)
-    throw new AppProblem(
-      422,
-      problemTypes.invalidRequest,
-      "Jede Kartenseite braucht eigenes Audio",
-    );
-  const client = await getPool().connect();
-  const cardId = crypto.randomUUID();
+    if (input.front.audioId && input.front.audioId === input.back.audioId) {
+      throw new AppProblemError(
+        422,
+        problemTypes.invalidRequest,
+        "Jede Kartenseite braucht eigenes Audio",
+      );
+    }
+    const client = await dependencies.connect();
+    const cardId = crypto.randomUUID();
 
-  try {
-    await client.query("BEGIN");
-    await lockStagedAudio(client, input.front.audioId, sessionHash);
-    await lockStagedAudio(client, input.back.audioId, sessionHash);
-    const topicIds = await uniqueTopicIdsForCollection(
-      client,
-      input.collectionId,
-      input.topicIds ?? [],
-    );
-    await client.query(
-      `INSERT INTO cards
+    try {
+      await client.query("BEGIN");
+      await lockStagedAudio(client, input.front.audioId, sessionHash);
+      await lockStagedAudio(client, input.back.audioId, sessionHash);
+      const topicIds = await uniqueTopicIdsForCollection(
+        client,
+        input.collectionId,
+        input.topicIds ?? [],
+      );
+      await client.query(
+        `INSERT INTO cards
        (id, collection_id, front_text, normalized_front, front_audio_id, back_text, back_audio_id)
        VALUES ($1,$2,$3,$3,$4,$5,$6)`,
-      [
-        cardId,
-        input.collectionId,
-        input.front.text,
-        input.front.audioId,
-        input.back.text,
-        input.back.audioId,
-      ],
-    );
-    await replaceCardTopics(client, cardId, topicIds);
-    await claimAudio(client, input.front.audioId, cardId, "front");
-    await claimAudio(client, input.back.audioId, cardId, "back");
-    await client.query("COMMIT");
+        [
+          cardId,
+          input.collectionId,
+          input.front.text,
+          input.front.audioId,
+          input.back.text,
+          input.back.audioId,
+        ],
+      );
+      await replaceCardTopics(client, cardId, topicIds);
+      await claimAudio(client, input.front.audioId, cardId, "front");
+      await claimAudio(client, input.back.audioId, cardId, "back");
+      await client.query("COMMIT");
+    } catch (error) {
+      await client.query("ROLLBACK");
+      throwCardWriteProblem(error);
+    } finally {
+      client.release();
+    }
 
-    return getCard(cardId);
-  } catch (error) {
-    await client.query("ROLLBACK");
-    throwCardWriteProblem(error);
-  } finally {
-    client.release();
-  }
+    return dependencies.read(cardId);
+  };
 }
+
+export const createCard = createCardWriter({
+  connect: () => getPool().connect(),
+  read: getCard,
+});
 
 export async function updateCard(
   cardId: string,
@@ -255,7 +305,7 @@ export async function updateCard(
   requestId?: string,
 ) {
   const client = await getPool().connect();
-  const obsolete: { id: string; objectKey: string }[] = [];
+  const obsolete: Array<{ id: string; objectKey: string }> = [];
 
   try {
     await client.query("BEGIN");
@@ -266,7 +316,9 @@ export async function updateCard(
     );
     const current = selected.rows[0] ? lockedCardSchema.parse(selected.rows[0]) : undefined;
 
-    if (!current) throw new AppProblem(404, problemTypes.cardNotFound, "Karte nicht gefunden");
+    if (!current) {
+      throw new AppProblemError(404, problemTypes.cardNotFound, "Karte nicht gefunden");
+    }
     const collectionId = input.collectionId ?? current.collection_id;
     const frontText = input.front?.text === undefined ? current.front_text : input.front.text;
     const backText = input.back?.text === undefined ? current.back_text : input.back.text;
@@ -275,40 +327,55 @@ export async function updateCard(
     const backAudioId =
       input.back?.audioId === undefined ? current.back_audio_id : input.back.audioId;
 
-    if (!frontText && !frontAudioId)
-      throw new AppProblem(422, problemTypes.invalidRequest, "Vorderseite darf nicht leer sein");
-    if (!backText && !backAudioId)
-      throw new AppProblem(422, problemTypes.invalidRequest, "Rückseite darf nicht leer sein");
-    if (frontAudioId && frontAudioId === backAudioId)
-      throw new AppProblem(
+    if (!frontText && !frontAudioId) {
+      throw new AppProblemError(
+        422,
+        problemTypes.invalidRequest,
+        "Vorderseite darf nicht leer sein",
+      );
+    }
+    if (!backText && !backAudioId) {
+      throw new AppProblemError(422, problemTypes.invalidRequest, "Rückseite darf nicht leer sein");
+    }
+    if (frontAudioId && frontAudioId === backAudioId) {
+      throw new AppProblemError(
         422,
         problemTypes.invalidRequest,
         "Jede Kartenseite braucht eigenes Audio",
       );
+    }
 
-    if (frontAudioId !== current.front_audio_id)
+    if (frontAudioId !== current.front_audio_id) {
       await lockStagedAudio(client, frontAudioId, sessionHash);
-    if (backAudioId !== current.back_audio_id)
+    }
+    if (backAudioId !== current.back_audio_id) {
       await lockStagedAudio(client, backAudioId, sessionHash);
+    }
     await client.query(
       `UPDATE cards SET collection_id=$1, front_text=$2, normalized_front=$2,
        front_audio_id=$3, back_text=$4, back_audio_id=$5, updated_at=now() WHERE id=$6`,
       [collectionId, frontText, frontAudioId, backText, backAudioId, cardId],
     );
-    if (input.topicIds !== undefined)
+    if (input.topicIds !== undefined) {
       await replaceCardTopics(
         client,
         cardId,
         await uniqueTopicIdsForCollection(client, collectionId, input.topicIds),
       );
-    else if (collectionId !== current.collection_id) await replaceCardTopics(client, cardId, []);
-    if (frontAudioId !== current.front_audio_id)
+    } else if (collectionId !== current.collection_id) {
+      await replaceCardTopics(client, cardId, []);
+    }
+    if (frontAudioId !== current.front_audio_id) {
       await claimAudio(client, frontAudioId, cardId, "front");
-    if (backAudioId !== current.back_audio_id)
+    }
+    if (backAudioId !== current.back_audio_id) {
       await claimAudio(client, backAudioId, cardId, "back");
+    }
 
     for (const oldAudioId of [current.front_audio_id, current.back_audio_id]) {
-      if (!oldAudioId || oldAudioId === frontAudioId || oldAudioId === backAudioId) continue;
+      if (!oldAudioId || oldAudioId === frontAudioId || oldAudioId === backAudioId) {
+        continue;
+      }
       const released = await client.query(
         `UPDATE audio_assets SET deleted_at=now(), claimed_card_id=NULL, claimed_face=NULL
          WHERE id=$1 RETURNING id, object_key`,
@@ -335,7 +402,7 @@ export async function updateCard(
 
 export async function deleteCard(cardId: string, requestId?: string): Promise<void> {
   const client = await getPool().connect();
-  const obsolete: { id: string; objectKey: string }[] = [];
+  const obsolete: Array<{ id: string; objectKey: string }> = [];
 
   try {
     await client.query("BEGIN");
@@ -361,7 +428,9 @@ export async function deleteCard(cardId: string, requestId?: string): Promise<vo
     await client.query("DELETE FROM card_topics WHERE card_id=$1", [cardId]);
 
     for (const audioId of [selectedCard.data.front_audio_id, selectedCard.data.back_audio_id]) {
-      if (!audioId) continue;
+      if (!audioId) {
+        continue;
+      }
       const released = await client.query(
         `UPDATE audio_assets SET deleted_at=now(), claimed_card_id=NULL, claimed_face=NULL
          WHERE id=$1 RETURNING id, object_key`,

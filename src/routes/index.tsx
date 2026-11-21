@@ -8,8 +8,12 @@ export const Route = createFileRoute("/")({ component: IndexRoute });
 function IndexRoute() {
   const auth = useAuth();
 
-  if (auth.status === "checking") return <LoadingScreen />;
-  if (auth.status === "error") return <SessionErrorScreen />;
+  if (auth.status === "checking") {
+    return <LoadingScreen />;
+  }
+  if (auth.status === "error") {
+    return <SessionErrorScreen />;
+  }
 
   return <Navigate to={auth.status === "authenticated" ? "/review" : "/login"} />;
 }

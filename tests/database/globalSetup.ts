@@ -14,7 +14,7 @@ if (!testDatabaseName.endsWith("_test")) {
 async function isPostgresReachable(): Promise<boolean> {
   const client = new Client({
     connectionString: maintenanceDatabaseUrl,
-    connectionTimeoutMillis: 2_000,
+    connectionTimeoutMillis: 2000,
   });
 
   try {
@@ -33,7 +33,9 @@ async function isPostgresReachable(): Promise<boolean> {
  * container the developer started, and only starts one when nothing is listening.
  */
 async function ensurePostgresRunning(): Promise<void> {
-  if (await isPostgresReachable()) return;
+  if (await isPostgresReachable()) {
+    return;
+  }
 
   try {
     await runCommand("docker", ["compose", "up", "--detach", "--wait", "postgres"], {

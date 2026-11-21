@@ -1,6 +1,8 @@
 import { apiPaths } from "../../contracts/apiPaths";
-import { audioMetadataSchema, type AudioMetadata } from "../../contracts/card";
-import { pronunciationInputSchema, type PronunciationInput } from "../../contracts/pronunciation";
+import { audioMetadataSchema } from "../../contracts/card";
+import type { AudioMetadata } from "../../contracts/card";
+import { pronunciationInputSchema } from "../../contracts/pronunciation";
+import type { PronunciationInput } from "../../contracts/pronunciation";
 import { apiRequest, throwApiError } from "../../lib/apiClient";
 
 export async function stageAudioDraft(blob: Blob): Promise<AudioMetadata> {
@@ -11,7 +13,9 @@ export async function stageAudioDraft(blob: Blob): Promise<AudioMetadata> {
     credentials: "same-origin",
   });
 
-  if (!response.ok) await throwApiError(response);
+  if (!response.ok) {
+    await throwApiError(response);
+  }
 
   return audioMetadataSchema.parse(await response.json());
 }
@@ -21,10 +25,8 @@ export async function stageAudioDraft(blob: Blob): Promise<AudioMetadata> {
  * through the claiming path a recording already uses. Nothing is written when this rejects.
  */
 export async function generatePronunciation(input: PronunciationInput): Promise<AudioMetadata> {
-  return audioMetadataSchema.parse(
-    await apiRequest(apiPaths.pronunciations, {
-      method: "POST",
-      body: JSON.stringify(pronunciationInputSchema.parse(input)),
-    }),
-  );
+  return await apiRequest(apiPaths.pronunciations, audioMetadataSchema, {
+    method: "POST",
+    body: JSON.stringify(pronunciationInputSchema.parse(input)),
+  });
 }

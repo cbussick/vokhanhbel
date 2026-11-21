@@ -1,11 +1,11 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useEffectEvent, useRef, useState } from "react";
 import { apiPaths } from "../../contracts/apiPaths";
-import { apiRequest, isTemporaryError } from "../../lib/apiClient";
+import { apiCommand, isTemporaryError } from "../../lib/apiClient";
 import { queryKeys } from "../../lib/queryKeys";
 import type { ReviewSubmission } from "./reviewSubmission";
 
-const retryDelays = [1_000, 2_000, 4_000];
+const retryDelays = [1000, 2000, 4000];
 
 interface QueuedReviewSubmission extends ReviewSubmission {
   syncStatus: "pending" | "syncing" | "failed";
@@ -47,13 +47,13 @@ function waitForRetry(milliseconds: number, signal: AbortSignal): Promise<void> 
 
 export function useReviewSubmissionQueue(): ReviewSubmissionQueue {
   const queryClient = useQueryClient();
-  const [queuedSubmissions, setQueuedSubmissions] = useState<QueuedReviewSubmission[]>([]);
-  const queuedSubmissionsRef = useRef<QueuedReviewSubmission[]>([]);
+  const [queuedSubmissions, setQueuedSubmissions] = useState<Array<QueuedReviewSubmission>>([]);
+  const queuedSubmissionsRef = useRef<Array<QueuedReviewSubmission>>([]);
   const controllers = useRef(new Map<string, AbortController>());
   const generation = useRef(0);
 
   const updateQueuedSubmissions = (
-    update: (submissions: QueuedReviewSubmission[]) => QueuedReviewSubmission[],
+    update: (submissions: Array<QueuedReviewSubmission>) => Array<QueuedReviewSubmission>,
   ) => {
     setQueuedSubmissions((submissions) => {
       const nextSubmissions = update(submissions);
@@ -69,7 +69,9 @@ export function useReviewSubmissionQueue(): ReviewSubmissionQueue {
   ) => {
     updateQueuedSubmissions((submissions) =>
       submissions.flatMap((submission) => {
-        if (submission.input.id !== id) return [submission];
+        if (submission.input.id !== id) {
+          return [submission];
+        }
         const updated = update(submission);
 
         return updated ? [updated] : [];
@@ -78,7 +80,9 @@ export function useReviewSubmissionQueue(): ReviewSubmissionQueue {
   };
 
   const sendReviewSubmission = async (submission: QueuedReviewSubmission, automatic = true) => {
-    if (!navigator.onLine || controllers.current.has(submission.input.id)) return;
+    if (!navigator.onLine || controllers.current.has(submission.input.id)) {
+      return;
+    }
 
     const controller = new AbortController();
     const requestGeneration = generation.current;
@@ -94,12 +98,14 @@ export function useReviewSubmissionQueue(): ReviewSubmissionQueue {
     try {
       for (let attempt = 0; attempt < attempts; attempt += 1) {
         try {
-          await apiRequest(apiPaths.reviews, {
+          await apiCommand(apiPaths.reviews, {
             method: "POST",
             body: JSON.stringify(submission.input),
             signal: controller.signal,
           });
-          if (controller.signal.aborted || requestGeneration !== generation.current) return;
+          if (controller.signal.aborted || requestGeneration !== generation.current) {
+            return;
+          }
           updateQueuedSubmission(submission.input.id, () => undefined);
           await Promise.all([
             queryClient.invalidateQueries({ queryKey: queryKeys.cards }),
@@ -108,15 +114,18 @@ export function useReviewSubmissionQueue(): ReviewSubmissionQueue {
 
           return;
         } catch (error) {
-          if (controller.signal.aborted || requestGeneration !== generation.current) return;
+          if (controller.signal.aborted || requestGeneration !== generation.current) {
+            return;
+          }
           if (!isTemporaryError(error)) {
             updateQueuedSubmission(submission.input.id, () => undefined);
             submission.onRejected(submission, error);
 
             return;
           }
-          if (attempt < attempts - 1)
-            await waitForRetry(retryDelays[attempt] ?? 4_000, controller.signal);
+          if (attempt < attempts - 1) {
+            await waitForRetry(retryDelays[attempt] ?? 4000, controller.signal);
+          }
         }
       }
 
@@ -125,14 +134,18 @@ export function useReviewSubmissionQueue(): ReviewSubmissionQueue {
         syncStatus: "failed",
       }));
     } finally {
-      if (controllers.current.get(submission.input.id) === controller)
+      if (controllers.current.get(submission.input.id) === controller) {
         controllers.current.delete(submission.input.id);
+      }
     }
   };
 
   const handleReconnect = useEffectEvent(() => {
-    for (const submission of queuedSubmissionsRef.current)
-      if (submission.syncStatus !== "syncing") void sendReviewSubmission(submission);
+    for (const submission of queuedSubmissionsRef.current) {
+      if (submission.syncStatus !== "syncing") {
+        void sendReviewSubmission(submission);
+      }
+    }
   });
 
   useEffect(() => {
@@ -143,7 +156,9 @@ export function useReviewSubmissionQueue(): ReviewSubmissionQueue {
 
   useEffect(() => {
     const warn = (event: BeforeUnloadEvent) => {
-      if (queuedSubmissionsRef.current.length > 0) event.preventDefault();
+      if (queuedSubmissionsRef.current.length > 0) {
+        event.preventDefault();
+      }
     };
 
     window.addEventListener("beforeunload", warn);
@@ -166,14 +181,18 @@ export function useReviewSubmissionQueue(): ReviewSubmissionQueue {
   };
 
   const retryFailedSubmissions = () => {
-    for (const submission of queuedSubmissionsRef.current)
-      if (submission.syncStatus === "failed" || submission.syncStatus === "pending")
+    for (const submission of queuedSubmissionsRef.current) {
+      if (submission.syncStatus === "failed" || submission.syncStatus === "pending") {
         void sendReviewSubmission(submission, false);
+      }
+    }
   };
 
   const discardAllSubmissions = () => {
     generation.current += 1;
-    for (const controller of controllers.current.values()) controller.abort();
+    for (const controller of controllers.current.values()) {
+      controller.abort();
+    }
     controllers.current.clear();
     updateQueuedSubmissions(() => []);
   };

@@ -1,23 +1,18 @@
 import { z } from "zod";
 import { cardSchema } from "../../contracts/card.js";
 import { problemTypes } from "../../contracts/problem.js";
-import {
-  reviewResultSchema,
-  reviewSchema,
-  type ReviewResult,
-  type ReviewSubmissionInput,
-} from "../../contracts/review.js";
+import { reviewResultSchema, reviewSchema } from "../../contracts/review.js";
+import type { ReviewResult, ReviewSubmissionInput } from "../../contracts/review.js";
 import {
   boxSchema,
   getBoxAfterGrade,
   getIntervalDays,
   getPointsForGrade,
   gradeSchema,
-  type Box,
 } from "../../domain/review.js";
 import { berlinTimeZone } from "../../domain/time.js";
 import { getPool } from "../database/client.js";
-import { AppProblem } from "../http/problem.js";
+import { AppProblemError } from "../http/problem.js";
 import { audioRowSchema, mapCard } from "./cardMapper.js";
 
 const reviewRowSchema = z.object({
@@ -48,10 +43,10 @@ const databaseCardRowSchema = z.object({
 });
 
 const dueRowSchema = z.object({ due_at: z.date() });
-const maximumReviewAgeMilliseconds = 7 * 24 * 60 * 60 * 1_000;
-const maximumClockSkewMilliseconds = 5 * 60 * 1_000;
+const maximumReviewAgeMilliseconds = 7 * 24 * 60 * 60 * 1000;
+const maximumClockSkewMilliseconds = 5 * 60 * 1000;
 
-function mapDatabaseCard(value: unknown, topicIds: string[]) {
+function mapDatabaseCard(value: unknown, topicIds: Array<string>) {
   const row = databaseCardRowSchema.parse(value);
 
   return mapCard(
@@ -127,7 +122,7 @@ export async function recordReview(input: ReviewSubmissionInput): Promise<Review
         original.grade !== input.grade ||
         original.reviewed_at.toISOString() !== input.reviewedAt
       ) {
-        throw new AppProblem(
+        throw new AppProblemError(
           409,
           problemTypes.reviewReplayConflict,
           "Review muss neu geladen werden",
@@ -146,19 +141,20 @@ export async function recordReview(input: ReviewSubmissionInput): Promise<Review
     const cardResult = await client.query(cardSelectSql, [input.cardId]);
     const card = cardResult.rows[0] ? databaseCardRowSchema.parse(cardResult.rows[0]) : undefined;
 
-    if (!card || card.deleted_at)
-      throw new AppProblem(404, problemTypes.cardNotFound, "Karte nicht gefunden");
+    if (!card || card.deleted_at) {
+      throw new AppProblemError(404, problemTypes.cardNotFound, "Karte nicht gefunden");
+    }
     const reviewedAt = new Date(input.reviewedAt);
     const now = new Date();
 
-    if (reviewedAt.getTime() < now.getTime() - maximumReviewAgeMilliseconds)
-      throw new AppProblem(422, problemTypes.reviewTooOld, "Review ist zu alt");
-    if (reviewedAt.getTime() > now.getTime() + maximumClockSkewMilliseconds)
-      throw new AppProblem(422, problemTypes.deviceClockAhead, "Gerätezeit prüfen");
+    if (reviewedAt.getTime() < now.getTime() - maximumReviewAgeMilliseconds) {
+      throw new AppProblemError(422, problemTypes.reviewTooOld, "Review ist zu alt");
+    }
+    if (reviewedAt.getTime() > now.getTime() + maximumClockSkewMilliseconds) {
+      throw new AppProblemError(422, problemTypes.deviceClockAhead, "Gerätezeit prüfen");
+    }
 
-    // SAFETY: the cards.box column carries the `cards_box_range` CHECK constraint restricting it
-    // to 0-5, so a stored value is always within the Box union.
-    const boxBefore = card.box as Box;
+    const boxBefore = card.box;
     const boxAfter = getBoxAfterGrade(boxBefore, input.grade);
     const pointsAwarded = getPointsForGrade(input.grade);
     const intervalDays = getIntervalDays(boxAfter);

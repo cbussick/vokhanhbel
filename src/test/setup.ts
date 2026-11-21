@@ -9,7 +9,7 @@ import { mockServer } from "./server";
 // — the assertion arriving before anything had rendered — which reads like a broken selector rather
 // than a slow one, and cost two wrong diagnoses before CI made it reproducible. `renderApp` already
 // hand-rolls a longer wait for the first render; this covers every navigation after it.
-configure({ asyncUtilTimeout: 5_000 });
+configure({ asyncUtilTimeout: 5000 });
 
 Object.defineProperty(window, "matchMedia", {
   writable: true,
@@ -24,13 +24,17 @@ Object.defineProperty(window, "matchMedia", {
 });
 Object.defineProperty(window, "scrollTo", { writable: true, value: () => undefined });
 
+function showModal(this: HTMLDialogElement) {
+  this.setAttribute("open", "");
+}
+
+function close(this: HTMLDialogElement) {
+  this.removeAttribute("open");
+}
+
 if (!HTMLDialogElement.prototype.showModal) {
-  HTMLDialogElement.prototype.showModal = function showModal() {
-    this.setAttribute("open", "");
-  };
-  HTMLDialogElement.prototype.close = function close() {
-    this.removeAttribute("open");
-  };
+  HTMLDialogElement.prototype.showModal = showModal;
+  HTMLDialogElement.prototype.close = close;
 }
 
 beforeAll(() => mockServer.listen({ onUnhandledRequest: "error" }));

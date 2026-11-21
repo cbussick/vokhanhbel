@@ -2,6 +2,7 @@ import { act, fireEvent, screen, waitFor, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
 import { describe, expect, it, vi } from "vitest";
+import { createCardInputSchema } from "../contracts/card";
 import type { CreateCardInput } from "../contracts/card";
 import type { CollectionInput } from "../contracts/collection";
 import type { PronunciationInput } from "../contracts/pronunciation";
@@ -13,11 +14,49 @@ import {
   testGeneratedAudio,
   testTopics,
 } from "../test/server";
+import {
+  cardInputWireSchema,
+  collectionInputWireSchema,
+  loginWireSchema,
+  nameWireSchema,
+  pronunciationWireSchema,
+  reviewWireSchema,
+  tutorWireSchema,
+} from "../test/wireSchemas";
+
+const initialRelease = () => undefined;
+
+const storedAudio = (id: string, synthesizedText: string | null) => ({
+  id,
+  durationMs: 1000,
+  contentType: "audio/wav",
+  byteSize: 8044,
+  synthesizedText,
+});
+
+function multipleChoiceCard(id: string, front: string, back: string) {
+  return {
+    ...testCards[0]!,
+    id,
+    front,
+    back,
+  };
+}
+
+function matchingCard(id: string, front: string, back: string) {
+  return { ...testCards[0]!, id, front, back };
+}
+
+function swipeCard(id: string, front: string, back: string) {
+  return { ...testCards[0]!, id, front, back };
+}
 
 function dialogByHeading(name: string) {
   const dialog = screen.getByRole("heading", { name }).closest("dialog");
 
-  if (!dialog) throw new Error(`dialog ${name} missing`);
+  if (!dialog) {
+    throw new Error(`dialog ${name} missing`);
+  }
 
   return dialog;
 }
@@ -50,7 +89,12 @@ async function chooseLanguage(
 }
 
 function summaryStat(label: string) {
-  return screen.getByText(label, { selector: "dt" }).nextElementSibling as HTMLElement;
+  const sibling = screen.getByText(label, { selector: "dt" }).nextElementSibling;
+  if (!sibling) {
+    throw new Error(`Missing summary value for ${label}`);
+  }
+
+  return sibling;
 }
 
 function completedTutorReply(text: string) {
@@ -87,7 +131,7 @@ describe("rendered app journeys", () => {
     mockServer.use(
       http.get("/api/session", () => HttpResponse.json({ authenticated: false })),
       http.post("/api/session", async ({ request }) => {
-        submitted = ((await request.json()) as { password: string }).password;
+        submitted = loginWireSchema.parse(await request.json()).password;
 
         return new HttpResponse(null, { status: 204 });
       }),
@@ -243,10 +287,10 @@ describe("rendered app journeys", () => {
 
   it("creates a Card in the open Collection", async () => {
     const user = userEvent.setup();
-    let created: { collectionId?: string } = {};
+    let created: CreateCardInput | undefined;
     mockServer.use(
       http.post("/api/cards", async ({ request }) => {
-        created = (await request.json()) as { collectionId?: string };
+        created = createCardInputSchema.parse(await request.json());
 
         return HttpResponse.json({ ...testCards[1]!, front: "Schnee" }, { status: 201 });
       }),
@@ -258,7 +302,7 @@ describe("rendered app journeys", () => {
     await user.type(screen.getByLabelText("Rückseite Maximal 1.000 Zeichen"), "snow");
     await user.click(screen.getByRole("button", { name: "Speichern" }));
 
-    await waitFor(() => expect(created.collectionId).toBe(testCollections[1]!.id));
+    await waitFor(() => expect(created?.collectionId).toBe(testCollections[1]!.id));
   });
 
   it("creates a Topic from the Card dialog and keeps the Card dialog open", async () => {
@@ -399,12 +443,12 @@ describe("rendered app journeys", () => {
     let created: Partial<CreateCardInput> = {};
     mockServer.use(
       http.post("/api/pronunciations", async ({ request }) => {
-        spoken = (await request.json()) as PronunciationInput;
+        spoken = pronunciationWireSchema.parse(await request.json());
 
         return HttpResponse.json(testGeneratedAudio, { status: 201 });
       }),
       http.post("/api/cards", async ({ request }) => {
-        created = (await request.json()) as Partial<CreateCardInput>;
+        created = cardInputWireSchema.parse(await request.json());
 
         return HttpResponse.json(testCards[0], { status: 201 });
       }),
@@ -442,7 +486,7 @@ describe("rendered app journeys", () => {
     const user = userEvent.setup();
     let created: Partial<CreateCardInput> = {};
     let cardRequests = 0;
-    let finishGeneration: () => void = () => undefined;
+    let finishGeneration: () => void = initialRelease;
     const generation = new Promise<void>((resolve) => {
       finishGeneration = resolve;
     });
@@ -454,7 +498,7 @@ describe("rendered app journeys", () => {
       }),
       http.post("/api/cards", async ({ request }) => {
         cardRequests += 1;
-        created = (await request.json()) as Partial<CreateCardInput>;
+        created = cardInputWireSchema.parse(await request.json());
 
         return HttpResponse.json(testCards[0], { status: 201 });
       }),
@@ -502,7 +546,7 @@ describe("rendered app journeys", () => {
         ),
       ),
       http.post("/api/cards", async ({ request }) => {
-        created = (await request.json()) as Partial<CreateCardInput>;
+        created = cardInputWireSchema.parse(await request.json());
 
         return HttpResponse.json(testCards[0], { status: 201 });
       }),
@@ -552,13 +596,6 @@ describe("rendered app journeys", () => {
   });
 
   it("says what a stored clip says when a Card is reopened, and nothing about the recording beside it", async () => {
-    const storedAudio = (id: string, synthesizedText: string | null) => ({
-      id,
-      durationMs: 1_000,
-      contentType: "audio/wav",
-      byteSize: 8_044,
-      synthesizedText,
-    });
     const savedCard = {
       ...testCards[0]!,
       front: {
@@ -597,7 +634,7 @@ describe("rendered app journeys", () => {
     let created: Partial<CollectionInput> = {};
     mockServer.use(
       http.post("/api/collections", async ({ request }) => {
-        created = (await request.json()) as Partial<CollectionInput>;
+        created = collectionInputWireSchema.parse(await request.json());
 
         return HttpResponse.json({ ...testCollections[0]!, ...created }, { status: 201 });
       }),
@@ -622,7 +659,7 @@ describe("rendered app journeys", () => {
     let created: Partial<CollectionInput> = {};
     mockServer.use(
       http.post("/api/collections", async ({ request }) => {
-        created = (await request.json()) as Partial<CollectionInput>;
+        created = collectionInputWireSchema.parse(await request.json());
 
         return HttpResponse.json({ ...testCollections[0]!, ...created }, { status: 201 });
       }),
@@ -650,7 +687,7 @@ describe("rendered app journeys", () => {
     let updated: Partial<CollectionInput> = {};
     mockServer.use(
       http.patch(`/api/collections/${testCollections[0]!.id}`, async ({ request }) => {
-        updated = (await request.json()) as Partial<CollectionInput>;
+        updated = collectionInputWireSchema.parse(await request.json());
 
         return HttpResponse.json({ ...testCollections[0]!, ...updated });
       }),
@@ -682,7 +719,7 @@ describe("rendered app journeys", () => {
     mockServer.use(
       http.get("/api/collections", () => HttpResponse.json([testCollections[0], foreign])),
       http.patch(`/api/collections/${foreign.id}`, async ({ request }) => {
-        updated = (await request.json()) as Partial<CollectionInput>;
+        updated = collectionInputWireSchema.parse(await request.json());
 
         return HttpResponse.json({ ...foreign, ...updated });
       }),
@@ -730,7 +767,7 @@ describe("rendered app journeys", () => {
     let renamed = "";
     mockServer.use(
       http.patch(`/api/collections/${testCollections[1]!.id}`, async ({ request }) => {
-        renamed = ((await request.json()) as { name: string }).name;
+        renamed = nameWireSchema.parse(await request.json()).name;
 
         return HttpResponse.json({ ...testCollections[1]!, name: renamed });
       }),
@@ -846,7 +883,7 @@ describe("rendered app journeys", () => {
     let recordedGrade = "";
     mockServer.use(
       http.post("/api/reviews", async ({ request }) => {
-        const input = (await request.json()) as { grade: string };
+        const input = reviewWireSchema.parse(await request.json());
         recordedGrade = input.grade;
 
         return HttpResponse.json({
@@ -914,7 +951,7 @@ describe("rendered app journeys", () => {
       ),
       http.post("/api/reviews", async ({ request }) => {
         streak = 3;
-        const input = (await request.json()) as { cardId: string; grade: string };
+        const input = reviewWireSchema.parse(await request.json());
 
         return HttpResponse.json({
           review: { ...input, id: crypto.randomUUID(), pointsAwarded: 10 },
@@ -941,7 +978,7 @@ describe("rendered app journeys", () => {
     mockServer.use(
       http.get("/api/cards", () => HttpResponse.json([testCards[0], secondCard])),
       http.post("/api/reviews", async ({ request }) => {
-        const input = (await request.json()) as { cardId: string; grade: string };
+        const input = reviewWireSchema.parse(await request.json());
 
         return HttpResponse.json({
           review: { ...input, id: crypto.randomUUID(), pointsAwarded: 10 },
@@ -977,15 +1014,6 @@ describe("rendered app journeys", () => {
     expect(await screen.findByRole("button", { name: "Review starten" })).toBeVisible();
   });
 
-  function multipleChoiceCard(id: string, front: string, back: string) {
-    return {
-      ...testCards[0]!,
-      id,
-      front,
-      back,
-    };
-  }
-
   const multipleChoiceCards = [
     multipleChoiceCard("33333333-3333-4333-8333-333333333331", "eins", "one"),
     // Shares its front with the Card above rather than "zwei" (never asserted on screen), so these
@@ -1002,7 +1030,7 @@ describe("rendered app journeys", () => {
     mockServer.use(
       http.get("/api/cards", () => HttpResponse.json(multipleChoiceCards)),
       http.post("/api/reviews", async ({ request }) => {
-        const input = (await request.json()) as { grade: string };
+        const input = reviewWireSchema.parse(await request.json());
         recordedGrade = input.grade;
 
         return HttpResponse.json({
@@ -1037,7 +1065,7 @@ describe("rendered app journeys", () => {
     mockServer.use(
       http.get("/api/cards", () => HttpResponse.json(multipleChoiceCards)),
       http.post("/api/reviews", async ({ request }) => {
-        const input = (await request.json()) as { grade: string };
+        const input = reviewWireSchema.parse(await request.json());
         recordedGrade = input.grade;
 
         return HttpResponse.json({
@@ -1074,7 +1102,7 @@ describe("rendered app journeys", () => {
       http.get("/api/cards", () => HttpResponse.json(multipleChoiceCards)),
       http.post("/api/reviews", async ({ request }) => {
         reviews += 1;
-        const input = (await request.json()) as { grade: string };
+        const input = reviewWireSchema.parse(await request.json());
         recordedGrade = input.grade;
 
         return HttpResponse.json({
@@ -1122,7 +1150,7 @@ describe("rendered app journeys", () => {
   it("keeps the resolved multiple-choice Tutor explanation local when the subject Card's front is audio-only", async () => {
     const user = userEvent.setup();
     const audioId = "88888888-8888-4888-8888-888888888887";
-    const metadata = { durationMs: 1_000, contentType: "audio/wav" as const, byteSize: 8_044 };
+    const metadata = { durationMs: 1000, contentType: "audio/wav" as const, byteSize: 8044 };
     const audioFrontCards = multipleChoiceCards.map((exerciseCard, index) =>
       index === 0
         ? { ...exerciseCard, front: { text: null, audio: { ...metadata, id: audioId } } }
@@ -1157,10 +1185,6 @@ describe("rendered app journeys", () => {
     expect(tutorRequests).toBe(0);
   });
 
-  function matchingCard(id: string, front: string, back: string) {
-    return { ...testCards[0]!, id, front, back };
-  }
-
   const matchingCards = [
     matchingCard("66666666-6666-4666-8666-666666666661", "eins", "one"),
     matchingCard("66666666-6666-4666-8666-666666666662", "zwei", "two"),
@@ -1174,7 +1198,7 @@ describe("rendered app journeys", () => {
     mockServer.use(
       http.get("/api/cards", () => HttpResponse.json(matchingCards)),
       http.post("/api/reviews", async ({ request }) => {
-        const input = (await request.json()) as { cardId: string; grade: string };
+        const input = reviewWireSchema.parse(await request.json());
         recordedGrades[input.cardId] = input.grade;
 
         return HttpResponse.json({
@@ -1213,7 +1237,7 @@ describe("rendered app journeys", () => {
     mockServer.use(
       http.get("/api/cards", () => HttpResponse.json(matchingCards)),
       http.post("/api/reviews", async ({ request }) => {
-        const input = (await request.json()) as { cardId: string; grade: string };
+        const input = reviewWireSchema.parse(await request.json());
         recordedGrades[input.cardId] = input.grade;
 
         return HttpResponse.json({
@@ -1257,7 +1281,7 @@ describe("rendered app journeys", () => {
     mockServer.use(
       http.get("/api/cards", () => HttpResponse.json(matchingCards)),
       http.post("/api/reviews", async ({ request }) => {
-        const input = (await request.json()) as { cardId: string; grade: string };
+        const input = reviewWireSchema.parse(await request.json());
         recordedGrades[input.cardId] = input.grade;
 
         return HttpResponse.json({
@@ -1365,10 +1389,6 @@ describe("rendered app journeys", () => {
     );
   });
 
-  function swipeCard(id: string, front: string, back: string) {
-    return { ...testCards[0]!, id, front, back };
-  }
-
   // "zwei" and "drei" share a back, so whichever the shuffle picks as "eins"'s one distractor, the
   // visible text is always "haus" — and "haus" is excluded as a distractor for whichever of "zwei"
   // or "drei" is being planned, since it would equal that Card's own correct back, leaving "eins"'s
@@ -1386,7 +1406,7 @@ describe("rendered app journeys", () => {
     mockServer.use(
       http.get("/api/cards", () => HttpResponse.json(swipeCards)),
       http.post("/api/reviews", async ({ request }) => {
-        const input = (await request.json()) as { grade: string };
+        const input = reviewWireSchema.parse(await request.json());
         recordedGrade = input.grade;
 
         return HttpResponse.json({
@@ -1422,7 +1442,7 @@ describe("rendered app journeys", () => {
     mockServer.use(
       http.get("/api/cards", () => HttpResponse.json(swipeCards)),
       http.post("/api/reviews", async ({ request }) => {
-        const input = (await request.json()) as { grade: string };
+        const input = reviewWireSchema.parse(await request.json());
         recordedGrade = input.grade;
 
         return HttpResponse.json({
@@ -1570,7 +1590,7 @@ describe("rendered app journeys", () => {
       http.get("/api/cards", () => HttpResponse.json([...multipleChoiceCards, soloCard])),
       http.post("/api/reviews", async ({ request }) => {
         reviews += 1;
-        const input = (await request.json()) as { grade: string };
+        const input = reviewWireSchema.parse(await request.json());
 
         return HttpResponse.json({
           review: { id: crypto.randomUUID(), pointsAwarded: 10, boxBefore: 0, boxAfter: 1 },
@@ -1618,7 +1638,7 @@ describe("rendered app journeys", () => {
     mockServer.use(
       http.get("/api/cards", () => HttpResponse.json(tinyCollectionCards)),
       http.post("/api/reviews", async ({ request }) => {
-        const input = (await request.json()) as { grade: string };
+        const input = reviewWireSchema.parse(await request.json());
 
         return HttpResponse.json({
           review: { id: crypto.randomUUID(), pointsAwarded: 10, boxBefore: 0, boxAfter: 1 },
@@ -1641,7 +1661,7 @@ describe("rendered app journeys", () => {
 
   it("offers audio options for a Card with a recorded back, blocks grading while one fails to load, and offers Skip Card", async () => {
     const user = userEvent.setup();
-    const metadata = { durationMs: 1_000, contentType: "audio/wav" as const, byteSize: 8_044 };
+    const metadata = { durationMs: 1000, contentType: "audio/wav" as const, byteSize: 8044 };
     const audioCard = (id: string, audioId: string, due: boolean) => ({
       ...testCards[0]!,
       id,
@@ -1717,7 +1737,7 @@ describe("rendered app journeys", () => {
       ...testCards[0]!,
       front: {
         text: null,
-        audio: { id: audioId, durationMs: 1_000, contentType: "audio/wav", byteSize: 8_044 },
+        audio: { id: audioId, durationMs: 1000, contentType: "audio/wav", byteSize: 8044 },
       },
       back: { text: "Antwort", audio: null },
     };
@@ -1760,7 +1780,7 @@ describe("rendered app journeys", () => {
   it("keeps the local mixed audio-only Tutor explanation available offline without a provider request", async () => {
     const user = userEvent.setup();
     const frontAudioId = "88888888-8888-4888-8888-888888888881";
-    const metadata = { durationMs: 1_000, contentType: "audio/wav", byteSize: 8_044 };
+    const metadata = { durationMs: 1000, contentType: "audio/wav", byteSize: 8044 };
     const audioCard = {
       ...testCards[0]!,
       front: { text: null, audio: { ...metadata, id: frontAudioId } },
@@ -1795,7 +1815,7 @@ describe("rendered app journeys", () => {
 
   it("keeps text-backed faces gradable after optional audio failure but blocks a failed audio-only back", async () => {
     const user = userEvent.setup();
-    const metadata = { durationMs: 1_000, contentType: "audio/wav", byteSize: 8_044 };
+    const metadata = { durationMs: 1000, contentType: "audio/wav", byteSize: 8044 };
     const first = {
       ...testCards[0]!,
       front: {
@@ -1819,7 +1839,7 @@ describe("rendered app journeys", () => {
       http.get("/api/audio/:audioId", () => new HttpResponse(new Uint8Array([1]))),
       http.post("/api/reviews", async ({ request }) => {
         reviews += 1;
-        const input = (await request.json()) as { cardId: string; grade: string };
+        const input = reviewWireSchema.parse(await request.json());
 
         return HttpResponse.json({
           review: { ...input, id: crypto.randomUUID(), pointsAwarded: 10 },
@@ -2305,7 +2325,7 @@ describe("rendered app journeys", () => {
     }> = [];
     mockServer.use(
       http.post("/api/tutor-replies", async ({ request }) => {
-        requests.push((await request.json()) as (typeof requests)[number]);
+        requests.push(tutorWireSchema.parse(await request.json()));
 
         return completedTutorReply(`Antwort ${requests.length}`);
       }),
@@ -2317,17 +2337,20 @@ describe("rendered app journeys", () => {
 
     expect(screen.queryByText(/Du kannst noch .* Nachrichten senden\./)).not.toBeInTheDocument();
 
-    for (let exchange = 1; exchange <= 8; exchange += 1) {
+    const sendMessage = async (exchange: number) => {
       await user.type(screen.getByLabelText("Deine Nachricht"), `Nachricht ${exchange}`);
       await user.click(screen.getByRole("button", { name: "Senden" }));
       await screen.findByText(`Antwort ${exchange}`);
+    };
 
-      if (exchange === 4)
-        expect(
-          screen.queryByText(/Du kannst noch .* Nachrichten senden\./),
-        ).not.toBeInTheDocument();
-      if (exchange === 5)
-        expect(screen.getByText("Du kannst noch 3 Nachrichten senden.")).toBeVisible();
+    for (let exchange = 1; exchange <= 4; exchange += 1) {
+      await sendMessage(exchange);
+    }
+    expect(screen.queryByText(/Du kannst noch .* Nachrichten senden\./)).not.toBeInTheDocument();
+    await sendMessage(5);
+    expect(screen.getByText("Du kannst noch 3 Nachrichten senden.")).toBeVisible();
+    for (let exchange = 6; exchange <= 8; exchange += 1) {
+      await sendMessage(exchange);
     }
 
     expect(requests).toHaveLength(8);
@@ -2536,6 +2559,9 @@ describe("rendered app journeys", () => {
 
     const reply = await within(dialog).findByText("Ein Beispiel");
     const replyArticle = reply.closest("article");
+    if (!replyArticle) {
+      throw new Error("Expected a Tutor reply article");
+    }
 
     expect(warning).toBeVisible();
     expect(
@@ -2545,7 +2571,7 @@ describe("rendered app journeys", () => {
     expect(within(dialog).getByRole("button", { name: "Einfach erklären" })).toBeEnabled();
     expect(replyArticle).toHaveAccessibleName("Tutopher");
     expect(replyArticle?.querySelector("svg")).toBeVisible();
-    expect(within(replyArticle as HTMLElement).queryByText("Tutopher")).not.toBeInTheDocument();
+    expect(within(replyArticle).queryByText("Tutopher")).not.toBeInTheDocument();
   });
 
   it("discards a partial failed Tutor answer and retains the question for retry", async () => {
@@ -2663,7 +2689,9 @@ describe("rendered app journeys", () => {
     expect(await screen.findByRole("heading", { name: "Khanhs Fortschritt" })).toBeVisible();
     const streakTile = screen.getByText("Streak", { exact: true }).closest("div");
 
-    if (!streakTile) throw new Error("Streak tile missing");
+    if (!streakTile) {
+      throw new Error("Streak tile missing");
+    }
     expect(within(streakTile).getByText("4")).toBeVisible();
     expect(
       within(screen.getByRole("banner")).queryByText("Streak", { exact: true }),
@@ -2688,7 +2716,9 @@ describe("rendered app journeys", () => {
     expect(await screen.findByRole("heading", { name: "Khanhs Fortschritt" })).toBeVisible();
     const streakTile = screen.getByText("Streak", { exact: true }).closest("div");
 
-    if (!streakTile) throw new Error("Streak tile missing");
+    if (!streakTile) {
+      throw new Error("Streak tile missing");
+    }
     expect(within(streakTile).getByText("0")).toBeVisible();
   });
 });

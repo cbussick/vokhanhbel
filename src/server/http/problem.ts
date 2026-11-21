@@ -1,10 +1,10 @@
-export class AppProblem extends Error {
+export class AppProblemError extends Error {
   constructor(
     public readonly status: number,
     public readonly type: string,
     public readonly title: string,
     public readonly detail?: string,
-    public readonly errors?: { pointer: string; code: string }[],
+    public readonly errors?: Array<{ pointer: string; code: string }>,
     public readonly retryAfter?: number,
   ) {
     super(title);
@@ -18,10 +18,10 @@ interface ProblemBody {
   status: number;
   instance: string;
   detail?: string;
-  errors?: { pointer: string; code: string }[];
+  errors?: Array<{ pointer: string; code: string }>;
 }
 
-export function problemResponse(problem: AppProblem, requestId: string): Response {
+export function problemResponse(problem: AppProblemError, requestId: string): Response {
   const body: ProblemBody = {
     type: problem.type,
     title: problem.title,
@@ -29,8 +29,12 @@ export function problemResponse(problem: AppProblem, requestId: string): Respons
     instance: `urn:uuid:${requestId}`,
   };
 
-  if (problem.detail) body.detail = problem.detail;
-  if (problem.errors) body.errors = problem.errors;
+  if (problem.detail) {
+    body.detail = problem.detail;
+  }
+  if (problem.errors) {
+    body.errors = problem.errors;
+  }
 
   return Response.json(body, {
     status: problem.status,

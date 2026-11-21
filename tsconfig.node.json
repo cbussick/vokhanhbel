@@ -17,6 +17,7 @@
     "skipLibCheck": true,
     "types": ["node", "vitest/globals"]
   },
+  "exclude": ["tests/e2e"],
   "include": [
     "api",
     "scripts",

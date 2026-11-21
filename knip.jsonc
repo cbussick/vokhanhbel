@@ -21,7 +21,6 @@
   // Its schema is already reachable through production database consumers.
   "drizzle": false,
   // localDevelopment.ts spawns Vercel's CLI through an absolute path.
-  // Oxlint discovers tsrs automatically as its type-aware backend, without an import.
-  "ignoreDependencies": ["vercel", "tsrs"],
+  "ignoreDependencies": ["vercel"],
   "ignoreExportsUsedInFile": true,
 }

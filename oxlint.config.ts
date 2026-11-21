@@ -1,8 +1,11 @@
+import cloudflare from "@cloudflare/oxlint-config";
 import { defineConfig } from "oxlint";
 
 export default defineConfig({
-  plugins: ["typescript", "jsx-a11y", "react", "import"],
+  ...cloudflare,
+  plugins: [...cloudflare.plugins],
   jsPlugins: [
+    ...cloudflare.jsPlugins,
     {
       name: "stylistic",
       specifier: "@stylistic/eslint-plugin",
@@ -17,9 +20,11 @@ export default defineConfig({
     suspicious: "error",
   },
   options: {
+    ...cloudflare.options,
     typeAware: true,
   },
   env: {
+    ...cloudflare.env,
     builtin: true,
     browser: true,
     node: true,
@@ -43,13 +48,12 @@ export default defineConfig({
     ".windsurf/**",
   ],
   rules: {
+    ...cloudflare.rules,
     "no-case-declarations": "error",
-    "no-empty": [
-      "error",
-      {
-        allowEmptyCatch: true,
-      },
-    ],
+    // Retain stronger pre-migration category defaults instead of inherited relaxations.
+    "no-unused-vars": "error",
+    "typescript/await-thenable": ["error", { allowMixedPromiseArrays: false }],
+    "no-empty": "error",
     "no-fallthrough": "error",
     "no-prototype-builtins": "error",
     "no-unexpected-multiline": "error",
@@ -80,7 +84,6 @@ export default defineConfig({
       },
     ],
     "typescript/consistent-return": "off",
-    "typescript/no-unsafe-type-assertion": "off",
     "anti-slop/no-chained-type-assertions": "error",
     "anti-slop/no-known-value-widening": "error",
     "anti-slop/no-module-mocking": "error",
@@ -94,6 +97,7 @@ export default defineConfig({
     "anti-slop/require-safety-comment-for-type-assertion": "error",
   },
   overrides: [
+    ...cloudflare.overrides,
     {
       files: ["**/*.ts", "**/*.tsx", "**/*.mts", "**/*.cts"],
       rules: {
@@ -113,6 +117,11 @@ export default defineConfig({
         "no-unreachable": "off",
         "no-unsafe-negation": "off",
         "no-var": "error",
+        // Inherited test overrides must not weaken pre-existing correctness coverage.
+        "typescript/no-explicit-any": "error",
+        "typescript/no-unsafe-argument": "error",
+        "typescript/only-throw-error": "error",
+        "typescript/unbound-method": "error",
         "no-with": "off",
         "prefer-const": "error",
         "jsx-a11y/control-has-associated-label": "off",
@@ -202,18 +211,9 @@ export default defineConfig({
           },
         ],
         "react/rules-of-hooks": "error",
-        "react/unsupported-syntax": "warn",
-        "typescript/consistent-type-definitions": ["error", "interface"],
-        "typescript/no-misused-promises": [
-          "error",
-          {
-            checksVoidReturn: {
-              attributes: false,
-            },
-          },
-        ],
-        "react/exhaustive-deps": "warn",
-        "react/incompatible-library": "warn",
+        "react/unsupported-syntax": "error",
+        "react/exhaustive-deps": "error",
+        "react/incompatible-library": "error",
       },
     },
     {

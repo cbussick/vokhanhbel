@@ -5,12 +5,16 @@ interface PlaybackParticipant {
 let currentParticipant: PlaybackParticipant | undefined;
 
 export function beginPlayback(participant: PlaybackParticipant): void {
-  if (currentParticipant !== participant) currentParticipant?.stop();
+  if (currentParticipant !== participant) {
+    currentParticipant?.stop();
+  }
   currentParticipant = participant;
 }
 
 export function endPlayback(participant: PlaybackParticipant): void {
-  if (currentParticipant === participant) currentParticipant = undefined;
+  if (currentParticipant === participant) {
+    currentParticipant = undefined;
+  }
 }
 
 export function stopApplicationPlayback(): void {

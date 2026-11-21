@@ -4,7 +4,7 @@ import { ListboxRoot } from "./ListboxRoot";
 
 describe("ListboxRoot", () => {
   it("clears its focus guard when a mouse drag ends outside", () => {
-    const onFocusLeave = vi.fn();
+    const onFocusLeave = vi.fn<() => void>();
     render(
       <>
         <ListboxRoot rootRef={() => undefined} className={undefined} onFocusLeave={onFocusLeave}>

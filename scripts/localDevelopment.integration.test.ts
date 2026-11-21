@@ -26,9 +26,11 @@ async function runLauncher(checkout: string, command: "up" | "clean"): Promise<s
   return stdout;
 }
 
-function connectionFromOutput(output: string): { project: string; url: string } {
+function connectionFromOutput(output: string) {
   const match = /Database: project=([^,]+), host=127\.0\.0\.1, port=(\d+)/.exec(output);
-  if (!match) throw new Error(`Launcher did not print the expected database identity:\n${output}`);
+  if (!match) {
+    throw new Error(`Launcher did not print the expected database identity:\n${output}`);
+  }
 
   return {
     project: match[1]!,
@@ -36,7 +38,7 @@ function connectionFromOutput(output: string): { project: string; url: string } 
   };
 }
 
-async function writeAndReadMarker(url: string, marker: string): Promise<string[]> {
+async function writeAndReadMarker(url: string, marker: string): Promise<Array<string>> {
   const client = new Client({ connectionString: url });
   await client.connect();
 

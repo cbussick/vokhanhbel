@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { calculateStreak, type StreakCard, type StreakReview } from "./streak.js";
+import { calculateStreak } from "./streak.js";
+import type { StreakCard, StreakReview } from "./streak.js";
 
 // A fixed "now" mid-day Berlin time, well clear of any calendar-day boundary.
 const now = new Date("2026-08-25T10:00:00.000Z");
@@ -107,7 +108,7 @@ describe("calculateStreak", () => {
 
   it("never lets the still-unfinished current day break the Streak", () => {
     const cards = [card("c1", "2026-08-23")]; // due immediately, never reviewed today
-    const reviews: StreakReview[] = [];
+    const reviews: Array<StreakReview> = [];
 
     // Today (2026-08-25) has a Card due and nothing reviewed yet, but the day isn't over, so it is
     // passed over rather than breaking the Streak. Walking further back does find the break.

@@ -32,12 +32,15 @@ export function useOnlineStatus(): boolean {
   );
 }
 
-export function useDueTime(dueTimes: string[]): number {
+export function useDueTime(dueTimes: Array<string>): number {
   const [now, setNow] = useState(Date.now);
   const nextBoundary = dueTimes
-    .map((dueAt) => new Date(dueAt).getTime())
-    .filter((dueAt) => dueAt > now)
-    .sort((left, right) => left - right)[0];
+    .flatMap((dueAt) => {
+      const timestamp = new Date(dueAt).getTime();
+
+      return timestamp > now ? [timestamp] : [];
+    })
+    .toSorted((left, right) => left - right)[0];
 
   useEffect(() => {
     const update = () => setNow(Date.now());
@@ -50,7 +53,9 @@ export function useDueTime(dueTimes: string[]): number {
     document.addEventListener("visibilitychange", update);
 
     return () => {
-      if (timer !== undefined) window.clearTimeout(timer);
+      if (timer !== undefined) {
+        window.clearTimeout(timer);
+      }
       window.removeEventListener("focus", update);
       document.removeEventListener("visibilitychange", update);
     };
