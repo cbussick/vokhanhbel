@@ -3,12 +3,13 @@ import { createRequire } from "node:module";
 import { resolve } from "node:path";
 import { promisify } from "node:util";
 import { describe, expect, it } from "vitest";
+import { z } from "zod";
 
 const runNode = promisify(execFile);
 
 interface BraceAst {
   type: string;
-  nodes?: Array<BraceAst>;
+  nodes?: Array<BraceAst> | undefined;
 }
 
 interface Braces {
@@ -22,7 +23,25 @@ interface Braces {
 const require = createRequire(import.meta.url);
 const requireStylelint = createRequire(require.resolve("stylelint"));
 const requireMicromatch = createRequire(requireStylelint.resolve("micromatch"));
-const braces = requireMicromatch("braces") as Braces;
+const loadedBraces: unknown = requireMicromatch("braces");
+if (
+  !loadedBraces || (typeof loadedBraces !== "object" && typeof loadedBraces !== "function") ||
+  !("parse" in loadedBraces) || typeof loadedBraces.parse !== "function" ||
+  !("compile" in loadedBraces) || typeof loadedBraces.compile !== "function" ||
+  !("expand" in loadedBraces) || typeof loadedBraces.expand !== "function" ||
+  !("stringify" in loadedBraces) || typeof loadedBraces.stringify !== "function"
+) {throw new Error("Invalid transitive braces module");}
+const { parse, compile, expand, stringify } = loadedBraces;
+const braceAstSchema: z.ZodType<BraceAst> = z.lazy(() => z.looseObject({
+  type: z.string(),
+  nodes: z.array(braceAstSchema).optional(),
+}));
+const braces: Braces = {
+  parse: (pattern) => braceAstSchema.parse(parse.call(loadedBraces, pattern)),
+  compile: (input) => z.string().parse(compile.call(loadedBraces, input)),
+  expand: (input) => z.array(z.string()).parse(expand.call(loadedBraces, input)),
+  stringify: (input) => z.string().parse(stringify.call(loadedBraces, input)),
+};
 describe("Drizzle's legacy TypeScript loader", () => {
   it("uses a patched compiler without breaking TypeScript transformation", async () => {
     // A real child avoids the application suite's MSW interception of the compiler's HTTP server.

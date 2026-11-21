@@ -1,4 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { z } from "zod";
+
 import { createWavFixture } from "../../src/server/audio/audioFixture.test-helper.js";
 import {
   FailingAudioObjectStore,
@@ -23,6 +25,8 @@ import { login } from "../../src/server/resources/sessions.js";
 import { getStats } from "../../src/server/resources/stats.js";
 import { createTopic, deleteTopic, listTopics } from "../../src/server/resources/topics.js";
 import { consumeTutorAllowance, createTutorStream } from "../../src/server/resources/tutor.js";
+
+const rejectionProblemSchema = z.object({ type: z.string() });
 
 const inDefaultCollection = { collectionId: defaultCollectionId };
 const englishCollection = { name: "Englisch", icon: "flag-gb" } as const;
@@ -496,7 +500,7 @@ describe("PostgreSQL application behavior", () => {
       Array.from({ length: 11 }, () => login(request, { password: "incorrect password!" })),
     );
     const problems = attempts.flatMap((result) =>
-      result.status === "rejected" ? [result.reason as { type?: string }] : [],
+      result.status === "rejected" ? [rejectionProblemSchema.parse(result.reason)] : [],
     );
     expect(problems.filter((problem) => problem.type === "/problems/wrong-password")).toHaveLength(
       10,
