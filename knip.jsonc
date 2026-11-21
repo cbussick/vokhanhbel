@@ -6,6 +6,8 @@
     "api/**/*.ts!",
     "scripts/{hashPassword,migratePreview,migrateProduction,runMigrationContainer,verifyRestore}.ts!",
     "drizzle.config.ts",
+    // Invoked by the Docker browser runner, outside npm's statically visible CLI graph.
+    "playwright.container.config.ts",
   ],
   "project": [
     "src/**/*.{ts,tsx}!",
