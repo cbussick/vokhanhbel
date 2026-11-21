@@ -228,14 +228,6 @@ export default defineConfig({
         "anti-slop/no-known-value-widening": "off",
       },
     },
-    {
-      // Temporary adoption baseline; removed rule by rule before completion.
-      files: ["**/*.{ts,tsx,mts,cts}"],
-      rules: {
-        "quality/no-chained-type-assertions": "off",
-        "typescript/no-unsafe-type-assertion": "off",
-      },
-    },
   ],
   globals: {
     AsyncDisposableStack: "readonly",

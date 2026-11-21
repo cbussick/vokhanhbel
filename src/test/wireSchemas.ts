@@ -1,7 +1,7 @@
 import { z } from "zod";
-import { collectionIconSchema, collectionLanguageSchema } from "../contracts/collection";
-import { reviewSubmissionInputSchema } from "../contracts/review";
-import { tutorInputSchema, tutorMessageSchema, tutorExerciseCardSchema } from "../contracts/tutor";
+import { collectionIconSchema, collectionLanguageSchema } from "../contracts/collection.js";
+import { reviewSubmissionInputSchema } from "../contracts/review.js";
+import { tutorInputSchema, tutorMessageSchema, tutorExerciseCardSchema } from "../contracts/tutor.js";
 
 // Interception tests inspect the bytes the client sent, not normalized application data.
 // Preserve unexpected keys, whitespace and omitted fields rather than repairing evidence.

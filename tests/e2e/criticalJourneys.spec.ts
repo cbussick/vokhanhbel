@@ -1,4 +1,5 @@
 import { AxeBuilder } from "@axe-core/playwright";
+import { cardInputWireSchema, reviewWireSchema } from "../../src/test/wireSchemas.js";
 import { expect, test } from '@playwright/test';
 import type { Locator, Page, Route } from '@playwright/test';
 
@@ -6,11 +7,7 @@ const initialRelease = () => undefined;
 
 const background = (locator: ReturnType<Page["locator"]>) =>
     locator.evaluate((element) => {
-      const browser = globalThis as unknown as {
-        getComputedStyle: (target: unknown) => { backgroundColor: string };
-      };
-
-      return browser.getComputedStyle(element).backgroundColor;
+      return getComputedStyle(element).backgroundColor;
     });
 
 interface MockCard {
@@ -24,6 +21,23 @@ interface MockCard {
   createdAt: string;
   updatedAt: string;
   deletedAt: null;
+}
+
+interface MockTopic {
+      id: string;
+      collectionId: string;
+      name: string;
+      icon: "shapes";
+      createdAt: string;
+      updatedAt: string;
+      deletedAt: null;
+    }
+
+interface MockApiState {
+  authenticated: boolean;
+  cards: Array<MockCard>;
+  collections: Array<MockCollection>;
+  topics: Array<MockTopic>;
 }
 
 interface MockFace {
@@ -106,19 +120,11 @@ async function installMockApi(page: Page, authenticated = true) {
       return ((mixed ^ (mixed >>> 14)) >>> 0) / 4_294_967_296;
     };
   });
-  const state = {
+  const state: MockApiState = {
     authenticated,
     cards: [createCard()],
     collections: [mockCollection],
-    topics: [] as Array<{
-      id: string;
-      collectionId: string;
-      name: string;
-      icon: "shapes";
-      createdAt: string;
-      updatedAt: string;
-      deletedAt: null;
-    }>,
+    topics: [],
   };
   await page.route("**/api/**", async (route) => {
     const request = route.request();
@@ -149,10 +155,7 @@ async function installMockApi(page: Page, authenticated = true) {
     if (pathname === "/api/topics" && request.method() === "GET") {return json(route, state.topics);}
     if (pathname === "/api/cards" && request.method() === "GET") {return json(route, state.cards);}
     if (pathname === "/api/cards" && request.method() === "POST") {
-      const input = request.postDataJSON() as {
-        front: { text: string | null; audioId: string | null };
-        back: { text: string | null; audioId: string | null };
-      };
+      const input = cardInputWireSchema.parse(request.postDataJSON());
       const card = createCard(
         { text: input.front.text, audio: null },
         { text: input.back.text, audio: null },
@@ -164,7 +167,7 @@ async function installMockApi(page: Page, authenticated = true) {
     if (pathname.startsWith("/api/audio/") && request.method() === "GET")
       {return route.fulfill({ status: 200, contentType: "audio/wav", body: "mock audio" });}
     if (pathname === "/api/reviews" && request.method() === "POST") {
-      const input = request.postDataJSON() as { id: string; cardId: string; grade: string };
+      const input = reviewWireSchema.parse(request.postDataJSON());
 
       return json(route, {
         review: {
@@ -205,7 +208,7 @@ async function installMockApi(page: Page, authenticated = true) {
 async function dragListboxUpWithTouch(page: Page, listbox: Locator) {
   const box = await listbox.boundingBox();
   const initialScrollTop = await listbox.evaluate<number>(
-    (element) => (element as { scrollTop: number }).scrollTop,
+    (element) => (element).scrollTop,
   );
 
   expect(box).not.toBeNull();
@@ -230,7 +233,7 @@ async function dragListboxUpWithTouch(page: Page, listbox: Locator) {
   await session.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
 
   await expect
-    .poll(() => listbox.evaluate<number>((element) => (element as { scrollTop: number }).scrollTop))
+    .poll(() => listbox.evaluate<number>((element) => (element).scrollTop))
     .toBeGreaterThan(initialScrollTop);
 
   let previousScrollTop = -1;
@@ -239,7 +242,7 @@ async function dragListboxUpWithTouch(page: Page, listbox: Locator) {
     .poll(
       async () => {
         const scrollTop = await listbox.evaluate<number>(
-          (element) => (element as { scrollTop: number }).scrollTop,
+          (element) => (element).scrollTop,
         );
 
         stableChecks = Math.abs(scrollTop - previousScrollTop) < 0.5 ? stableChecks + 1 : 0;
@@ -455,10 +458,7 @@ test("keeps the Card dialog locked while Save is pending", async ({ page }) => {
     if (route.request().method() !== "POST") {return route.fallback();}
     saveRequests += 1;
 
-    const input = route.request().postDataJSON() as {
-      front: { text: string | null };
-      back: { text: string | null };
-    };
+    const input = cardInputWireSchema.parse(route.request().postDataJSON());
     await saveGate;
     await json(
       route,
@@ -548,13 +548,9 @@ test("keeps the Card audio rail stable while dragging and recording", async ({ p
   await page.getByRole("button", { name: "Karte hinzufügen" }).first().click();
   const rail = page.getByRole("group", { name: "Audio für Vorderseite" });
   const dataTransfer = await page.evaluateHandle(() => {
-    const browser = globalThis as unknown as {
-      DataTransfer: new () => { items: { add: (file: Blob) => void } };
-      File: new (bits: Array<string>, name: string, options: { type: string }) => Blob;
-    };
-    const transfer = new browser.DataTransfer();
+    const transfer = new DataTransfer();
 
-    transfer.items.add(new browser.File(["audio"], "test.wav", { type: "audio/wav" }));
+    transfer.items.add(new File(["audio"], "test.wav", { type: "audio/wav" }));
 
     return transfer;
   });
@@ -572,10 +568,8 @@ test("keeps the Card audio rail stable while dragging and recording", async ({ p
   const dropStyles = await dropCopy.evaluate((element) => {
     const dropZone = element.parentElement;
     if (!dropZone) {throw new Error("Audio drop zone not found");}
-    const browser = globalThis as unknown as {
-      getComputedStyle: (target: unknown) => { borderRadius: string; cursor: string };
-    };
-    const styles = browser.getComputedStyle(dropZone);
+    
+    const styles = getComputedStyle(dropZone);
 
     return {
       borderRadius: styles.borderRadius,
@@ -590,14 +584,8 @@ test("keeps the Card audio rail stable while dragging and recording", async ({ p
 
   const recordButton = rail.getByRole("button", { name: "Audio aufnehmen" });
   const idleButtonStyles = await recordButton.evaluate((element) => {
-    const browser = globalThis as unknown as {
-      getComputedStyle: (target: unknown) => {
-        fontSize: string;
-        fontWeight: string;
-        scale: string;
-      };
-    };
-    const styles = browser.getComputedStyle(element);
+    
+    const styles = getComputedStyle(element);
 
     return { fontSize: styles.fontSize, fontWeight: styles.fontWeight, scale: styles.scale };
   });
@@ -605,15 +593,8 @@ test("keeps the Card audio rail stable while dragging and recording", async ({ p
   await page.mouse.down();
   await page.waitForTimeout(150);
   const pressedButtonStyles = await recordButton.evaluate((element) => {
-    const browser = globalThis as unknown as {
-      getComputedStyle: (target: unknown) => {
-        fontSize: string;
-        fontWeight: string;
-        scale: string;
-        translate: string;
-      };
-    };
-    const styles = browser.getComputedStyle(element);
+    
+    const styles = getComputedStyle(element);
 
     return {
       fontSize: styles.fontSize,
@@ -1209,7 +1190,7 @@ test("gives the Tutor dialog full-screen chrome and a pinned composer on mobile"
   expect(await composer.boundingBox()).toEqual(composerBox);
   const transcriptBox = await transcript.boundingBox();
   await transcript.evaluate((element) => {
-    (element as { scrollTop: number }).scrollTop = 0;
+    (element).scrollTop = 0;
   });
   const latest = dialog.getByRole("button", { name: "Zur neuesten Nachricht" });
   await expect(latest).toBeVisible();
