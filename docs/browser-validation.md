@@ -71,6 +71,27 @@ The final runner therefore retains CSP and other production headers without runn
 inside its read-only source mount. Final gates and re-review cover this correction.
 
 The fix supplies a deterministic local validation environment rather than changing the app's
-intended visuals. Existing snapshots and anti-slop rules are preserved. Investigation logs and
-original expected/actual/diff evidence are retained under `/tmp/vok-baseline-*` on the task host;
-these temporary artifacts are not a durable repository dependency.
+intended visuals. Existing snapshots and anti-slop rules are preserved. Temporary investigation
+logs, traces, and actual/diff images are disposable after delivery; the diagnosis and results here
+are the durable record.
+
+## Reviewed validation result
+
+Implementation `99ccbd87fc246de8ee40e4ab122fbfce6594ad2c` passed the complete isolated browser
+suite: **89 passed, 46 pre-existing skips, zero failures**, across Chromium, Firefox and WebKit
+with one worker. Original mobile and tablet multi-state visual journeys then passed three repeats
+each (**6 passed**) with the final production headers and DejaVu fallback installed. No snapshots,
+assertions, tolerances, bundled assets or app visuals changed.
+
+Fresh installation, production build, formatting, lint, types, both Knip modes, production audit
+(zero vulnerabilities) and license policy passed. Unit tests: **272 passed / 33 files**; isolated
+database tests: **31 passed / 2 files**; isolated local-development integration: **1 passed**.
+The unit run preceded the mechanical shared-header extraction; final type/build/browser gates
+covered the extraction without duplicating the full unit suite. Disposable database validation
+used a private container network namespace, not the shared host database port.
+
+Two independent local read-only reviews identified the draft's omitted production headers.
+After correction, two fresh independent full-diff reviews reported no actionable findings.
+These are agent reviews, not human approvals. Native Debian remains noncanonical for exact
+screenshot comparison; the pinned container is the reproducible local environment. No single
+rendering-library internal defect or human design approval is claimed.
