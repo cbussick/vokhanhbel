@@ -39,7 +39,9 @@ function databaseIdentity(target: URL): string {
 }
 
 export function assertDistinctFromProduction(preview: URL, productionValue?: string): void {
-  if (!productionValue) {return;}
+  if (!productionValue) {
+    return;
+  }
 
   const production = new URL(productionValue);
 
@@ -65,7 +67,9 @@ async function readProductionDatabaseUrl(): Promise<string | undefined> {
 
     return parseEnv(contents).DATABASE_URL_UNPOOLED;
   } catch (error) {
-    if (error instanceof Error && "code" in error && error.code === "ENOENT") {return undefined;}
+    if (error instanceof Error && "code" in error && error.code === "ENOENT") {
+      return undefined;
+    }
     throw error;
   }
 }

@@ -9,7 +9,9 @@ const scryptMaximumMemory = 256 * 1024 * 1024;
 function assertPasswordLength(password: string): void {
   const length = Array.from(password).length;
 
-  if (length < 6 || length > 128) {throw new Error("password-length");}
+  if (length < 6 || length > 128) {
+    throw new Error("password-length");
+  }
 }
 
 function deriveKey(password: string, salt: Buffer): Promise<Buffer> {
@@ -20,8 +22,11 @@ function deriveKey(password: string, salt: Buffer): Promise<Buffer> {
       scryptKeyLength,
       { N: scryptCost, r: scryptBlockSize, p: scryptParallelization, maxmem: scryptMaximumMemory },
       (error, key) => {
-        if (error) {reject(error);}
-        else {resolve(key);}
+        if (error) {
+          reject(error);
+        } else {
+          resolve(key);
+        }
       },
     );
   });
@@ -63,7 +68,9 @@ export async function verifyPassword(password: string, encoded: string): Promise
 
     const expectedKey = Buffer.from(keyValue, "base64url");
 
-    if (expectedKey.length !== scryptKeyLength) {return false;}
+    if (expectedKey.length !== scryptKeyLength) {
+      return false;
+    }
     const actualKey = await deriveKey(password, Buffer.from(saltValue, "base64url"));
 
     return timingSafeEqual(actualKey, expectedKey);

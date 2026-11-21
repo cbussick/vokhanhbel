@@ -11,7 +11,9 @@ it("keeps intercepted Card evidence without normalization, defaults or unknown-k
   const parsed = cardInputWireSchema.parse(sent);
   expect(parsed).toEqual(sent);
   expect(parsed).not.toHaveProperty("topicIds");
-  expect(() => cardInputWireSchema.parse({ ...sent, front: { audioId: null } })).toThrow("Invalid input");
+  expect(() => cardInputWireSchema.parse({ ...sent, front: { audioId: null } })).toThrow(
+    "Invalid input",
+  );
 });
 
 it("keeps omitted Collection language declarations omitted", () => {

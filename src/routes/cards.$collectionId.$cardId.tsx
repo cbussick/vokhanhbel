@@ -13,7 +13,9 @@ function CardDetailRoute() {
   const cards = useQuery(cardsQuery);
   const card = cards.data?.find((entry) => entry.id === cardId);
 
-  if (!card) {return null;}
+  if (!card) {
+    return null;
+  }
 
   const close = () => void navigate({ to: "/cards/$collectionId", params: { collectionId } });
 

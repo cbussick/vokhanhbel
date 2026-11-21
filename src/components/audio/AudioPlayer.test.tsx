@@ -60,9 +60,10 @@ describe("AudioPlayer", () => {
 
   it("moves the loading state into the play control without showing an error", async () => {
     vi.spyOn(HTMLMediaElement.prototype, "play").mockImplementation(
-      () => new Promise<void>(() => {
-        // Intentionally pending: exercise the native loading state without settling playback.
-      }),
+      () =>
+        new Promise<void>(() => {
+          // Intentionally pending: exercise the native loading state without settling playback.
+        }),
     );
     const user = userEvent.setup();
     render(<AudioPlayer audio={firstAudio} label="Audio Vorderseite" />);

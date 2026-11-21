@@ -85,7 +85,11 @@ export function vercelDevelopmentEnvironment(
   return runtimeEnvironment;
 }
 
-function runNode(script: string, args: Array<string>, environment: NodeJS.ProcessEnv): Promise<number> {
+function runNode(
+  script: string,
+  args: Array<string>,
+  environment: NodeJS.ProcessEnv,
+): Promise<number> {
   return new Promise((resolveExit, reject) => {
     const child = spawn(process.execPath, [script, ...args], {
       cwd: repositoryRoot,
@@ -128,7 +132,9 @@ async function runApplication(project: string, databaseUrl: string): Promise<num
   const environment = developmentEnvironment(databaseUrl);
   const drizzle = resolve(repositoryRoot, "node_modules/drizzle-kit/bin.cjs");
   const migrationExit = await runNode(drizzle, ["migrate"], environment);
-  if (migrationExit !== 0) {return migrationExit;}
+  if (migrationExit !== 0) {
+    return migrationExit;
+  }
 
   const port = await availableApplicationPort();
   const applicationUrl = `http://127.0.0.1:${port}`;
@@ -175,14 +181,18 @@ async function main(): Promise<void> {
   // eslint-disable-next-line no-console -- Native CLI startup boundary prints the isolated database identity.
   console.log(`Database: project=${project}, host=127.0.0.1, port=${new URL(databaseUrl).port}`);
 
-  if (command === "up") {return;}
+  if (command === "up") {
+    return;
+  }
   if (command === "studio") {
     const drizzle = resolve(repositoryRoot, "node_modules/drizzle-kit/bin.cjs");
     process.exitCode = await runNode(drizzle, ["studio"], developmentEnvironment(databaseUrl));
 
     return;
   }
-  if (command !== "app") {throw new Error(`Unknown local development command: ${command}`);}
+  if (command !== "app") {
+    throw new Error(`Unknown local development command: ${command}`);
+  }
 
   process.exitCode = await runApplication(project, databaseUrl);
 }

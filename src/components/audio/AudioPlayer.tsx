@@ -94,7 +94,9 @@ export function AudioPlayer({
   const previousSourceRef = useRef(resolvedSource);
 
   useEffect(() => {
-    if (previousSourceRef.current === resolvedSource) {return;}
+    if (previousSourceRef.current === resolvedSource) {
+      return;
+    }
     previousSourceRef.current = resolvedSource;
     const element = elementRef.current;
 
@@ -123,14 +125,18 @@ export function AudioPlayer({
   const play = async (reload = false) => {
     const element = elementRef.current;
 
-    if (!element) {return;}
+    if (!element) {
+      return;
+    }
     beginPlayback(participantRef.current);
     if (!loadedSource || reload) {
       setLoadedSource(resolvedSource);
       element.src = resolvedSource;
       element.load();
     }
-    if (state === "ended") {element.currentTime = 0;}
+    if (state === "ended") {
+      element.currentTime = 0;
+    }
     setState("loading");
 
     try {
@@ -192,11 +198,21 @@ export function AudioPlayer({
             <span className={styles.spinner} aria-hidden="true" />
           </button>
         ) : state === "playing" ? (
-          <button type="button" {...controlProps} onClick={pause} aria-label={`${label}: ${t("audio.pause")}`}>
+          <button
+            type="button"
+            {...controlProps}
+            onClick={pause}
+            aria-label={`${label}: ${t("audio.pause")}`}
+          >
             <FilledPlaybackIcon kind="pause" />
           </button>
         ) : state === "error" ? (
-          <button type="button" {...controlProps} onClick={retry} aria-label={`${label}: ${t("audio.retry")}`}>
+          <button
+            type="button"
+            {...controlProps}
+            onClick={retry}
+            aria-label={`${label}: ${t("audio.retry")}`}
+          >
             <RotateCcw aria-hidden="true" />
           </button>
         ) : (

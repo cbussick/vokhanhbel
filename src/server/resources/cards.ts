@@ -54,14 +54,18 @@ function throwCardWriteProblem(error: unknown): never {
   throw error;
 }
 
-function isLegacyInput(input: CreateCardInput | LegacyCreateCardInput): input is LegacyCreateCardInput {
+function isLegacyInput(
+  input: CreateCardInput | LegacyCreateCardInput,
+): input is LegacyCreateCardInput {
   return typeof input.front === "string";
 }
 
 function structuredInput(input: CreateCardInput | LegacyCreateCardInput): CreateCardInput {
   // The two input shapes differ only in `front`: a string means the legacy shape, an object means
   // the structured one. That makes this check a discriminator for the union.
-  if (!isLegacyInput(input)) {return input;}
+  if (!isLegacyInput(input)) {
+    return input;
+  }
 
   const legacy = input;
 

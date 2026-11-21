@@ -79,11 +79,12 @@ describe("public contracts", () => {
       }),
     ).toMatchObject({ frontLanguage: "vi-VN", backLanguage: null });
     // A bare language code is not a locale, and neither is a locale this build does not offer.
-    for (const frontLanguage of ["vi", "en-GB"])
-      {expect(
+    for (const frontLanguage of ["vi", "en-GB"]) {
+      expect(
         collectionInputSchema.safeParse({ name: "Vietnamesisch", icon: "flag-vn", frontLanguage })
           .success,
-      ).toBe(false);}
+      ).toBe(false);
+    }
     // Absent rather than null, so an older client's request cannot clear what it never sent.
     expect(
       collectionInputSchema.parse({ name: "Vietnamesisch", icon: "flag-vn" }),

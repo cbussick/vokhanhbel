@@ -2,8 +2,8 @@ import { useIsMutating, useMutation, useQuery, useQueryClient } from "@tanstack/
 import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { apiPaths } from "../contracts/apiPaths";
-import { cardSchema, createCardInputSchema, updateCardInputSchema } from '../contracts/card';
-import type { Card } from '../contracts/card';
+import { cardSchema, createCardInputSchema, updateCardInputSchema } from "../contracts/card";
+import type { Card } from "../contracts/card";
 import { offeredCollectionLanguage } from "../contracts/collection";
 import { problemTypes } from "../contracts/problem";
 import { ApiError, apiRequest, apiCommand } from "../lib/apiClient";
@@ -11,8 +11,8 @@ import { useOnlineStatus } from "../lib/browserState";
 import { collectionsQuery, topicsQuery } from "../lib/queries";
 import { mutationKeys, queryKeys } from "../lib/queryKeys";
 import { stageAudioDraft } from "./audio/audioApi";
-import { AudioInput, releaseAudioDraft } from './audio/AudioInput';
-import type { AudioDraft } from './audio/AudioInput';
+import { AudioInput, releaseAudioDraft } from "./audio/AudioInput";
+import type { AudioDraft } from "./audio/AudioInput";
 import { CollectionFormDialog } from "./CollectionFormDialog";
 import { CollectionSelect } from "./CollectionSelect";
 import { Dialog } from "./Dialog";
@@ -72,8 +72,12 @@ export function CardFormDialog({
       // A generated clip is staged already, so only a clip recorded or picked here is uploaded —
       // and only that upload is undone below, leaving a generated clip to expire on its own.
       const claimAudio = async (draft: AudioDraft | null) => {
-        if (!draft) {return undefined;}
-        if (draft.origin === "staged") {return draft.metadata.id;}
+        if (!draft) {
+          return undefined;
+        }
+        if (draft.origin === "staged") {
+          return draft.metadata.id;
+        }
         const staged = await stageAudioDraft(draft.blob);
 
         uploadedIds.push(staged.id);
@@ -100,9 +104,9 @@ export function CardFormDialog({
           ? updateCardInputSchema.parse(value)
           : createCardInputSchema.parse(value);
         const saved = await apiRequest(card ? apiPaths.card(card.id) : apiPaths.cards, cardSchema, {
-            method: card ? "PATCH" : "POST",
-            body: JSON.stringify(input),
-          });
+          method: card ? "PATCH" : "POST",
+          body: JSON.stringify(input),
+        });
 
         return saved;
       } catch (error_) {
@@ -130,7 +134,9 @@ export function CardFormDialog({
 
   const remove = useMutation({
     mutationFn: async () => {
-      if (!card) {throw new Error("Cannot delete a missing card");}
+      if (!card) {
+        throw new Error("Cannot delete a missing card");
+      }
 
       return apiCommand(apiPaths.card(card.id), { method: "DELETE" });
     },
@@ -152,7 +158,9 @@ export function CardFormDialog({
   const isGeneratingPronunciation = useIsMutating({ mutationKey: mutationKeys.pronunciation }) > 0;
 
   const close = () => {
-    if (isPending) {return;}
+    if (isPending) {
+      return;
+    }
 
     releaseAudioDraft(frontDraft);
     releaseAudioDraft(backDraft);
@@ -163,7 +171,9 @@ export function CardFormDialog({
   const submit = (event: React.FormEvent) => {
     event.preventDefault();
 
-    if (isPending) {return;}
+    if (isPending) {
+      return;
+    }
 
     setError(undefined);
 
@@ -270,7 +280,9 @@ export function CardFormDialog({
                 aria-busy={remove.isPending}
                 aria-disabled={remove.isPending}
                 onClick={() => {
-                  if (!remove.isPending) {remove.mutate();}
+                  if (!remove.isPending) {
+                    remove.mutate();
+                  }
                 }}
               >
                 <PendingActionContent

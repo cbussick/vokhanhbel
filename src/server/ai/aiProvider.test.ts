@@ -3,18 +3,26 @@ import { resetServerEnvironmentForTests } from "../config/environment.js";
 import { createOpenAiProvider } from "./aiProvider.js";
 
 function promptContent(): string {
-    const first = createResponse.mock.calls[0]?.[0].input[0];
-    if (!first) {throw new Error("Expected model input");}
-
-    return first.content;
+  const first = createResponse.mock.calls[0]?.[0].input[0];
+  if (!first) {
+    throw new Error("Expected model input");
   }
+
+  return first.content;
+}
 
 interface ResponseRequest {
   instructions: string;
   input: Array<{ role: string; content: string }>;
 }
 const { createResponse } = vi.hoisted(() => ({
-  createResponse: vi.fn<(request: ResponseRequest, options: { signal: AbortSignal }) => Promise<AsyncIterable<unknown>>>(),
+  createResponse:
+    vi.fn<
+      (
+        request: ResponseRequest,
+        options: { signal: AbortSignal },
+      ) => Promise<AsyncIterable<unknown>>
+    >(),
 }));
 
 // These tests cover the OpenAI adapter itself, which constructs the client. Injecting a seam here
@@ -37,7 +45,9 @@ async function drain(events: AsyncIterable<unknown>): Promise<void> {
   const iterator = events[Symbol.asyncIterator]();
   let step = await iterator.next();
 
-  while (!step.done) {step = await iterator.next();}
+  while (!step.done) {
+    step = await iterator.next();
+  }
 }
 
 async function collectProviderEvents(events: Array<unknown>) {
@@ -123,8 +133,6 @@ describe("Exercise content reaches the model as untrusted data", () => {
     createResponse.mockReset();
     createResponse.mockResolvedValue(stream([]));
   });
-
-  
 
   it("marks a flip Card's Exercise as unbewertet, with no chosen option", async () => {
     const provider = createOpenAiProvider();

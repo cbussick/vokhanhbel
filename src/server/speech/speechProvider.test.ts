@@ -5,7 +5,14 @@ import { createGoogleSpeechProvider, synthesizePronunciation } from "./speechPro
 import { RecordingSpeechProvider } from "./speechProvider.test-helper.js";
 
 const { synthesizeSpeech } = vi.hoisted(() => ({
-  synthesizeSpeech: vi.fn<(request: { input: { text: string }; voice: { languageCode: string; name: string }; audioConfig: { audioEncoding: string } }) => Promise<[{ audioContent: Uint8Array | string | null }]>>(),
+  synthesizeSpeech:
+    vi.fn<
+      (request: {
+        input: { text: string };
+        voice: { languageCode: string; name: string };
+        audioConfig: { audioEncoding: string };
+      }) => Promise<[{ audioContent: Uint8Array | string | null }]>
+    >(),
 }));
 
 // These tests cover the Google adapter itself, which constructs the client. Injecting a seam here

@@ -1,8 +1,8 @@
-import { createContext, useContext } from 'react';
-import type { ReactNode } from 'react';
+import { createContext, useContext } from "react";
+import type { ReactNode } from "react";
 import type { ReviewSubmission } from "./review/reviewSubmission";
-import { useReviewSubmissionQueue } from './review/useReviewSubmissionQueue';
-import type { ReviewSubmissionRejectedHandler } from './review/useReviewSubmissionQueue';
+import { useReviewSubmissionQueue } from "./review/useReviewSubmissionQueue";
+import type { ReviewSubmissionRejectedHandler } from "./review/useReviewSubmissionQueue";
 
 interface ReviewSubmissionSync {
   optimisticPoints: number;
@@ -54,7 +54,9 @@ export function ReviewSubmissionProvider({ children }: { children: ReactNode }) 
 export function useReviewSubmissions(): ReviewSubmissionState {
   const value = useContext(ReviewSubmissionContext);
 
-  if (!value) {throw new Error("ReviewSubmissionProvider missing");}
+  if (!value) {
+    throw new Error("ReviewSubmissionProvider missing");
+  }
 
   return value;
 }

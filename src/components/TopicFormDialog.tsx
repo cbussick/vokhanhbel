@@ -3,8 +3,14 @@ import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { apiPaths } from "../contracts/apiPaths";
 import { problemTypes } from "../contracts/problem";
-import { createTopicInputSchema, defaultTopicIcon, topicIconKeys, topicInputSchema, topicSchema } from '../contracts/topic';
-import type { Topic, TopicIconKey } from '../contracts/topic';
+import {
+  createTopicInputSchema,
+  defaultTopicIcon,
+  topicIconKeys,
+  topicInputSchema,
+  topicSchema,
+} from "../contracts/topic";
+import type { Topic, TopicIconKey } from "../contracts/topic";
 import { apiRequest, ApiError, apiCommand } from "../lib/apiClient";
 import { useOnlineStatus } from "../lib/browserState";
 import { queryKeys } from "../lib/queryKeys";
@@ -39,8 +45,12 @@ export function TopicFormDialog({
   const [error, setError] = useState<string>();
 
   const describeError = (value: unknown, fallback: string) => {
-    if (!(value instanceof ApiError)) {return fallback;}
-    if (value.problem.type === problemTypes.topicNameConflict) {return t("topics.nameConflict");}
+    if (!(value instanceof ApiError)) {
+      return fallback;
+    }
+    if (value.problem.type === problemTypes.topicNameConflict) {
+      return t("topics.nameConflict");
+    }
 
     return fallback;
   };
@@ -50,18 +60,20 @@ export function TopicFormDialog({
       const input = topicInputSchema.parse({ name, icon });
 
       return topic
-          ? await apiRequest(apiPaths.topic(topic.id), topicSchema, {
-              method: "PATCH",
-              body: JSON.stringify(input),
-            })
-          : await apiRequest(apiPaths.topics, topicSchema, {
-              method: "POST",
-              body: JSON.stringify(createTopicInputSchema.parse({ collectionId, ...input })),
-            });
+        ? await apiRequest(apiPaths.topic(topic.id), topicSchema, {
+            method: "PATCH",
+            body: JSON.stringify(input),
+          })
+        : await apiRequest(apiPaths.topics, topicSchema, {
+            method: "POST",
+            body: JSON.stringify(createTopicInputSchema.parse({ collectionId, ...input })),
+          });
     },
     onSuccess: async (saved) => {
       await queryClient.invalidateQueries({ queryKey: queryKeys.topics });
-      if (!topic) {onCreated?.(saved);}
+      if (!topic) {
+        onCreated?.(saved);
+      }
 
       dialogRef.current?.close();
       onClose();
@@ -71,7 +83,9 @@ export function TopicFormDialog({
 
   const remove = useMutation({
     mutationFn: async () => {
-      if (!topic) {throw new Error("Cannot delete a missing topic");}
+      if (!topic) {
+        throw new Error("Cannot delete a missing topic");
+      }
 
       return apiCommand(apiPaths.topic(topic.id), { method: "DELETE" });
     },
@@ -92,7 +106,9 @@ export function TopicFormDialog({
   const isPending = save.isPending || remove.isPending;
 
   const close = () => {
-    if (isPending) {return;}
+    if (isPending) {
+      return;
+    }
 
     dialogRef.current?.close();
     onClose();
@@ -101,7 +117,9 @@ export function TopicFormDialog({
   const submit = (event: React.FormEvent) => {
     event.preventDefault();
 
-    if (isPending) {return;}
+    if (isPending) {
+      return;
+    }
 
     setError(undefined);
 
@@ -143,7 +161,9 @@ export function TopicFormDialog({
               aria-busy={remove.isPending}
               aria-disabled={remove.isPending}
               onClick={() => {
-                if (!remove.isPending) {remove.mutate();}
+                if (!remove.isPending) {
+                  remove.mutate();
+                }
               }}
             >
               <PendingActionContent

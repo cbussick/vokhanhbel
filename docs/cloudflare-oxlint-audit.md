@@ -194,6 +194,68 @@ planner tuple invariants and test-owned fake contracts need real redesign.
 No final review or full validation gate has been run; all gates below still apply.
 Second worker relinquishes write ownership only after committing this checkpoint.
 
+## Third-worker progress (through `bd4bbc1`)
+
+**Still incomplete. Three temporary rules remain:** unsafe assertions, non-null
+assertions, and chained assertions. No final reviewer or integration claim.
+
+- `e2baf33`: malformed WebM scale/duration and Ogg page bounds now produce
+  invalid-audio errors instead of accepting NaN duration or truncated pages.
+  Red: `/tmp/vok-cf-audio-bounds-red.log` (2 failed / 3 passed); green:
+  `/tmp/vok-cf-audio-bounds-green.log`. Lint and typecheck passed.
+- `e20a81b`: metadata/error subscriptions use native addEventListener, with once
+  semantics; AudioInput suite, lint and typecheck passed.
+- `663e710`: Card writer takes explicit connection/read dependencies; transaction
+  releases before starting the independent post-commit read. Regression runs
+  prove old ordering fails, new ordering passes, read rejection does not roll
+  back a committed write, and failed writes roll back/release without reading.
+  Tests use a faithful query contract, not module mocking. Evidence:
+  `/tmp/vok-cf-card-return-{di-red,green,lint,types}.log`.
+- `7602bdb`: mock argument/result contracts declared across UI/provider/HTTP/DB
+  tests; model prompt helper now checks the required first input rather than
+  asserting it. Seven focused suites, lint and typecheck passed.
+- `3fc20f5`: pure helpers hoisted, including browser-evaluation wrapper (its
+  serialized function remains inside evaluate); native dialog polyfills carry
+  explicit this contracts. Six focused suites, lint and typecheck passed.
+- `fcd741d`: bounded DataView reads replace byte assertions, bitrate checked;
+  private-store rejection expectations identify actual validation errors.
+- `497cc13`, `c3aabc4`: Box derives from a literal schema; promotion uses a fixed
+  tuple. Configuration values narrow individually before use. Focused domain,
+  speech and storage suites, lint and typecheck passed.
+- `51ef195`: throw-message default enabled. Card normalization SQL fixtures now
+  include the required Collection, so constraints rather than unrelated not-null
+  errors are exercised. Exact constraint expectations pass all 26 core DB tests.
+  An initial hypothesis based only on migration 0003 suggested trigger repair;
+  the actual migrated-DB probe disproved it: migration 0007 preserves the check.
+  The coordinator escalation was explicitly withdrawn. No schema change needed.
+  Evidence `/tmp/vok-cf-{normalization-probe,throw-db,throw-db-green,throw-lint,throw-types}.log`.
+- `160372a`: data-returning requests take endpoint schemas; commands return void
+  and retain JSON-syntax checking when a response body is intentionally ignored.
+  Missing JSON bodies reject explicitly. A preliminary attempt validated ignored
+  Review responses and exposed intentionally minimal test fixtures; it was
+  replaced with a void command contract preserving existing semantics, not test
+  weakening. Final 91 API/journey/dialog tests pass. Schema-bypass red evidence
+  exists in `/tmp/vok-cf-api-schema-red.log`; final evidence is
+  `/tmp/vok-cf-api-schema-{tests,lint,types}.log`. The preliminary command-status
+  expectation in that red run is not the final command policy.
+- `e2858f0`, `bd4bbc1`: searchable label arrays replace unchecked index callbacks;
+  native Node identity is checked before contains (one explained line exception).
+  Deletion mutations guard missing entities; reducer binds its first remaining
+  Card; MIME splitting has an explicit empty-string fallback. Six focused suites,
+  lint and typecheck passed (`/tmp/vok-cf-ui-invariants-*.log`).
+
+Intermediate full unit suite: **264 passed in 31 files**
+(`/tmp/vok-cf-third-unit.log`), before the API schema tests were added. This does
+not replace final full validation. Expected jsdom unimplemented media warnings
+remain visible; no tests/timeouts were weakened.
+
+Isolated DB evidence uses container `vok-cf-defaults-tests`, PostgreSQL 17 Alpine,
+loopback port 32776, database `cf_defaults_test`; it never uses the shared 5433
+service. Ignored `.scratch/cf-database.config.ts` disables the ordinary shared
+DB lifecycle and overrides DATABASE_URL to this disposable container. Preserve
+logs; remove the temporary config before final validation. No build/browser
+artifact writers were run concurrently by this worker.
+
 ## Validation status / remaining release gate
 
 Original lint passed with fresh baseline installation (coordinator evidence).

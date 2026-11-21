@@ -1,6 +1,6 @@
 import { z } from "zod";
-import { collectionSchema } from '../../contracts/collection.js';
-import type { Collection } from '../../contracts/collection.js';
+import { collectionSchema } from "../../contracts/collection.js";
+import type { Collection } from "../../contracts/collection.js";
 
 const collectionRowSchema = z.object({
   id: z.uuid(),

@@ -86,7 +86,13 @@ function shuffle<T>(items: Array<T>, random: RandomSource): Array<T> {
 
     const current = shuffled[index];
     const swapped = shuffled[swapIndex];
-    if (!Number.isInteger(swapIndex) || swapIndex < 0 || swapIndex > index || current === undefined || swapped === undefined) {
+    if (
+      !Number.isInteger(swapIndex) ||
+      swapIndex < 0 ||
+      swapIndex > index ||
+      current === undefined ||
+      swapped === undefined
+    ) {
       throw new Error("Invalid shuffle source or missing item");
     }
     shuffled[index] = swapped;
@@ -106,8 +112,12 @@ function hasBack(card: Card, modality: Modality): boolean {
  * an audio one. Two Cards may legitimately share either.
  */
 function backIdentity(card: Card, modality: Modality): string {
-  if (modality === "text") {return normalizeCardText(card.back.text ?? "");}
-  if (!card.back.audio) {throw new Error("Expected audio back for an audio option");}
+  if (modality === "text") {
+    return normalizeCardText(card.back.text ?? "");
+  }
+  if (!card.back.audio) {
+    throw new Error("Expected audio back for an audio option");
+  }
 
   return card.back.audio.id;
 }
@@ -158,11 +168,15 @@ function findDistractors(
   const distractors: Array<Card> = [];
 
   for (const candidate of candidates) {
-    if (distractors.length === requiredDistractorCount) {break;}
+    if (distractors.length === requiredDistractorCount) {
+      break;
+    }
 
     const back = backIdentity(candidate, modality);
 
-    if (seenBacks.has(back)) {continue;}
+    if (seenBacks.has(back)) {
+      continue;
+    }
 
     seenBacks.add(back);
     distractors.push(candidate);
@@ -176,7 +190,9 @@ function toFlipExercise(card: Card): FlipExercise {
 }
 
 function toOption(card: Card, correct: boolean, modality: Modality): MultipleChoiceOption {
-  if (modality === "text" ? !card.back.text : !card.back.audio) {throw new Error("Expected an option matching the selected modality");}
+  if (modality === "text" ? !card.back.text : !card.back.audio) {
+    throw new Error("Expected an option matching the selected modality");
+  }
 
   return {
     cardId: card.id,
@@ -203,20 +219,28 @@ function selectMatchingGroup(dueCards: Array<Card>): Array<Card> | undefined {
   const seenBacks = new Set<string>();
 
   for (const card of dueCards) {
-    if (!card.front.text || !card.back.text) {continue;}
-    if (collectionId !== undefined && card.collectionId !== collectionId) {continue;}
+    if (!card.front.text || !card.back.text) {
+      continue;
+    }
+    if (collectionId !== undefined && card.collectionId !== collectionId) {
+      continue;
+    }
 
     const front = normalizeCardText(card.front.text);
     const back = normalizeCardText(card.back.text);
 
-    if (seenFronts.has(front) || seenBacks.has(back)) {continue;}
+    if (seenFronts.has(front) || seenBacks.has(back)) {
+      continue;
+    }
 
     chosen.push(card);
     collectionId = card.collectionId;
     seenFronts.add(front);
     seenBacks.add(back);
 
-    if (chosen.length === matchingGroupSize) {return chosen;}
+    if (chosen.length === matchingGroupSize) {
+      return chosen;
+    }
   }
 
   return undefined;
@@ -247,13 +271,19 @@ function selectSwipeExercise(
   leading: boolean,
 ): SwipeExercise | undefined {
   for (const card of dueCards) {
-    if (!card.back.text) {continue;}
+    if (!card.back.text) {
+      continue;
+    }
 
     const distractors = findDistractors(card, pool, random, "text");
     const distractor = distractors[0];
 
-    if (!distractor?.back.text) {continue;}
-    if (!leading && distractors.length >= requiredDistractorCount) {continue;}
+    if (!distractor?.back.text) {
+      continue;
+    }
+    if (!leading && distractors.length >= requiredDistractorCount) {
+      continue;
+    }
 
     const correctOption: SwipeOption = { cardId: card.id, correct: true, text: card.back.text };
     const distractorOption: SwipeOption = {
@@ -390,10 +420,14 @@ export function planExercises(
   for (const [index, kind] of order.entries()) {
     if (kind === "matching") {
       matchingGroup = selectMatchingGroup(dueCards);
-      if (matchingGroup) {break;}
+      if (matchingGroup) {
+        break;
+      }
     } else {
       swipeExercise = selectSwipeExercise(dueCards, pool, random, index === 0);
-      if (swipeExercise) {break;}
+      if (swipeExercise) {
+        break;
+      }
     }
   }
 
@@ -404,7 +438,9 @@ export function planExercises(
 
   const planned = dueCards.flatMap((card): Array<PlannedExercise> => {
     if (matchingGroup && matchingCardIds.has(card.id)) {
-      if (matchingPlanned) {return [];}
+      if (matchingPlanned) {
+        return [];
+      }
 
       matchingPlanned = true;
 
@@ -412,7 +448,9 @@ export function planExercises(
     }
 
     if (swipeExercise && swipeCardIds.has(card.id)) {
-      if (swipePlanned) {return [];}
+      if (swipePlanned) {
+        return [];
+      }
 
       swipePlanned = true;
 
@@ -425,11 +463,15 @@ export function planExercises(
         ? "audio"
         : undefined;
 
-    if (!modality) {return [toFlipExercise(card)];}
+    if (!modality) {
+      return [toFlipExercise(card)];
+    }
 
     const distractors = findDistractors(card, pool, random, modality);
 
-    if (distractors.length < requiredDistractorCount) {return [toFlipExercise(card)];}
+    if (distractors.length < requiredDistractorCount) {
+      return [toFlipExercise(card)];
+    }
 
     return [toMultipleChoiceExercise(card, distractors, random, modality)];
   });

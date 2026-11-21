@@ -18,8 +18,12 @@ export interface OptionVerdict {
  * present different Exercises but the same green/red verdict on an option.
  */
 export function optionModifierClassName(verdict: OptionVerdict): string {
-  if (verdict.revealedCorrect) {return styles.optionCorrect ?? "";}
-  if (verdict.dead) {return styles.optionDead ?? "";}
+  if (verdict.revealedCorrect) {
+    return styles.optionCorrect ?? "";
+  }
+  if (verdict.dead) {
+    return styles.optionDead ?? "";
+  }
 
   return "";
 }

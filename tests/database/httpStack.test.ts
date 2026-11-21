@@ -9,8 +9,8 @@ import { GET as readStats } from "../../api/stats.js";
 import { POST as createTopic } from "../../api/topics/index.js";
 import { maximumAudioBytes, audioMetadataSchema, cardSchema } from "../../src/contracts/card.js";
 import { collectionSchema } from "../../src/contracts/collection.js";
-import { topicSchema } from "../../src/contracts/topic.js";
 import { maximumPronunciationTextLength } from "../../src/contracts/pronunciation.js";
+import { topicSchema } from "../../src/contracts/topic.js";
 import { createWavFixture } from "../../src/server/audio/audioFixture.test-helper.js";
 import {
   InMemoryAudioObjectStore,
@@ -33,11 +33,17 @@ afterEach(() => {
 function request(path: string, method: "GET" | "POST", body?: unknown, cookie?: string): Request {
   const headers = new Headers({ origin, "sec-fetch-site": "same-origin" });
 
-  if (body !== undefined) {headers.set("content-type", "application/json");}
-  if (cookie) {headers.set("cookie", cookie);}
+  if (body !== undefined) {
+    headers.set("content-type", "application/json");
+  }
+  if (cookie) {
+    headers.set("cookie", cookie);
+  }
   const init: RequestInit = { method, headers };
 
-  if (body !== undefined) {init.body = JSON.stringify(body);}
+  if (body !== undefined) {
+    init.body = JSON.stringify(body);
+  }
 
   return new Request(`${origin}${path}`, init);
 }

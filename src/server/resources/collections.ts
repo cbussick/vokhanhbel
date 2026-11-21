@@ -43,11 +43,15 @@ export async function createCollection(input: CollectionInput) {
       .returning();
 
     const [row] = rows;
-    if (!row) {throw new Error("Insert returned no resource");}
+    if (!row) {
+      throw new Error("Insert returned no resource");
+    }
 
     return mapCollection(row);
   } catch (error) {
-    if (isUniqueViolation(error)) {throwNameConflict();}
+    if (isUniqueViolation(error)) {
+      throwNameConflict();
+    }
     throw error;
   }
 }
@@ -68,12 +72,15 @@ export async function updateCollection(collectionId: string, input: CollectionIn
       .where(and(eq(collections.id, collectionId), isNull(collections.deletedAt)))
       .returning();
 
-    if (!rows[0])
-      {throw new AppProblemError(404, problemTypes.collectionNotFound, "Sammlung nicht gefunden");}
+    if (!rows[0]) {
+      throw new AppProblemError(404, problemTypes.collectionNotFound, "Sammlung nicht gefunden");
+    }
 
     return mapCollection(rows[0]);
   } catch (error) {
-    if (isUniqueViolation(error)) {throwNameConflict();}
+    if (isUniqueViolation(error)) {
+      throwNameConflict();
+    }
     throw error;
   }
 }
@@ -89,8 +96,9 @@ export async function deleteCollection(collectionId: string): Promise<void> {
       [collectionId],
     );
 
-    if (!selected.rows[0])
-      {throw new AppProblemError(404, problemTypes.collectionNotFound, "Sammlung nicht gefunden");}
+    if (!selected.rows[0]) {
+      throw new AppProblemError(404, problemTypes.collectionNotFound, "Sammlung nicht gefunden");
+    }
 
     const audio = await client.query(
       `SELECT audio_assets.id, audio_assets.object_key

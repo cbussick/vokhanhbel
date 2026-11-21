@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
-
+import type { AiProvider } from "../../src/server/ai/aiProvider.js";
 import { createWavFixture } from "../../src/server/audio/audioFixture.test-helper.js";
 import {
   FailingAudioObjectStore,
@@ -12,7 +12,6 @@ import { resetServerEnvironmentForTests } from "../../src/server/config/environm
 import { getPool } from "../../src/server/database/client.js";
 import { defaultCollectionId } from "../../src/server/database/schema.js";
 import { retryAudioCleanup, stageAudio } from "../../src/server/resources/audio.js";
-import type { AiProvider } from "../../src/server/ai/aiProvider.js";
 import { createCard, deleteCard, listCards, updateCard } from "../../src/server/resources/cards.js";
 import {
   createCollection,

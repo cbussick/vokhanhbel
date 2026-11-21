@@ -1,9 +1,15 @@
 import { z } from "zod";
 import { cardSchema } from "../../contracts/card.js";
 import { problemTypes } from "../../contracts/problem.js";
-import { reviewResultSchema, reviewSchema } from '../../contracts/review.js';
-import type { ReviewResult, ReviewSubmissionInput } from '../../contracts/review.js';
-import { boxSchema, getBoxAfterGrade, getIntervalDays, getPointsForGrade, gradeSchema } from '../../domain/review.js';
+import { reviewResultSchema, reviewSchema } from "../../contracts/review.js";
+import type { ReviewResult, ReviewSubmissionInput } from "../../contracts/review.js";
+import {
+  boxSchema,
+  getBoxAfterGrade,
+  getIntervalDays,
+  getPointsForGrade,
+  gradeSchema,
+} from "../../domain/review.js";
 import { berlinTimeZone } from "../../domain/time.js";
 import { getPool } from "../database/client.js";
 import { AppProblemError } from "../http/problem.js";
@@ -135,15 +141,18 @@ export async function recordReview(input: ReviewSubmissionInput): Promise<Review
     const cardResult = await client.query(cardSelectSql, [input.cardId]);
     const card = cardResult.rows[0] ? databaseCardRowSchema.parse(cardResult.rows[0]) : undefined;
 
-    if (!card || card.deleted_at)
-      {throw new AppProblemError(404, problemTypes.cardNotFound, "Karte nicht gefunden");}
+    if (!card || card.deleted_at) {
+      throw new AppProblemError(404, problemTypes.cardNotFound, "Karte nicht gefunden");
+    }
     const reviewedAt = new Date(input.reviewedAt);
     const now = new Date();
 
-    if (reviewedAt.getTime() < now.getTime() - maximumReviewAgeMilliseconds)
-      {throw new AppProblemError(422, problemTypes.reviewTooOld, "Review ist zu alt");}
-    if (reviewedAt.getTime() > now.getTime() + maximumClockSkewMilliseconds)
-      {throw new AppProblemError(422, problemTypes.deviceClockAhead, "Gerätezeit prüfen");}
+    if (reviewedAt.getTime() < now.getTime() - maximumReviewAgeMilliseconds) {
+      throw new AppProblemError(422, problemTypes.reviewTooOld, "Review ist zu alt");
+    }
+    if (reviewedAt.getTime() > now.getTime() + maximumClockSkewMilliseconds) {
+      throw new AppProblemError(422, problemTypes.deviceClockAhead, "Gerätezeit prüfen");
+    }
 
     const boxBefore = card.box;
     const boxAfter = getBoxAfterGrade(boxBefore, input.grade);

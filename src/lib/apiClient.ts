@@ -1,7 +1,7 @@
 import type { ZodType } from "zod";
 import { apiPaths } from "../contracts/apiPaths";
-import { problemSchema, problemTypes } from '../contracts/problem';
-import type { Problem } from '../contracts/problem';
+import { problemSchema, problemTypes } from "../contracts/problem";
+import type { Problem } from "../contracts/problem";
 import { publishSessionExpired } from "./sessionEvents";
 
 export class ApiError extends Error {
@@ -17,18 +17,30 @@ export class ApiError extends Error {
 async function fetchApiResponse(path: string, init?: RequestInit): Promise<Response> {
   const headers = new Headers(init?.headers);
 
-  if (init?.body) {headers.set("content-type", "application/json");}
+  if (init?.body) {
+    headers.set("content-type", "application/json");
+  }
   const response = await fetch(path, { ...init, headers, credentials: "same-origin" });
 
-  if (response.status === 401 && path !== apiPaths.session) {publishSessionExpired();}
-  if (!response.ok) {await throwApiError(response);}
+  if (response.status === 401 && path !== apiPaths.session) {
+    publishSessionExpired();
+  }
+  if (!response.ok) {
+    await throwApiError(response);
+  }
 
   return response;
 }
 
-export async function apiRequest<T>(path: string, schema: ZodType<T>, init?: RequestInit): Promise<T> {
+export async function apiRequest<T>(
+  path: string,
+  schema: ZodType<T>,
+  init?: RequestInit,
+): Promise<T> {
   const response = await fetchApiResponse(path, init);
-  if (response.status === 204) {throw new Error("Expected a JSON response, received no content");}
+  if (response.status === 204) {
+    throw new Error("Expected a JSON response, received no content");
+  }
 
   return schema.parse(await response.json());
 }
@@ -37,7 +49,9 @@ export async function apiCommand(path: string, init?: RequestInit): Promise<void
   const response = await fetchApiResponse(path, init);
   // Some commands return JSON which callers intentionally do not consume (Review Submission).
   // Keep checking JSON syntax, without inventing an unchecked caller-chosen return type.
-  if (response.status !== 204) {await response.json();}
+  if (response.status !== 204) {
+    await response.json();
+  }
 }
 
 export async function throwApiError(response: Response): Promise<never> {

@@ -1,5 +1,5 @@
-import { createContext, useContext, useEffect } from 'react';
-import type { ReactNode } from 'react';
+import { createContext, useContext, useEffect } from "react";
+import type { ReactNode } from "react";
 import { apiPaths } from "../contracts/apiPaths";
 import { apiCommand } from "../lib/apiClient";
 import { subscribeToSessionExpiry } from "../lib/sessionEvents";
@@ -42,7 +42,9 @@ export function SessionLifecycleProvider({ children }: { children: ReactNode }) 
 export function useSessionLifecycle(): SessionLifecycleState {
   const value = useContext(SessionLifecycleContext);
 
-  if (!value) {throw new Error("SessionLifecycleProvider missing");}
+  if (!value) {
+    throw new Error("SessionLifecycleProvider missing");
+  }
 
   return value;
 }

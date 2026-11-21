@@ -13,8 +13,8 @@ import { TopicIcon } from "../components/TopicIcon";
 import type { Card } from "../contracts/card";
 import { useDueTime } from "../lib/browserState";
 import { cardsQuery, collectionsQuery, topicsQuery } from "../lib/queries";
-import { ReviewSessionProvider, useReviewSession } from '../state/ReviewSessionContext';
-import type { ReviewScope } from '../state/ReviewSessionContext';
+import { ReviewSessionProvider, useReviewSession } from "../state/ReviewSessionContext";
+import type { ReviewScope } from "../state/ReviewSessionContext";
 import styles from "./review.module.css";
 
 export const Route = createFileRoute("/review")({ component: ReviewRouteProvider });
@@ -100,21 +100,24 @@ function ReviewRoute() {
     window.setTimeout(() => void navigate({ to: "/review/session" }), 0);
   };
 
-  if (pathname === "/review/session") {return <Outlet />;}
+  if (pathname === "/review/session") {
+    return <Outlet />;
+  }
 
   let content;
 
-  if (cards.isPending || collections.isPending || topics.isPending) {content = <DelayedSkeleton />;}
-  else if (cards.isError && !cards.data)
-    {content = (
+  if (cards.isPending || collections.isPending || topics.isPending) {
+    content = <DelayedSkeleton />;
+  } else if (cards.isError && !cards.data) {
+    content = (
       <div className={styles.landing}>
         <p>{t("errors.load")}</p>
         <button type="button" onClick={() => void cards.refetch()}>
           {t("common.retry")}
         </button>
       </div>
-    );}
-  else {
+    );
+  } else {
     const active = cards.data ?? [];
     const collectionList = collections.data ?? [];
     const topicList = topics.data ?? [];

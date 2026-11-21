@@ -30,8 +30,9 @@ function MeRoute() {
     if (
       submissionSync.outstandingCount > 0 &&
       !window.confirm(t("shell.logoutPending", { count: submissionSync.outstandingCount }))
-    )
-      {return;}
+    ) {
+      return;
+    }
 
     await sessionLifecycle.logout();
     await navigate({ to: "/login" });
@@ -39,17 +40,18 @@ function MeRoute() {
 
   let content;
 
-  if (stats.isPending) {content = <DelayedSkeleton />;}
-  else if (stats.isError && !stats.data)
-    {content = (
+  if (stats.isPending) {
+    content = <DelayedSkeleton />;
+  } else if (stats.isError && !stats.data) {
+    content = (
       <div className={styles.error}>
         <p>{t("errors.load")}</p>
         <button type="button" onClick={() => void stats.refetch()}>
           {t("common.retry")}
         </button>
       </div>
-    );}
-  else {
+    );
+  } else {
     const data = stats.data;
     const formatDate = (date: string) =>
       new Intl.DateTimeFormat(i18n.language, {

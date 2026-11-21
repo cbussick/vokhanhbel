@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import { useRef, useSyncExternalStore } from 'react';
-import type { ReactNode } from 'react';
+import { useRef, useSyncExternalStore } from "react";
+import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { statsQuery } from "../lib/queries";
 import { useReviewSubmissions } from "../state/ReviewSubmissionContext";
@@ -105,7 +105,9 @@ export function AppShell({
   const focusMainContent = () => {
     const main = mainRef.current;
 
-    if (!main) {return;}
+    if (!main) {
+      return;
+    }
 
     main.tabIndex = -1;
     main.focus();

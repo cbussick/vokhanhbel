@@ -11,7 +11,9 @@ class HiddenInputOutput extends Writable {
     encoding: BufferEncoding,
     callback: (error?: Error | null) => void,
   ): void {
-    if (!this.muted) {process.stdout.write(chunk, encoding);}
+    if (!this.muted) {
+      process.stdout.write(chunk, encoding);
+    }
     callback();
   }
 }
@@ -35,7 +37,9 @@ export async function main(): Promise<void> {
     output.muted = false;
     process.stdout.write("\n");
 
-    if (password !== confirmation) {throw new Error("Passwords do not match.");}
+    if (password !== confirmation) {
+      throw new Error("Passwords do not match.");
+    }
 
     const encoded = await encodePassword(password);
     process.stdout.write(`APP_PASSWORD_HASH=${encoded}\n`);

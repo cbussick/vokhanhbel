@@ -5,13 +5,20 @@ export async function run(command: string, arguments_: Array<string>, environmen
     const child = spawn(command, arguments_, { env: environment, stdio: "inherit" });
     child.once("error", reject);
     child.once("exit", (code, signal) => {
-      if (code === 0) {resolve();}
-      else {reject(new Error(`${command} failed (${signal ?? String(code)})`));}
+      if (code === 0) {
+        resolve();
+      } else {
+        reject(new Error(`${command} failed (${signal ?? String(code)})`));
+      }
     });
   });
 }
 
-export async function capture(command: string, arguments_: Array<string>, environment = process.env) {
+export async function capture(
+  command: string,
+  arguments_: Array<string>,
+  environment = process.env,
+) {
   return new Promise<string>((resolve, reject) => {
     const child = spawn(command, arguments_, {
       env: environment,
@@ -24,8 +31,11 @@ export async function capture(command: string, arguments_: Array<string>, enviro
     });
     child.once("error", reject);
     child.once("exit", (code, signal) => {
-      if (code === 0) {resolve(output);}
-      else {reject(new Error(`${command} failed (${signal ?? String(code)})`));}
+      if (code === 0) {
+        resolve(output);
+      } else {
+        reject(new Error(`${command} failed (${signal ?? String(code)})`));
+      }
     });
   });
 }

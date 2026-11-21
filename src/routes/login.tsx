@@ -49,12 +49,16 @@ function LoginRoute() {
       } else if (error instanceof ApiError) {
         setErrorKey("login.failed");
         setErrorRequestId(error.requestId);
-      } else {setErrorKey("login.network");}
+      } else {
+        setErrorKey("login.network");
+      }
     },
   });
 
   useEffect(() => {
-    if (seconds <= 0) {return;}
+    if (seconds <= 0) {
+      return;
+    }
 
     const timer = window.setInterval(() => setSeconds((value) => Math.max(0, value - 1)), 1000);
 
@@ -65,9 +69,15 @@ function LoginRoute() {
     document.title = `${t("login.title")} | ${t("appName")}`;
   }, [t]);
 
-  if (auth.status === "checking") {return <LoadingScreen />;}
-  if (auth.status === "error") {return <SessionErrorScreen />;}
-  if (auth.status === "authenticated") {return <Navigate to="/review" />;}
+  if (auth.status === "checking") {
+    return <LoadingScreen />;
+  }
+  if (auth.status === "error") {
+    return <SessionErrorScreen />;
+  }
+  if (auth.status === "authenticated") {
+    return <Navigate to="/review" />;
+  }
 
   const visibleErrorKey = errorKey === "login.throttled" && seconds === 0 ? undefined : errorKey;
 

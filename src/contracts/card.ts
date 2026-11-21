@@ -61,7 +61,9 @@ const structuredCardSchema = z.object({
 });
 
 export const cardSchema = z.preprocess((value) => {
-  if (!value || typeof value !== "object") {return value;}
+  if (!value || typeof value !== "object") {
+    return value;
+  }
   const topicIds = "topicIds" in value ? value.topicIds : undefined;
   const front = "front" in value ? value.front : undefined;
   const back = "back" in value ? value.back : undefined;

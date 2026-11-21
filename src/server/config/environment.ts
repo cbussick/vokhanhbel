@@ -48,8 +48,17 @@ export interface R2Environment {
 
 export function getR2Environment(): R2Environment {
   const environment = getServerEnvironment();
-  const { R2_ENVIRONMENT, R2_ACCOUNT_ID, R2_BUCKET, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY } = environment;
-  if (!R2_ENVIRONMENT || !R2_ACCOUNT_ID || !R2_BUCKET || !R2_ACCESS_KEY_ID || !R2_SECRET_ACCESS_KEY) {throw new Error("R2 configuration is incomplete");}
+  const { R2_ENVIRONMENT, R2_ACCOUNT_ID, R2_BUCKET, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY } =
+    environment;
+  if (
+    !R2_ENVIRONMENT ||
+    !R2_ACCOUNT_ID ||
+    !R2_BUCKET ||
+    !R2_ACCESS_KEY_ID ||
+    !R2_SECRET_ACCESS_KEY
+  ) {
+    throw new Error("R2 configuration is incomplete");
+  }
 
   return {
     environment: R2_ENVIRONMENT,
@@ -71,8 +80,9 @@ export function getGoogleSpeechEnvironment(): GoogleSpeechEnvironment {
   const environment = getServerEnvironment();
   const { GOOGLE_TTS_PROJECT_ID, GOOGLE_TTS_CLIENT_EMAIL, GOOGLE_TTS_PRIVATE_KEY } = environment;
 
-  if (!GOOGLE_TTS_PROJECT_ID || !GOOGLE_TTS_CLIENT_EMAIL || !GOOGLE_TTS_PRIVATE_KEY)
-    {throw new Error("Google Text-to-Speech configuration is incomplete");}
+  if (!GOOGLE_TTS_PROJECT_ID || !GOOGLE_TTS_CLIENT_EMAIL || !GOOGLE_TTS_PRIVATE_KEY) {
+    throw new Error("Google Text-to-Speech configuration is incomplete");
+  }
 
   return {
     projectId: GOOGLE_TTS_PROJECT_ID,

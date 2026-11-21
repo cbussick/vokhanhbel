@@ -1,11 +1,18 @@
 import { z } from "zod";
 import { collectionIconSchema, collectionLanguageSchema } from "../contracts/collection.js";
 import { reviewSubmissionInputSchema } from "../contracts/review.js";
-import { tutorInputSchema, tutorMessageSchema, tutorExerciseCardSchema } from "../contracts/tutor.js";
+import {
+  tutorInputSchema,
+  tutorMessageSchema,
+  tutorExerciseCardSchema,
+} from "../contracts/tutor.js";
 
 // Interception tests inspect the bytes the client sent, not normalized application data.
 // Preserve unexpected keys, whitespace and omitted fields rather than repairing evidence.
-const faceWireSchema = z.looseObject({ text: z.string().nullable(), audioId: z.string().nullable() });
+const faceWireSchema = z.looseObject({
+  text: z.string().nullable(),
+  audioId: z.string().nullable(),
+});
 export const cardInputWireSchema = z.looseObject({
   collectionId: z.string(),
   topicIds: z.array(z.string()).optional(),
@@ -19,7 +26,10 @@ export const collectionInputWireSchema = z.looseObject({
   backLanguage: collectionLanguageSchema.nullable().optional(),
 });
 export const loginWireSchema = z.looseObject({ password: z.string() });
-export const pronunciationWireSchema = z.looseObject({ text: z.string(), language: collectionLanguageSchema });
+export const pronunciationWireSchema = z.looseObject({
+  text: z.string(),
+  language: collectionLanguageSchema,
+});
 export const nameWireSchema = z.looseObject({ name: z.string() });
 export const reviewWireSchema = z.looseObject(reviewSubmissionInputSchema.shape);
 export const tutorWireSchema = z.looseObject({

@@ -3,8 +3,8 @@ import { useTranslation } from "react-i18next";
 import { apiPaths } from "../contracts/apiPaths";
 import type { Card } from "../contracts/card";
 import { problemSchema, problemTypes } from "../contracts/problem";
-import { tutorLimits, tutorStreamEventSchema } from '../contracts/tutor';
-import type { TutorInput } from '../contracts/tutor';
+import { tutorLimits, tutorStreamEventSchema } from "../contracts/tutor";
+import type { TutorInput } from "../contracts/tutor";
 import { prefersReducedMotion, useOnlineStatus } from "../lib/browserState";
 import { publishSessionExpired } from "../lib/sessionEvents";
 import type { TutorConversationMessage, TutorExerciseContext } from "../state/ReviewSessionContext";
@@ -74,7 +74,9 @@ export function TutorDialog({
   const composerDisabled = pending || !online || retryAfter > 0 || atConversationCeiling;
 
   useEffect(() => {
-    if (request.status !== "submitting") {return;}
+    if (request.status !== "submitting") {
+      return;
+    }
 
     const timer = window.setTimeout(() => {
       setRequest((state) => (state.status === "submitting" ? { status: "thinking" } : state));
@@ -84,7 +86,9 @@ export function TutorDialog({
   }, [request.status]);
 
   useEffect(() => {
-    if (retryAfter <= 0) {return;}
+    if (retryAfter <= 0) {
+      return;
+    }
 
     const timer = window.setInterval(
       () =>
@@ -105,7 +109,9 @@ export function TutorDialog({
   // makes the view follow a new Tutor reply. Removing them would only scroll when the Learner
   // toggles following.
   useEffect(() => {
-    if (following) {endRef.current?.scrollIntoView?.();}
+    if (following) {
+      endRef.current?.scrollIntoView?.();
+    }
     // oxlint-disable-next-line react/exhaustive-effect-dependencies -- deliberate scroll triggers
   }, [messages, following, thinking]);
 
@@ -119,7 +125,9 @@ export function TutorDialog({
   const send = async (text = question) => {
     const trimmed = text.trim();
 
-    if (!trimmed || composerDisabled) {return;}
+    if (!trimmed || composerDisabled) {
+      return;
+    }
 
     const historyLength = messages.length;
     const input: TutorInput = {
@@ -168,10 +176,12 @@ export function TutorDialog({
         const retryHeader = response.headers.get("retry-after");
         const retrySeconds = retryHeader && /^\d+$/u.test(retryHeader) ? Number(retryHeader) : 0;
 
-        if (problem.success && problem.data.type === problemTypes.tutorSessionLimit)
-          {throw new TutorRequestError("session-limit", Math.max(1, retrySeconds));}
-        if (problem.success && problem.data.type === problemTypes.tutorDailyLimit)
-          {throw new TutorRequestError("daily-limit", Math.max(1, retrySeconds));}
+        if (problem.success && problem.data.type === problemTypes.tutorSessionLimit) {
+          throw new TutorRequestError("session-limit", Math.max(1, retrySeconds));
+        }
+        if (problem.success && problem.data.type === problemTypes.tutorDailyLimit) {
+          throw new TutorRequestError("daily-limit", Math.max(1, retrySeconds));
+        }
 
         throw new Error("failed");
       }
@@ -185,8 +195,12 @@ export function TutorDialog({
       while (true) {
         const { value, done } = await reader.read();
 
-        if (controller.signal.aborted) {return;}
-        if (done) {break;}
+        if (controller.signal.aborted) {
+          return;
+        }
+        if (done) {
+          break;
+        }
 
         buffer += decoder.decode(value, { stream: true });
         const blocks = buffer.split("\n\n");
@@ -196,7 +210,9 @@ export function TutorDialog({
           const event = /^event: (.+)$/m.exec(block)?.[1];
           const dataText = /^data: (.+)$/m.exec(block)?.[1];
 
-          if (!event || !dataText) {throw new Error("failed");}
+          if (!event || !dataText) {
+            throw new Error("failed");
+          }
           const data: unknown = JSON.parse(dataText);
           const streamEvent = tutorStreamEventSchema.parse({ event, data });
 
@@ -213,16 +229,22 @@ export function TutorDialog({
           } else if (streamEvent.event === "done") {
             completed = true;
             setTruncated(streamEvent.data.truncated);
-          } else {throw new Error("failed");}
+          } else {
+            throw new Error("failed");
+          }
         }
       }
 
-      if (!completed) {throw new Error("failed");}
+      if (!completed) {
+        throw new Error("failed");
+      }
       activeRequestRef.current = undefined;
       setAnnouncement(`${t("tutor.title")}: ${assistantReply}`);
       setRequest({ status: "idle" });
     } catch (error_) {
-      if (controller.signal.aborted) {return;}
+      if (controller.signal.aborted) {
+        return;
+      }
 
       activeRequestRef.current = undefined;
       const code = error_ instanceof Error ? error_.message : "failed";
@@ -238,7 +260,9 @@ export function TutorDialog({
               ? t("tutor.dailyLimit")
               : t("tutor.error"),
         retryAfter:
-          error_ instanceof TutorRequestError && error_.retryAfter ? Math.ceil(error_.retryAfter) : 0,
+          error_ instanceof TutorRequestError && error_.retryAfter
+            ? Math.ceil(error_.retryAfter)
+            : 0,
       });
     }
   };
@@ -246,7 +270,9 @@ export function TutorDialog({
   const onScroll = () => {
     const element = scrollerRef.current;
 
-    if (element) {setFollowing(element.scrollHeight - element.scrollTop - element.clientHeight < 48);}
+    if (element) {
+      setFollowing(element.scrollHeight - element.scrollTop - element.clientHeight < 48);
+    }
   };
 
   const latest = () => {

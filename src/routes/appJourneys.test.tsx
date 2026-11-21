@@ -7,7 +7,6 @@ import type { CreateCardInput } from "../contracts/card";
 import type { CollectionInput } from "../contracts/collection";
 import type { PronunciationInput } from "../contracts/pronunciation";
 import { renderApp } from "../test/renderApp";
-import { cardInputWireSchema, collectionInputWireSchema, loginWireSchema, nameWireSchema, pronunciationWireSchema, reviewWireSchema, tutorWireSchema } from "../test/wireSchemas";
 import {
   mockServer,
   testCards,
@@ -15,38 +14,49 @@ import {
   testGeneratedAudio,
   testTopics,
 } from "../test/server";
+import {
+  cardInputWireSchema,
+  collectionInputWireSchema,
+  loginWireSchema,
+  nameWireSchema,
+  pronunciationWireSchema,
+  reviewWireSchema,
+  tutorWireSchema,
+} from "../test/wireSchemas";
 
 const initialRelease = () => undefined;
 
 const storedAudio = (id: string, synthesizedText: string | null) => ({
-      id,
-      durationMs: 1000,
-      contentType: "audio/wav",
-      byteSize: 8044,
-      synthesizedText,
-    });
+  id,
+  durationMs: 1000,
+  contentType: "audio/wav",
+  byteSize: 8044,
+  synthesizedText,
+});
 
 function multipleChoiceCard(id: string, front: string, back: string) {
-    return {
-      ...testCards[0]!,
-      id,
-      front,
-      back,
-    };
-  }
+  return {
+    ...testCards[0]!,
+    id,
+    front,
+    back,
+  };
+}
 
 function matchingCard(id: string, front: string, back: string) {
-    return { ...testCards[0]!, id, front, back };
-  }
+  return { ...testCards[0]!, id, front, back };
+}
 
 function swipeCard(id: string, front: string, back: string) {
-    return { ...testCards[0]!, id, front, back };
-  }
+  return { ...testCards[0]!, id, front, back };
+}
 
 function dialogByHeading(name: string) {
   const dialog = screen.getByRole("heading", { name }).closest("dialog");
 
-  if (!dialog) {throw new Error(`dialog ${name} missing`);}
+  if (!dialog) {
+    throw new Error(`dialog ${name} missing`);
+  }
 
   return dialog;
 }
@@ -80,7 +90,9 @@ async function chooseLanguage(
 
 function summaryStat(label: string) {
   const sibling = screen.getByText(label, { selector: "dt" }).nextElementSibling;
-  if (!sibling) {throw new Error(`Missing summary value for ${label}`);}
+  if (!sibling) {
+    throw new Error(`Missing summary value for ${label}`);
+  }
 
   return sibling;
 }
@@ -119,7 +131,7 @@ describe("rendered app journeys", () => {
     mockServer.use(
       http.get("/api/session", () => HttpResponse.json({ authenticated: false })),
       http.post("/api/session", async ({ request }) => {
-        submitted = (loginWireSchema.parse(await request.json())).password;
+        submitted = loginWireSchema.parse(await request.json()).password;
 
         return new HttpResponse(null, { status: 204 });
       }),
@@ -584,7 +596,6 @@ describe("rendered app journeys", () => {
   });
 
   it("says what a stored clip says when a Card is reopened, and nothing about the recording beside it", async () => {
-    
     const savedCard = {
       ...testCards[0]!,
       front: {
@@ -756,7 +767,7 @@ describe("rendered app journeys", () => {
     let renamed = "";
     mockServer.use(
       http.patch(`/api/collections/${testCollections[1]!.id}`, async ({ request }) => {
-        renamed = (nameWireSchema.parse(await request.json())).name;
+        renamed = nameWireSchema.parse(await request.json()).name;
 
         return HttpResponse.json({ ...testCollections[1]!, name: renamed });
       }),
@@ -1003,8 +1014,6 @@ describe("rendered app journeys", () => {
     expect(await screen.findByRole("button", { name: "Review starten" })).toBeVisible();
   });
 
-  
-
   const multipleChoiceCards = [
     multipleChoiceCard("33333333-3333-4333-8333-333333333331", "eins", "one"),
     // Shares its front with the Card above rather than "zwei" (never asserted on screen), so these
@@ -1175,8 +1184,6 @@ describe("rendered app journeys", () => {
     expect(await screen.findByText(/Tutopher kann Aufnahmen nicht anhören/)).toBeVisible();
     expect(tutorRequests).toBe(0);
   });
-
-  
 
   const matchingCards = [
     matchingCard("66666666-6666-4666-8666-666666666661", "eins", "one"),
@@ -1381,8 +1388,6 @@ describe("rendered app journeys", () => {
       }),
     );
   });
-
-  
 
   // "zwei" and "drei" share a back, so whichever the shuffle picks as "eins"'s one distractor, the
   // visible text is always "haus" — and "haus" is excluded as a distractor for whichever of "zwei"
@@ -2338,11 +2343,15 @@ describe("rendered app journeys", () => {
       await screen.findByText(`Antwort ${exchange}`);
     };
 
-    for (let exchange = 1; exchange <= 4; exchange += 1) {await sendMessage(exchange);}
+    for (let exchange = 1; exchange <= 4; exchange += 1) {
+      await sendMessage(exchange);
+    }
     expect(screen.queryByText(/Du kannst noch .* Nachrichten senden\./)).not.toBeInTheDocument();
     await sendMessage(5);
     expect(screen.getByText("Du kannst noch 3 Nachrichten senden.")).toBeVisible();
-    for (let exchange = 6; exchange <= 8; exchange += 1) {await sendMessage(exchange);}
+    for (let exchange = 6; exchange <= 8; exchange += 1) {
+      await sendMessage(exchange);
+    }
 
     expect(requests).toHaveLength(8);
     expect(requests[7]).toEqual({
@@ -2550,7 +2559,9 @@ describe("rendered app journeys", () => {
 
     const reply = await within(dialog).findByText("Ein Beispiel");
     const replyArticle = reply.closest("article");
-    if (!replyArticle) {throw new Error("Expected a Tutor reply article");}
+    if (!replyArticle) {
+      throw new Error("Expected a Tutor reply article");
+    }
 
     expect(warning).toBeVisible();
     expect(
@@ -2678,7 +2689,9 @@ describe("rendered app journeys", () => {
     expect(await screen.findByRole("heading", { name: "Khanhs Fortschritt" })).toBeVisible();
     const streakTile = screen.getByText("Streak", { exact: true }).closest("div");
 
-    if (!streakTile) {throw new Error("Streak tile missing");}
+    if (!streakTile) {
+      throw new Error("Streak tile missing");
+    }
     expect(within(streakTile).getByText("4")).toBeVisible();
     expect(
       within(screen.getByRole("banner")).queryByText("Streak", { exact: true }),
@@ -2703,7 +2716,9 @@ describe("rendered app journeys", () => {
     expect(await screen.findByRole("heading", { name: "Khanhs Fortschritt" })).toBeVisible();
     const streakTile = screen.getByText("Streak", { exact: true }).closest("div");
 
-    if (!streakTile) {throw new Error("Streak tile missing");}
+    if (!streakTile) {
+      throw new Error("Streak tile missing");
+    }
     expect(within(streakTile).getByText("0")).toBeVisible();
   });
 });

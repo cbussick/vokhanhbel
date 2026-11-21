@@ -43,24 +43,26 @@ export async function consumeTutorAllowance(sessionHash: string): Promise<void> 
     );
     const count = allowanceCountSchema.parse(counts.rows[0]);
 
-    if (Number(count.session_count) >= sessionRequestLimit)
-      {throw new AppProblemError(
+    if (Number(count.session_count) >= sessionRequestLimit) {
+      throw new AppProblemError(
         429,
         problemTypes.tutorSessionLimit,
         "Tutopher braucht eine Pause",
         undefined,
         undefined,
         Number(count.session_retry),
-      );}
-    if (Number(count.daily_count) >= dailyRequestLimit)
-      {throw new AppProblemError(
+      );
+    }
+    if (Number(count.daily_count) >= dailyRequestLimit) {
+      throw new AppProblemError(
         429,
         problemTypes.tutorDailyLimit,
         "Tutopher hat für heute Feierabend",
         undefined,
         undefined,
         Number(count.daily_retry),
-      );}
+      );
+    }
     await client.query("INSERT INTO ai_usage (session_hash) VALUES ($1)", [sessionHash]);
     await client.query("COMMIT");
   } catch (error) {
@@ -91,12 +93,13 @@ export async function createTutorStream(
 ): Promise<Response> {
   const subjectCard = await getCard(exercise.subjectCardId);
 
-  if (!subjectCard.front.text || !subjectCard.back.text)
-    {throw new AppProblemError(
+  if (!subjectCard.front.text || !subjectCard.back.text) {
+    throw new AppProblemError(
       422,
       problemTypes.tutorAudioUnsupported,
       "Tutopher kann Audio nicht anhören",
-    );}
+    );
+  }
 
   const exerciseCards = await Promise.all(
     exercise.exerciseCards.map(async (exerciseCard) => {
@@ -138,8 +141,11 @@ export function createTutorResponse(
 
       try {
         for await (const event of provider.streamTutorReply({ ...exercise, input, signal })) {
-          if (event.type === "delta") {send("delta", { text: event.text });}
-          else {send("done", { truncated: event.truncated });}
+          if (event.type === "delta") {
+            send("delta", { text: event.text });
+          } else {
+            send("done", { truncated: event.truncated });
+          }
         }
       } catch {
         send("error", { type: problemTypes.tutorFailed });

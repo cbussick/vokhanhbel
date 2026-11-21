@@ -49,7 +49,9 @@ export function TopicSelect({
 
     const topic = topics[index];
 
-    if (!topic) {return;}
+    if (!topic) {
+      return;
+    }
 
     onChange(
       selected.has(topic.id)

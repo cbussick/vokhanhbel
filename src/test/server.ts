@@ -4,25 +4,25 @@ import { pronunciationWireSchema, reviewWireSchema } from "./wireSchemas";
 
 const now = new Date().toISOString();
 const vietnameseCollection = {
-    id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
-    name: "Vietnamesisch",
-    icon: "flag-vn",
-    frontLanguage: "vi-VN",
-    backLanguage: "de-DE",
-    createdAt: now,
-    updatedAt: now,
-    deletedAt: null,
-  };
+  id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+  name: "Vietnamesisch",
+  icon: "flag-vn",
+  frontLanguage: "vi-VN",
+  backLanguage: "de-DE",
+  createdAt: now,
+  updatedAt: now,
+  deletedAt: null,
+};
 const englishCollection = {
-    id: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
-    name: "Englisch",
-    icon: "flag-gb",
-    frontLanguage: null,
-    backLanguage: null,
-    createdAt: now,
-    updatedAt: now,
-    deletedAt: null,
-  };
+  id: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+  name: "Englisch",
+  icon: "flag-gb",
+  frontLanguage: null,
+  backLanguage: null,
+  createdAt: now,
+  updatedAt: now,
+  deletedAt: null,
+};
 export const testCollections = [vietnameseCollection, englishCollection];
 export const testTopics = [
   {

@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState } from 'react';
-import type { CSSProperties } from 'react';
+import { useEffect, useRef, useState } from "react";
+import type { CSSProperties } from "react";
 import { useTranslation } from "react-i18next";
 import type { SummaryView } from "../../state/ReviewSessionContext";
 import { AppShell } from "../AppShell";
@@ -36,7 +36,12 @@ interface ConfettiPiece {
  * off screen a little over four seconds in.
  */
 function createConfettiPieces(): Array<ConfettiPiece> {
-  const colors = Array.from({ length: Math.ceil(confettiPieceCount / confettiColors.length) }, () => confettiColors).flat().slice(0, confettiPieceCount);
+  const colors = Array.from(
+    { length: Math.ceil(confettiPieceCount / confettiColors.length) },
+    () => confettiColors,
+  )
+    .flat()
+    .slice(0, confettiPieceCount);
 
   return colors.map((color, index) => ({
     id: index,

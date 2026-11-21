@@ -1,6 +1,6 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { createContext, useContext, useState } from 'react';
-import type { ReactNode } from 'react';
+import { createContext, useContext, useState } from "react";
+import type { ReactNode } from "react";
 import { ApiError } from "../lib/apiClient";
 import { sessionQuery } from "../lib/queries";
 import { queryKeys } from "../lib/queryKeys";
@@ -34,9 +34,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   let status: AuthStatus;
 
-  if (session.data) {status = session.data.authenticated ? "authenticated" : "unauthenticated";}
-  else if (session.isPending || session.isFetching) {status = "checking";}
-  else {status = "error";}
+  if (session.data) {
+    status = session.data.authenticated ? "authenticated" : "unauthenticated";
+  } else if (session.isPending || session.isFetching) {
+    status = "checking";
+  } else {
+    status = "error";
+  }
 
   const value: AuthState = {
     status,
@@ -58,7 +62,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 export function useAuth(): AuthState {
   const value = useContext(AuthContext);
 
-  if (!value) {throw new Error("AuthProvider missing");}
+  if (!value) {
+    throw new Error("AuthProvider missing");
+  }
 
   return value;
 }

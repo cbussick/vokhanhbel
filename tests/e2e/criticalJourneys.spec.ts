@@ -1,14 +1,14 @@
 import { AxeBuilder } from "@axe-core/playwright";
+import { expect, test } from "@playwright/test";
+import type { Locator, Page, Route } from "@playwright/test";
 import { cardInputWireSchema, reviewWireSchema } from "../../src/test/wireSchemas.js";
-import { expect, test } from '@playwright/test';
-import type { Locator, Page, Route } from '@playwright/test';
 
 const initialRelease = () => undefined;
 
 const background = (locator: ReturnType<Page["locator"]>) =>
-    locator.evaluate((element) => {
-      return getComputedStyle(element).backgroundColor;
-    });
+  locator.evaluate((element) => {
+    return getComputedStyle(element).backgroundColor;
+  });
 
 interface MockCard {
   id: string;
@@ -24,14 +24,14 @@ interface MockCard {
 }
 
 interface MockTopic {
-      id: string;
-      collectionId: string;
-      name: string;
-      icon: "shapes";
-      createdAt: string;
-      updatedAt: string;
-      deletedAt: null;
-    }
+  id: string;
+  collectionId: string;
+  name: string;
+  icon: "shapes";
+  createdAt: string;
+  updatedAt: string;
+  deletedAt: null;
+}
 
 interface MockApiState {
   authenticated: boolean;
@@ -130,8 +130,9 @@ async function installMockApi(page: Page, authenticated = true) {
     const request = route.request();
     const pathname = new URL(request.url()).pathname;
 
-    if (pathname === "/api/session" && request.method() === "GET")
-      {return json(route, { authenticated: state.authenticated });}
+    if (pathname === "/api/session" && request.method() === "GET") {
+      return json(route, { authenticated: state.authenticated });
+    }
     if (pathname === "/api/session" && request.method() === "POST") {
       state.authenticated = true;
 
@@ -142,8 +143,9 @@ async function installMockApi(page: Page, authenticated = true) {
 
       return route.fulfill({ status: 204 });
     }
-    if (pathname === "/api/collections" && request.method() === "GET")
-      {return json(route, state.collections);}
+    if (pathname === "/api/collections" && request.method() === "GET") {
+      return json(route, state.collections);
+    }
     if (pathname === `/api/collections/${mockCollection.id}` && request.method() === "DELETE") {
       state.collections = state.collections.filter(
         (collection) => collection.id !== mockCollection.id,
@@ -152,8 +154,12 @@ async function installMockApi(page: Page, authenticated = true) {
 
       return route.fulfill({ status: 204 });
     }
-    if (pathname === "/api/topics" && request.method() === "GET") {return json(route, state.topics);}
-    if (pathname === "/api/cards" && request.method() === "GET") {return json(route, state.cards);}
+    if (pathname === "/api/topics" && request.method() === "GET") {
+      return json(route, state.topics);
+    }
+    if (pathname === "/api/cards" && request.method() === "GET") {
+      return json(route, state.cards);
+    }
     if (pathname === "/api/cards" && request.method() === "POST") {
       const input = cardInputWireSchema.parse(request.postDataJSON());
       const card = createCard(
@@ -164,8 +170,9 @@ async function installMockApi(page: Page, authenticated = true) {
 
       return json(route, card, 201);
     }
-    if (pathname.startsWith("/api/audio/") && request.method() === "GET")
-      {return route.fulfill({ status: 200, contentType: "audio/wav", body: "mock audio" });}
+    if (pathname.startsWith("/api/audio/") && request.method() === "GET") {
+      return route.fulfill({ status: 200, contentType: "audio/wav", body: "mock audio" });
+    }
     if (pathname === "/api/reviews" && request.method() === "POST") {
       const input = reviewWireSchema.parse(request.postDataJSON());
 
@@ -183,21 +190,23 @@ async function installMockApi(page: Page, authenticated = true) {
         card: { ...state.cards[0], box: 1 },
       });
     }
-    if (pathname === "/api/stats")
-      {return json(route, {
+    if (pathname === "/api/stats") {
+      return json(route, {
         totalPoints: 35,
         activeCardCount: state.cards.length,
         reviewsThisWeek: 4,
         currentStreak: 3,
         bestDay: { date: "2026-07-14", reviewCount: 4 },
         dailyRecap: { period: "today", date: "2026-07-14", reviewCount: 4, knewItCount: 3 },
-      });}
-    if (pathname.endsWith("/tutor-replies"))
-      {return route.fulfill({
+      });
+    }
+    if (pathname.endsWith("/tutor-replies")) {
+      return route.fulfill({
         status: 200,
         contentType: "text/event-stream",
         body: 'event: delta\ndata: {"text":"Ein Apfel ist eine Frucht."}\n\nevent: done\ndata: {"truncated":false}\n\n',
-      });}
+      });
+    }
 
     return route.fulfill({ status: 404 });
   });
@@ -207,9 +216,7 @@ async function installMockApi(page: Page, authenticated = true) {
 
 async function dragListboxUpWithTouch(page: Page, listbox: Locator) {
   const box = await listbox.boundingBox();
-  const initialScrollTop = await listbox.evaluate<number>(
-    (element) => (element).scrollTop,
-  );
+  const initialScrollTop = await listbox.evaluate<number>((element) => element.scrollTop);
 
   expect(box).not.toBeNull();
 
@@ -233,7 +240,7 @@ async function dragListboxUpWithTouch(page: Page, listbox: Locator) {
   await session.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
 
   await expect
-    .poll(() => listbox.evaluate<number>((element) => (element).scrollTop))
+    .poll(() => listbox.evaluate<number>((element) => element.scrollTop))
     .toBeGreaterThan(initialScrollTop);
 
   let previousScrollTop = -1;
@@ -241,9 +248,7 @@ async function dragListboxUpWithTouch(page: Page, listbox: Locator) {
   await expect
     .poll(
       async () => {
-        const scrollTop = await listbox.evaluate<number>(
-          (element) => (element).scrollTop,
-        );
+        const scrollTop = await listbox.evaluate<number>((element) => element.scrollTop);
 
         stableChecks = Math.abs(scrollTop - previousScrollTop) < 0.5 ? stableChecks + 1 : 0;
         previousScrollTop = scrollTop;
@@ -277,8 +282,9 @@ async function fullyVisibleListboxOption(listbox: Locator) {
       optionBox &&
       optionBox.y >= listboxBox!.y &&
       optionBox.y + optionBox.height <= listboxBox!.y + listboxBox!.height
-    )
-      {return option;}
+    ) {
+      return option;
+    }
   }
 
   throw new Error("The listbox has no fully visible option");
@@ -423,8 +429,6 @@ test("gives primary, surface, and navigation controls a hover state", async ({ p
   await installMockApi(page);
   await page.goto(`/cards/${mockCollection.id}`);
 
-  
-
   const addCard = page.getByRole("button", { name: "Karte hinzufügen" }).first();
   const cardRow = page.getByRole("listitem").filter({ hasText: "der Apfel" });
   const navLink = page.getByRole("link", { name: /Ich/ });
@@ -455,7 +459,9 @@ test("keeps the Card dialog locked while Save is pending", async ({ page }) => {
   });
   await installMockApi(page);
   await page.route("**/api/cards", async (route) => {
-    if (route.request().method() !== "POST") {return route.fallback();}
+    if (route.request().method() !== "POST") {
+      return route.fallback();
+    }
     saveRequests += 1;
 
     const input = cardInputWireSchema.parse(route.request().postDataJSON());
@@ -567,8 +573,10 @@ test("keeps the Card audio rail stable while dragging and recording", async ({ p
   await expect(dropCopy).toBeVisible();
   const dropStyles = await dropCopy.evaluate((element) => {
     const dropZone = element.parentElement;
-    if (!dropZone) {throw new Error("Audio drop zone not found");}
-    
+    if (!dropZone) {
+      throw new Error("Audio drop zone not found");
+    }
+
     const styles = getComputedStyle(dropZone);
 
     return {
@@ -584,7 +592,6 @@ test("keeps the Card audio rail stable while dragging and recording", async ({ p
 
   const recordButton = rail.getByRole("button", { name: "Audio aufnehmen" });
   const idleButtonStyles = await recordButton.evaluate((element) => {
-    
     const styles = getComputedStyle(element);
 
     return { fontSize: styles.fontSize, fontWeight: styles.fontWeight, scale: styles.scale };
@@ -593,7 +600,6 @@ test("keeps the Card audio rail stable while dragging and recording", async ({ p
   await page.mouse.down();
   await page.waitForTimeout(150);
   const pressedButtonStyles = await recordButton.evaluate((element) => {
-    
     const styles = getComputedStyle(element);
 
     return {
@@ -676,11 +682,14 @@ test("scrolls the Card dialog body below a fixed top bar and locks the page behi
 test("completes Review, Tutor, repeat-ready summary, and Me", async ({ page }) => {
   const preloadErrors: Array<string> = [];
   page.on("console", (message) => {
-    if (message.type() === "error" && message.text().includes("_nonReactive"))
-      {preloadErrors.push(message.text());}
+    if (message.type() === "error" && message.text().includes("_nonReactive")) {
+      preloadErrors.push(message.text());
+    }
   });
   page.on("pageerror", (error) => {
-    if (error.message.includes("_nonReactive")) {preloadErrors.push(error.message);}
+    if (error.message.includes("_nonReactive")) {
+      preloadErrors.push(error.message);
+    }
   });
 
   await installMockApi(page);
@@ -1190,7 +1199,7 @@ test("gives the Tutor dialog full-screen chrome and a pinned composer on mobile"
   expect(await composer.boundingBox()).toEqual(composerBox);
   const transcriptBox = await transcript.boundingBox();
   await transcript.evaluate((element) => {
-    (element).scrollTop = 0;
+    element.scrollTop = 0;
   });
   const latest = dialog.getByRole("button", { name: "Zur neuesten Nachricht" });
   await expect(latest).toBeVisible();
@@ -1517,7 +1526,9 @@ for (const viewport of [
         state: "visible",
       }),
     ]);
-    if (!(await weiter.isVisible())) {await option(2).click();}
+    if (!(await weiter.isVisible())) {
+      await option(2).click();
+    }
     await expect(weiter).toBeVisible();
     await expectNoSeriousAxeViolations(page);
     await expect(page).toHaveScreenshot(

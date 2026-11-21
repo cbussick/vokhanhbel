@@ -1,6 +1,6 @@
 import { useEffect, useId, useRef, useState } from "react";
-import { nextTypeAheadState } from '../../lib/typeAhead';
-import type { TypeAheadState } from '../../lib/typeAhead';
+import { nextTypeAheadState } from "../../lib/typeAhead";
+import type { TypeAheadState } from "../../lib/typeAhead";
 
 interface TypeAheadOptions {
   /**
@@ -50,12 +50,16 @@ export function useListbox({
   const [activeIndex, setActiveIndex] = useState(firstIndex);
 
   useEffect(() => {
-    if (!isOpen) {return;}
+    if (!isOpen) {
+      return;
+    }
 
     const closeOnOutsidePointer = (event: PointerEvent) => {
       // Native EventTarget also admits non-Node targets (for example document-level dispatch).
       // eslint-disable-next-line @nkzw/no-instanceof -- contains requires native DOM Node identity, not structural resemblance.
-      if (!(event.target instanceof Node) || !rootElement.current?.contains(event.target)) {setIsExpanded(false);}
+      if (!(event.target instanceof Node) || !rootElement.current?.contains(event.target)) {
+        setIsExpanded(false);
+      }
     };
 
     document.addEventListener("pointerdown", closeOnOutsidePointer);
@@ -64,7 +68,9 @@ export function useListbox({
   }, [isOpen]);
 
   useEffect(() => {
-    if (!isOpen) {return;}
+    if (!isOpen) {
+      return;
+    }
 
     optionElements.current[activeIndex]?.scrollIntoView?.({ block: "nearest" });
   }, [activeIndex, isOpen]);
@@ -77,13 +83,17 @@ export function useListbox({
   const close = () => setIsExpanded(false);
 
   const moveActive = (offset: number) => {
-    if (optionCount === 0) {return;}
+    if (optionCount === 0) {
+      return;
+    }
 
     setActiveIndex((current) => Math.min(Math.max(current + offset, 0), lastIndex));
   };
 
   const matchTypeAhead = (key: string) => {
-    if (!typeAhead || typeAhead.labels.length === 0) {return;}
+    if (!typeAhead || typeAhead.labels.length === 0) {
+      return;
+    }
 
     typeAheadState.current = nextTypeAheadState(typeAheadState.current, key);
     const { labels } = typeAhead;
@@ -92,9 +102,13 @@ export function useListbox({
     const startIndex = isOpen ? activeIndex : firstIndex;
     const first = (startIndex + 1) % count;
     const rotatedLabels = [...labels.slice(first), ...labels.slice(0, first)];
-    const matchOffset = rotatedLabels.findIndex((label) => label.toLocaleLowerCase("de").startsWith(query));
+    const matchOffset = rotatedLabels.findIndex((label) =>
+      label.toLocaleLowerCase("de").startsWith(query),
+    );
 
-    if (matchOffset < 0) {return;}
+    if (matchOffset < 0) {
+      return;
+    }
 
     setActiveIndex((startIndex + matchOffset + 1) % count);
     setIsExpanded(true);
@@ -104,39 +118,61 @@ export function useListbox({
     switch (event.key) {
       case "ArrowDown":
         event.preventDefault();
-        if (isOpen) {moveActive(1);}
-        else {open();}
+        if (isOpen) {
+          moveActive(1);
+        } else {
+          open();
+        }
         break;
       case "ArrowUp":
         event.preventDefault();
-        if (isOpen) {moveActive(-1);}
-        else {open(selectedIndex >= 0 ? selectedIndex : lastIndex);}
+        if (isOpen) {
+          moveActive(-1);
+        } else {
+          open(selectedIndex >= 0 ? selectedIndex : lastIndex);
+        }
         break;
       case "Home":
         event.preventDefault();
-        if (isOpen) {setActiveIndex(0);}
-        else {open(0);}
+        if (isOpen) {
+          setActiveIndex(0);
+        } else {
+          open(0);
+        }
         break;
       case "End":
         event.preventDefault();
-        if (isOpen) {setActiveIndex(lastIndex);}
-        else {open(lastIndex);}
+        if (isOpen) {
+          setActiveIndex(lastIndex);
+        } else {
+          open(lastIndex);
+        }
         break;
       case "Enter":
       case " ":
         event.preventDefault();
-        if (isOpen) {onActivate(activeIndex);}
-        else {open();}
+        if (isOpen) {
+          onActivate(activeIndex);
+        } else {
+          open();
+        }
         break;
       case "Escape":
-        if (!isOpen) {break;}
+        if (!isOpen) {
+          break;
+        }
         event.preventDefault();
         close();
         break;
       case "Tab":
-        if (!isOpen) {break;}
-        if (commitOnTab) {onActivate(activeIndex);}
-        else {close();}
+        if (!isOpen) {
+          break;
+        }
+        if (commitOnTab) {
+          onActivate(activeIndex);
+        } else {
+          close();
+        }
         break;
       default:
         if (event.key.length === 1 && !event.ctrlKey && !event.metaKey && !event.altKey) {

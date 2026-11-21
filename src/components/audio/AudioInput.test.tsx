@@ -30,7 +30,9 @@ class RecorderStub {
   }
 
   stop() {
-    if (this.state !== "recording") {return;}
+    if (this.state !== "recording") {
+      return;
+    }
     this.state = "inactive";
     this.ondataavailable?.({ data: new Blob(["recording"], { type: this.mimeType }) });
     this.onstop?.();
@@ -43,7 +45,10 @@ describe("AudioInput microphone gate", () => {
     RecorderStub.supportedTypes = new Set(["audio/webm;codecs=opus"]);
     vi.stubGlobal("MediaRecorder", RecorderStub);
     Object.defineProperties(URL, {
-      createObjectURL: { configurable: true, value: vi.fn<typeof URL.createObjectURL>(() => "blob:recording") },
+      createObjectURL: {
+        configurable: true,
+        value: vi.fn<typeof URL.createObjectURL>(() => "blob:recording"),
+      },
       revokeObjectURL: { configurable: true, value: revokeObjectUrl },
     });
   });
@@ -56,7 +61,9 @@ describe("AudioInput microphone gate", () => {
 
   it("requests the default microphone only after Record and keeps file import available on denial", async () => {
     const user = userEvent.setup();
-    const getUserMedia = vi.fn<typeof navigator.mediaDevices.getUserMedia>().mockRejectedValue(new DOMException("denied", "NotAllowedError"));
+    const getUserMedia = vi
+      .fn<typeof navigator.mediaDevices.getUserMedia>()
+      .mockRejectedValue(new DOMException("denied", "NotAllowedError"));
 
     Object.defineProperty(navigator, "mediaDevices", {
       configurable: true,
@@ -193,7 +200,9 @@ describe("AudioInput microphone gate", () => {
     Object.defineProperty(navigator, "mediaDevices", {
       configurable: true,
       value: {
-        getUserMedia: vi.fn<() => Promise<{ getTracks: () => Array<{ stop: () => void }> }>>().mockResolvedValue({ getTracks: () => [{ stop: stopTrack }] }),
+        getUserMedia: vi
+          .fn<() => Promise<{ getTracks: () => Array<{ stop: () => void }> }>>()
+          .mockResolvedValue({ getTracks: () => [{ stop: stopTrack }] }),
       },
     });
     const onDraftChange = vi.fn<(draft: AudioDraft | null) => void>();
@@ -239,7 +248,11 @@ describe("AudioInput microphone gate", () => {
     RecorderStub.supportedTypes = new Set(["audio/mp4;codecs=mp4a.40.2"]);
     Object.defineProperty(navigator, "mediaDevices", {
       configurable: true,
-      value: { getUserMedia: vi.fn<() => Promise<{ getTracks: () => Array<never> }>>().mockResolvedValue({ getTracks: () => [] }) },
+      value: {
+        getUserMedia: vi
+          .fn<() => Promise<{ getTracks: () => Array<never> }>>()
+          .mockResolvedValue({ getTracks: () => [] }),
+      },
     });
     render(
       <AudioInput

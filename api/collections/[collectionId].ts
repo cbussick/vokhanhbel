@@ -9,8 +9,9 @@ function getCollectionId(request: Request): string {
   const value = new URL(request.url).pathname.split("/").filter(Boolean).at(-1);
   const result = z.uuid().safeParse(value);
 
-  if (!result.success)
-    {throw new AppProblemError(404, problemTypes.collectionNotFound, "Sammlung nicht gefunden");}
+  if (!result.success) {
+    throw new AppProblemError(404, problemTypes.collectionNotFound, "Sammlung nicht gefunden");
+  }
 
   return result.data;
 }

@@ -6,9 +6,16 @@ import { configDefaults, defineConfig } from "vitest/config";
 import { z } from "zod";
 
 const deploymentSchema = z.object({
-  headers: z.array(z.object({ source: z.string(), headers: z.array(z.object({ key: z.string(), value: z.string() })) })),
+  headers: z.array(
+    z.object({
+      source: z.string(),
+      headers: z.array(z.object({ key: z.string(), value: z.string() })),
+    }),
+  ),
 });
-const deployment = deploymentSchema.parse(JSON.parse(readFileSync(new URL("./vercel.json", import.meta.url), "utf8")));
+const deployment = deploymentSchema.parse(
+  JSON.parse(readFileSync(new URL("./vercel.json", import.meta.url), "utf8")),
+);
 
 /**
  * The preview server backs the end-to-end suite, so it has to answer with the same headers

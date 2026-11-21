@@ -1,15 +1,37 @@
-import { drizzle } from 'drizzle-orm/node-postgres';
-import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
+import { drizzle } from "drizzle-orm/node-postgres";
+import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
 import { getServerEnvironment } from "../config/environment.js";
 import {
-  aiUsage, audioAssets, audioCleanupJobs, audioPlaybackAttempts, audioUploadAttempts,
-  cards, cardTopics, collections, defaultCollectionId, loginAttempts, reviews, sessions, topics,
+  aiUsage,
+  audioAssets,
+  audioCleanupJobs,
+  audioPlaybackAttempts,
+  audioUploadAttempts,
+  cards,
+  cardTopics,
+  collections,
+  defaultCollectionId,
+  loginAttempts,
+  reviews,
+  sessions,
+  topics,
 } from "./schema.js";
 
 const schema = {
-  aiUsage, audioAssets, audioCleanupJobs, audioPlaybackAttempts, audioUploadAttempts,
-  cards, cardTopics, collections, defaultCollectionId, loginAttempts, reviews, sessions, topics,
+  aiUsage,
+  audioAssets,
+  audioCleanupJobs,
+  audioPlaybackAttempts,
+  audioUploadAttempts,
+  cards,
+  cardTopics,
+  collections,
+  defaultCollectionId,
+  loginAttempts,
+  reviews,
+  sessions,
+  topics,
 };
 
 let pool: Pool | undefined;

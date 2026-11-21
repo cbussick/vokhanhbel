@@ -12,8 +12,9 @@ function getAudioId(request: Request): string {
   const segment = new URL(request.url).pathname.split("/").filter(Boolean).at(-1);
   const result = z.uuid().safeParse(segment);
 
-  if (!result.success)
-    {throw new AppProblemError(404, problemTypes.audioNotFound, "Audio nicht gefunden");}
+  if (!result.success) {
+    throw new AppProblemError(404, problemTypes.audioNotFound, "Audio nicht gefunden");
+  }
 
   return result.data;
 }

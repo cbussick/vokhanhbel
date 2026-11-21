@@ -29,8 +29,12 @@ export function problemResponse(problem: AppProblemError, requestId: string): Re
     instance: `urn:uuid:${requestId}`,
   };
 
-  if (problem.detail) {body.detail = problem.detail;}
-  if (problem.errors) {body.errors = problem.errors;}
+  if (problem.detail) {
+    body.detail = problem.detail;
+  }
+  if (problem.errors) {
+    body.errors = problem.errors;
+  }
 
   return Response.json(body, {
     status: problem.status,

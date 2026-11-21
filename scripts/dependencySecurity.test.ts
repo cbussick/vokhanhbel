@@ -25,17 +25,26 @@ const requireStylelint = createRequire(require.resolve("stylelint"));
 const requireMicromatch = createRequire(requireStylelint.resolve("micromatch"));
 const loadedBraces: unknown = requireMicromatch("braces");
 if (
-  !loadedBraces || (typeof loadedBraces !== "object" && typeof loadedBraces !== "function") ||
-  !("parse" in loadedBraces) || typeof loadedBraces.parse !== "function" ||
-  !("compile" in loadedBraces) || typeof loadedBraces.compile !== "function" ||
-  !("expand" in loadedBraces) || typeof loadedBraces.expand !== "function" ||
-  !("stringify" in loadedBraces) || typeof loadedBraces.stringify !== "function"
-) {throw new Error("Invalid transitive braces module");}
+  !loadedBraces ||
+  (typeof loadedBraces !== "object" && typeof loadedBraces !== "function") ||
+  !("parse" in loadedBraces) ||
+  typeof loadedBraces.parse !== "function" ||
+  !("compile" in loadedBraces) ||
+  typeof loadedBraces.compile !== "function" ||
+  !("expand" in loadedBraces) ||
+  typeof loadedBraces.expand !== "function" ||
+  !("stringify" in loadedBraces) ||
+  typeof loadedBraces.stringify !== "function"
+) {
+  throw new Error("Invalid transitive braces module");
+}
 const { parse, compile, expand, stringify } = loadedBraces;
-const braceAstSchema: z.ZodType<BraceAst> = z.lazy(() => z.looseObject({
-  type: z.string(),
-  nodes: z.array(braceAstSchema).optional(),
-}));
+const braceAstSchema: z.ZodType<BraceAst> = z.lazy(() =>
+  z.looseObject({
+    type: z.string(),
+    nodes: z.array(braceAstSchema).optional(),
+  }),
+);
 const braces: Braces = {
   parse: (pattern) => braceAstSchema.parse(parse.call(loadedBraces, pattern)),
   compile: (input) => z.string().parse(compile.call(loadedBraces, input)),
