@@ -2,9 +2,10 @@
 
 ## Status
 
-**Default adoption implemented; independent review gate still pending.**
+**Local defaults migration complete; two independent full-diff reviews have zero blockers.**
 No temporary disables remain. This is not permission to integrate: the full
-browser suite is not green, and final independent reviewers have not yet run.
+browser suite is not green; its same 20 failures reproduce on freshly installed
+original base. No integration authorization is implied.
 
 Worktree `.worktrees/cloudflare-oxlint-defaults`, branch
 `chore/cloudflare-oxlint-defaults`, exact base `192638b`. Local only: no push,
@@ -198,46 +199,63 @@ browsers, tests and timings were serialized. No production data accessed.
 
 ## Warmed lint timing
 
-Two discarded warmups per setup, then seven interleaved `npm run lint` samples,
-alternating order, same Node/host/default threads. Both installations are fresh;
-this includes npm startup, Oxlint and Stylelint, not just the executable.
+Two discarded warmups per setup, seven interleaved `npm run lint` samples,
+alternating order, same Node/host/default threads. Fresh installations; includes
+npm startup, Oxlint and Stylelint, not just the executable.
 
 | Setup            | Seconds                                         | Median     |
 | ---------------- | ----------------------------------------------- | ---------- |
-| Original 192638b | 5.152, 4.681, 6.491, 4.899, 5.096, 4.347, 4.951 | **4.951s** |
-| Passing defaults | 5.731, 5.700, 5.389, 5.587, 5.374, 4.983, 5.918 | **5.587s** |
+| Original 192638b | 5.066, 4.617, 4.381, 4.467, 4.385, 5.477, 4.390 | **4.467s** |
+| Final defaults   | 5.383, 5.968, 4.775, 4.486, 6.270, 6.188, 6.494 | **5.968s** |
 
-Every sample exits0. Median adds **0.636s (~12.8%)** for complete configurations,
-source coverage and toolchains, not isolated backend performance. No speedup claim.
-Shared-host load remains uncontrolled; this is not a formal benchmark.
-`/tmp/vok-cf-final-timings.json`. Original coordinator single cold9.937s is not
-comparable to this warmed series.
+Every sample exits0. Final post-review median adds **1.501s (~33.6%)** for complete
+configurations/source coverage/toolchains, not isolated backend performance.
+No speedup claim. Shared-host load remains uncontrolled; not a formal benchmark.
+`/tmp/vok-cf-complete-timings.json`. Earlier pre-review series measured medians
+4.951s / 5.587s (+12.8%); preserved in `/tmp/vok-cf-final-timings.json`, not selected
+over the final run. This variation illustrates host noise. Original coordinator
+single cold9.937s is not comparable to either warmed series.
 
 ## Independent reviews / recommendation
 
-Two fresh LOCAL read-only Pi reviewers must inspect the full exact
-`192638b...<review-tip>` diff independently (standards/spec and behavior/coverage).
-First round: two isolated Pi processes independently inspected complete range
+First round: two isolated LOCAL read-only Pi processes independently inspected
+complete exact range
 `192638b94f8278f109a5b799f6e9ce8cd5fe344b...189827ef58dc9e691fe39f144c6de169a9d23bb0`.
-Standards found the inherited JSX attribute promise exemption; Spec found response
-parsing could strip an objectKey leak before the privacy assertion. Both were
-verified and fixed in `fd6690a`: strict JSX checking restored, and raw JSON checked
-before parsing. A leaked-response regression fails with parse-before-check and
-passes with raw-before-parse (`/tmp/vok-cf-review-privacy-{red,green}.log`). A direct
-async JSX probe produces no-misused-promises, then is removed
-(`/tmp/vok-cf-review-jsx-probe.log`). Lint/typecheck/full isolated DB pass.
+Standards found inherited JSX attribute promise exemption; Spec found parsing
+could strip objectKey before its privacy assertion. Both verified and fixed in
+`fd6690a`: strict JSX checking and raw-before-parse evidence. Leaked-response
+regression fails with parse-before-check, passes with raw-before-parse
+(`/tmp/vok-cf-review-privacy-{red,green}.log`). Direct async JSX probe produces
+no-misused-promises, then is removed (`/tmp/vok-cf-review-jsx-probe.log`).
 
-**Fresh full-diff re-reviews pending.** Do not treat this report as completion
-before that gate, final cleanup and final validation refresh.
+Two **fresh** isolated LOCAL read-only Pi processes then independently reviewed
+complete exact range
+`192638b94f8278f109a5b799f6e9ce8cd5fe344b...2489407e8ef56c7137af68d9aa2e4d14a1562745`.
+Standards: **zero blockers, zero optional findings**. Spec/behavior/coverage:
+**zero blockers, zero optional findings**. Both inspected the complete 143-file
+change and verified fixes, not merely the latest patch. Reviews were static;
+reviewers did not independently rerun validation. Reports retained in
+`/tmp/vok-cf-review-round2/`, first round in `/tmp/vok-cf-review-round1/`.
+This evidence-only report refresh receives an additional pair of full-diff
+confirmation reviews before handoff; exact-tip outputs are retained in
+`/tmp/vok-cf-review-round3/` and identified in the local handoff.
 
-Defaults are implemented, but do not integrate yet: review remains and full
-browsers have reproduced original failures. All work stays local pending explicit
-integration authorization.
+After fixes, format/lint/typecheck/both Knip modes/build/licenses and all
+272 unit tests pass again (`/tmp/vok-cf-complete-*.log`). Full isolated DB after
+privacy fix: 31 pass. No runtime source or browser test changed after the full
+browser comparison. Temporary configs/probes removed from this worktree;
+runner copies remain in `/tmp/vok-cf-validation-runners/`. Disposable DB container
+is stopped, not deleted. Branch clean at handoff.
+
+Recommendation: local migration is complete, but **do not represent full CI as
+green**. Retain isolated branch/evidence and obtain an explicit integration
+decision concerning reproduced original screenshot failures. No push, PR, merge,
+deployment or main edit is authorized by this report.
 
 ## Changed files
 
-Before this final audit/Knip refresh: **142 files, +3413/-1507**. Final exact Git
-diff is authoritative. Most breadth is mechanical braces/arrays/imports/formatting.
+Through reviewed implementation: **143 files, +3541/-1518**. Final exact Git
+diff is authoritative (this evidence-only refresh changes those line counts). Most breadth is mechanical braces/arrays/imports/formatting.
 
 ```text
 api/audio/[audioId].ts
@@ -252,6 +270,7 @@ api/session.ts
 api/topics/index.ts
 api/tutor-replies.ts
 docs/cloudflare-oxlint-audit.md
+knip.jsonc
 oxlint.config.ts
 package-lock.json
 package.json
