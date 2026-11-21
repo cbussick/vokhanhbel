@@ -233,7 +233,6 @@ export default defineConfig({
       files: ["**/*.{ts,tsx,mts,cts}"],
       rules: {
         "quality/no-chained-type-assertions": "off",
-        "typescript/no-non-null-assertion": "off",
         "typescript/no-unsafe-type-assertion": "off",
       },
     },

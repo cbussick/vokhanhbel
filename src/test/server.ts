@@ -2,8 +2,7 @@ import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
 
 const now = new Date().toISOString();
-export const testCollections = [
-  {
+const vietnameseCollection = {
     id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
     name: "Vietnamesisch",
     icon: "flag-vn",
@@ -12,8 +11,8 @@ export const testCollections = [
     createdAt: now,
     updatedAt: now,
     deletedAt: null,
-  },
-  {
+  };
+const englishCollection = {
     id: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
     name: "Englisch",
     icon: "flag-gb",
@@ -22,12 +21,12 @@ export const testCollections = [
     createdAt: now,
     updatedAt: now,
     deletedAt: null,
-  },
-];
+  };
+export const testCollections = [vietnameseCollection, englishCollection];
 export const testTopics = [
   {
     id: "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
-    collectionId: testCollections[0]!.id,
+    collectionId: vietnameseCollection.id,
     name: "Tiere",
     icon: "animal" as const,
     createdAt: now,
@@ -38,7 +37,7 @@ export const testTopics = [
 export const testCards = [
   {
     id: "11111111-1111-4111-8111-111111111111",
-    collectionId: testCollections[0]!.id,
+    collectionId: vietnameseCollection.id,
     topicIds: ["cccccccc-cccc-4ccc-8ccc-cccccccccccc"],
     front: "Take care",
     back: "Pass auf",
@@ -51,7 +50,7 @@ export const testCards = [
   },
   {
     id: "22222222-2222-4222-8222-222222222222",
-    collectionId: testCollections[1]!.id,
+    collectionId: englishCollection.id,
     topicIds: [],
     front: "Café",
     back: "Kaffeehaus",
