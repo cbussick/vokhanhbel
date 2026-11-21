@@ -1,5 +1,26 @@
 # Cloudflare defaults migration — local validation report
 
+## Integration follow-up (authorized normal GitHub workflow)
+
+Delivery authorization supersedes the historical local-only restriction below, not
+validation or branch protections. Merged origin/main security PR70 without rewriting
+reviewed commits in `fdf26e2`; npm regenerated the lock and fresh npm ci passed.
+Vite 8.1.7 and tar 7.5.23 are preserved alongside exact Cloudflare/tsrs versions.
+Fresh LOCAL independent read-only Pi reconciliation review found zero Standards
+or Spec blockers/optional findings; all 141 nondependency files match reviewed tip.
+Original exact-tip review evidence remains in `/tmp/vok-cf-review-round{1,2,3}/`;
+focused reconciliation report: `/tmp/vok-cf-integration-review.out`.
+
+Combined-result format, lint, types, both Knip modes, 272 unit tests, local-development
+integration, production build, production audit, licenses and npm ls pass. Isolated
+DB: 31 pass. Restarting disposable DB changed allocated port to 32781; initial
+32776 connection refusal was corrected in the temporary runner, not product code.
+A foreground command timeout interrupted initial build/browser validation; build
+passed on retry and full browser retry runs separately. Evidence retained under
+`/tmp/vok-cf-integration-*`; original evidence and screenshots are preserved.
+No human review is claimed. Required GitHub checks remain mandatory; inherited
+screenshot failures do not authorize bypassing a failed required check.
+
 ## Status
 
 **Local defaults migration complete; two independent full-diff reviews have zero blockers.**
