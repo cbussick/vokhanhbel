@@ -48,7 +48,10 @@ export async function createTopic(input: CreateTopicInput) {
       })
       .returning();
 
-    return mapTopic(rows[0]!);
+    const [row] = rows;
+    if (!row) {throw new Error("Insert returned no resource");}
+
+    return mapTopic(row);
   } catch (error) {
     if (isUniqueViolation(error)) {throwNameConflict();}
     if (isForeignKeyViolation(error))

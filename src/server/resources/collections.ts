@@ -42,7 +42,10 @@ export async function createCollection(input: CollectionInput) {
       })
       .returning();
 
-    return mapCollection(rows[0]!);
+    const [row] = rows;
+    if (!row) {throw new Error("Insert returned no resource");}
+
+    return mapCollection(row);
   } catch (error) {
     if (isUniqueViolation(error)) {throwNameConflict();}
     throw error;

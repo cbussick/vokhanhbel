@@ -140,7 +140,12 @@ const contentRangeSchema = z
   .string()
   .regex(/^bytes \d+-\d+\/\d+$/u)
   .transform((value, context) => {
-    const match = /^bytes (\d+)-(\d+)\/(\d+)$/u.exec(value)!;
+    const match = /^bytes (\d+)-(\d+)\/(\d+)$/u.exec(value);
+    if (!match) {
+      context.addIssue({ code: "custom", message: "Invalid R2 content range" });
+
+      return z.NEVER;
+    }
     const parsed = z
       .tuple([responseIntegerSchema, responseIntegerSchema, responseIntegerSchema])
       .safeParse(match.slice(1));
@@ -210,9 +215,10 @@ export class R2AudioObjectStore implements AudioObjectStore {
       "x-amz-date": date,
       ...extraHeaders,
     });
-    const signedHeaderNames = [...headers.keys()].toSorted();
-    const canonicalHeaders = signedHeaderNames
-      .map((name) => `${name.toLowerCase()}:${headers.get(name)!.trim()}\n`)
+    const signedEntries = [...headers.entries()].toSorted(([left], [right]) => left < right ? -1 : left > right ? 1 : 0);
+    const signedHeaderNames = signedEntries.map(([name]) => name);
+    const canonicalHeaders = signedEntries
+      .map(([name, value]) => `${name.toLowerCase()}:${value.trim()}\n`)
       .join("");
     const signedHeaders = signedHeaderNames.map((name) => name.toLowerCase()).join(";");
     const canonicalRequest = [method, path, "", canonicalHeaders, signedHeaders, payloadHash].join(

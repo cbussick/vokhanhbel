@@ -106,7 +106,8 @@ export async function stageAudio(
         ...(provenance.source === "generated" ? provenance : recordedColumns),
       })
       .returning();
-    const row = rows[0]!;
+    const [row] = rows;
+    if (!row) {throw new Error("Audio insert returned no resource");}
 
     return audioMetadataSchema.parse({
       id: row.id,
