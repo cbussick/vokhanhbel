@@ -7,8 +7,7 @@ interface TypeAheadOptions {
    * How many leading options a query searches. A trailing action row, such as "create", is not a
    * value the Learner can type her way to, so it sits outside this count.
    */
-  count: number;
-  labelAt: (index: number) => string;
+  labels: Array<string>;
 }
 
 /**
@@ -54,9 +53,9 @@ export function useListbox({
     if (!isOpen) {return;}
 
     const closeOnOutsidePointer = (event: PointerEvent) => {
-      // SAFETY: a pointerdown dispatched on the document always targets a DOM element, so target
-      // is a Node. contains() also accepts null, so a null target would still be handled.
-      if (!rootElement.current?.contains(event.target as Node)) {setIsExpanded(false);}
+      // Native EventTarget also admits non-Node targets (for example document-level dispatch).
+      // eslint-disable-next-line @nkzw/no-instanceof -- contains requires native DOM Node identity, not structural resemblance.
+      if (!(event.target instanceof Node) || !rootElement.current?.contains(event.target)) {setIsExpanded(false);}
     };
 
     document.addEventListener("pointerdown", closeOnOutsidePointer);
@@ -84,17 +83,16 @@ export function useListbox({
   };
 
   const matchTypeAhead = (key: string) => {
-    if (!typeAhead || typeAhead.count === 0) {return;}
+    if (!typeAhead || typeAhead.labels.length === 0) {return;}
 
     typeAheadState.current = nextTypeAheadState(typeAheadState.current, key);
-    const { count, labelAt } = typeAhead;
+    const { labels } = typeAhead;
+    const count = labels.length;
     const query = typeAheadState.current.query.toLocaleLowerCase("de");
     const startIndex = isOpen ? activeIndex : firstIndex;
-    const matchOffset = Array.from({ length: count }, (_, offset) =>
-      labelAt((startIndex + offset + 1) % count)
-        .toLocaleLowerCase("de")
-        .startsWith(query),
-    ).findIndex(Boolean);
+    const first = (startIndex + 1) % count;
+    const rotatedLabels = [...labels.slice(first), ...labels.slice(0, first)];
+    const matchOffset = rotatedLabels.findIndex((label) => label.toLocaleLowerCase("de").startsWith(query));
 
     if (matchOffset < 0) {return;}
 

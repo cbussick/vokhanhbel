@@ -35,7 +35,7 @@ export function TopicSelect({
     onActivate: (index) => toggle(index),
     // Topic membership changes immediately; Tab only dismisses the open list.
     commitOnTab: false,
-    typeAhead: { count: topics.length, labelAt: (index) => topics[index]!.name },
+    typeAhead: { labels: topics.map((entry) => entry.name) },
     disabled,
   });
 

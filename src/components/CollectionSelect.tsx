@@ -33,7 +33,7 @@ export function CollectionSelect({
     optionCount: canCreate ? collections.length + 1 : collections.length,
     selectedIndex,
     onActivate: (index) => select(index),
-    typeAhead: { count: collections.length, labelAt: (index) => collections[index]!.name },
+    typeAhead: { labels: collections.map((entry) => entry.name) },
     disabled,
   });
 
