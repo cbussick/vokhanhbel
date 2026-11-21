@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { updateCardInputSchema } from "../../src/contracts/card.js";
 import { problemTypes } from "../../src/contracts/problem.js";
-import { handleRequest } from "../../src/server/http/handler.js";
+import { handleRequest, handleJsonRequest } from "../../src/server/http/handler.js";
 import { AppProblemError } from "../../src/server/http/problem.js";
 import { deleteCard, getCard, updateCard } from "../../src/server/resources/cards.js";
 
@@ -21,7 +21,7 @@ export async function GET(request: Request): Promise<Response> {
 }
 
 export async function PATCH(request: Request): Promise<Response> {
-  return handleRequest(
+  return handleJsonRequest(
     request,
     { unsafe: true, protected: true, bodySchema: updateCardInputSchema },
     async ({ body, sessionHash, requestId }) =>

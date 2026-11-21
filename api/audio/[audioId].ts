@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { problemTypes } from "../../src/contracts/problem.js";
-import { handleRequest } from "../../src/server/http/handler.js";
+import { handleAuthenticatedRequest } from "../../src/server/http/handler.js";
 import { AppProblemError } from "../../src/server/http/problem.js";
 import {
   discardStagedAudio,
@@ -19,23 +19,23 @@ function getAudioId(request: Request): string {
 }
 
 export async function GET(request: Request): Promise<Response> {
-  return handleRequest(
+  return handleAuthenticatedRequest(
     request,
     { protected: true, privateMedia: true, cacheControl: "private, max-age=3600" },
     async ({ sessionHash, requestId }) => {
-      await enforceAudioPlaybackRateLimit(sessionHash!);
+      await enforceAudioPlaybackRateLimit(sessionHash);
 
-      return playAudio(getAudioId(request), sessionHash!, request.headers.get("range"), requestId);
+      return playAudio(getAudioId(request), sessionHash, request.headers.get("range"), requestId);
     },
   );
 }
 
 export async function DELETE(request: Request): Promise<Response> {
-  return handleRequest(
+  return handleAuthenticatedRequest(
     request,
     { unsafe: true, protected: true },
     async ({ sessionHash, requestId }) => {
-      await discardStagedAudio(getAudioId(request), sessionHash!, requestId);
+      await discardStagedAudio(getAudioId(request), sessionHash, requestId);
 
       return new Response(null, { status: 204 });
     },

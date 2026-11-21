@@ -1,5 +1,5 @@
 import { createCardInputSchema } from "../../src/contracts/card.js";
-import { handleRequest } from "../../src/server/http/handler.js";
+import { handleRequest, handleJsonRequest } from "../../src/server/http/handler.js";
 import { createCard, listCards } from "../../src/server/resources/cards.js";
 
 export async function GET(request: Request): Promise<Response> {
@@ -9,7 +9,7 @@ export async function GET(request: Request): Promise<Response> {
 }
 
 export async function POST(request: Request): Promise<Response> {
-  return handleRequest(
+  return handleJsonRequest(
     request,
     { unsafe: true, protected: true, bodySchema: createCardInputSchema },
     async ({ body, sessionHash }) =>

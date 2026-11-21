@@ -5,7 +5,7 @@
 import { z } from "zod";
 import { problemTypes } from "../../src/contracts/problem.js";
 import { createTopicInputSchema, topicInputSchema } from "../../src/contracts/topic.js";
-import { handleRequest } from "../../src/server/http/handler.js";
+import { handleRequest, handleJsonRequest } from "../../src/server/http/handler.js";
 import { AppProblemError } from "../../src/server/http/problem.js";
 import {
   createTopic,
@@ -52,7 +52,7 @@ export async function GET(request: Request): Promise<Response> {
 }
 
 export async function POST(request: Request): Promise<Response> {
-  return handleRequest(
+  return handleJsonRequest(
     request,
     { unsafe: true, protected: true, bodySchema: createTopicInputSchema },
     async ({ body }) => {
@@ -65,7 +65,7 @@ export async function POST(request: Request): Promise<Response> {
 }
 
 export async function PATCH(request: Request): Promise<Response> {
-  return handleRequest(
+  return handleJsonRequest(
     request,
     { unsafe: true, protected: true, bodySchema: topicInputSchema },
     async ({ body }) => Response.json(await updateTopic(requireTopicId(request), body)),

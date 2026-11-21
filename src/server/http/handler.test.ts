@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
-import { handleRequest } from "./handler.js";
+import { handleJsonRequest, handleRequest } from "./handler.js";
 
 const createRequest = (headers: Record<string, string>, body: string) =>
       new Request("https://cards.example/api/test", {
@@ -27,7 +27,7 @@ describe("public HTTP envelope", () => {
       body: '{"name":"Khanh"}',
     });
 
-    const response = await handleRequest(request, { unsafe: true, bodySchema: schema }, callback);
+    const response = await handleJsonRequest(request, { unsafe: true, bodySchema: schema }, callback);
     const problem = (await response.json()) as { type: string; instance: string };
 
     expect(response.status).toBe(403);
@@ -43,17 +43,17 @@ describe("public HTTP envelope", () => {
     const callback = vi.fn<() => Promise<Response>>(async () => Response.json({ ok: true }));
     
 
-    const wrongType = await handleRequest(
+    const wrongType = await handleJsonRequest(
       createRequest({ "content-type": "text/plain" }, "{}"),
       { unsafe: true, bodySchema: schema },
       callback,
     );
-    const oversized = await handleRequest(
+    const oversized = await handleJsonRequest(
       createRequest({ "content-type": "application/json", "content-length": "32769" }, "{}"),
       { unsafe: true, bodySchema: schema },
       callback,
     );
-    const invalid = await handleRequest(
+    const invalid = await handleJsonRequest(
       createRequest({ "content-type": "application/json" }, '{"name":1}'),
       { unsafe: true, bodySchema: schema },
       callback,

@@ -1,7 +1,7 @@
 import { maximumAudioBytes } from "../../src/contracts/card.js";
 import { problemTypes } from "../../src/contracts/problem.js";
 import { pronunciationInputSchema } from "../../src/contracts/pronunciation.js";
-import { handleRequest } from "../../src/server/http/handler.js";
+import { handleAuthenticatedRequest, handleAuthenticatedJsonRequest } from "../../src/server/http/handler.js";
 import { AppProblemError } from "../../src/server/http/problem.js";
 import {
   cleanupExpiredAudio,
@@ -37,7 +37,7 @@ async function readLimitedBody(request: Request): Promise<Uint8Array> {
 }
 
 function uploadRecording(request: Request): Promise<Response> {
-  return handleRequest(
+  return handleAuthenticatedRequest(
     request,
     { unsafe: true, protected: true },
     async ({ sessionHash, requestId }) => {
@@ -45,13 +45,13 @@ function uploadRecording(request: Request): Promise<Response> {
 
       if (contentLength > maximumAudioBytes)
         {throw new AppProblemError(413, problemTypes.requestTooLarge, "Audiodatei ist zu groß");}
-      await enforceAudioUploadRateLimit(sessionHash!);
+      await enforceAudioUploadRateLimit(sessionHash);
       const bytes = await readLimitedBody(request);
       await cleanupExpiredAudio();
 
       return Response.json(
         await stageAudio(
-          sessionHash!,
+          sessionHash,
           bytes,
           { source: "recorded" },
           request.headers.get("content-type") ?? undefined,
@@ -64,17 +64,17 @@ function uploadRecording(request: Request): Promise<Response> {
 }
 
 function generateClip(request: Request): Promise<Response> {
-  return handleRequest(
+  return handleAuthenticatedJsonRequest(
     request,
     { unsafe: true, protected: true, bodySchema: pronunciationInputSchema },
     async ({ body, sessionHash, requestId }) => {
       // Generation stages an audio asset the same way an upload does, so it draws on the same
       // allowance rather than opening a second, unmetered way to create one.
-      await enforceAudioUploadRateLimit(sessionHash!);
+      await enforceAudioUploadRateLimit(sessionHash);
       await cleanupExpiredAudio();
 
       return Response.json(
-        await generatePronunciation(sessionHash!, body, getSpeechProvider(), requestId),
+        await generatePronunciation(sessionHash, body, getSpeechProvider(), requestId),
         { status: 201 },
       );
     },
