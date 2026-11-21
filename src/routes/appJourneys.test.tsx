@@ -7,6 +7,7 @@ import type { CreateCardInput } from "../contracts/card";
 import type { CollectionInput } from "../contracts/collection";
 import type { PronunciationInput } from "../contracts/pronunciation";
 import { renderApp } from "../test/renderApp";
+import { cardInputWireSchema, collectionInputWireSchema, loginWireSchema, nameWireSchema, pronunciationWireSchema, reviewWireSchema, tutorWireSchema } from "../test/wireSchemas";
 import {
   mockServer,
   testCards,
@@ -78,7 +79,10 @@ async function chooseLanguage(
 }
 
 function summaryStat(label: string) {
-  return screen.getByText(label, { selector: "dt" }).nextElementSibling as HTMLElement;
+  const sibling = screen.getByText(label, { selector: "dt" }).nextElementSibling;
+  if (!sibling) {throw new Error(`Missing summary value for ${label}`);}
+
+  return sibling;
 }
 
 function completedTutorReply(text: string) {
@@ -115,7 +119,7 @@ describe("rendered app journeys", () => {
     mockServer.use(
       http.get("/api/session", () => HttpResponse.json({ authenticated: false })),
       http.post("/api/session", async ({ request }) => {
-        submitted = ((await request.json()) as { password: string }).password;
+        submitted = (loginWireSchema.parse(await request.json())).password;
 
         return new HttpResponse(null, { status: 204 });
       }),
@@ -427,12 +431,12 @@ describe("rendered app journeys", () => {
     let created: Partial<CreateCardInput> = {};
     mockServer.use(
       http.post("/api/pronunciations", async ({ request }) => {
-        spoken = (await request.json()) as PronunciationInput;
+        spoken = pronunciationWireSchema.parse(await request.json());
 
         return HttpResponse.json(testGeneratedAudio, { status: 201 });
       }),
       http.post("/api/cards", async ({ request }) => {
-        created = (await request.json()) as Partial<CreateCardInput>;
+        created = cardInputWireSchema.parse(await request.json());
 
         return HttpResponse.json(testCards[0], { status: 201 });
       }),
@@ -482,7 +486,7 @@ describe("rendered app journeys", () => {
       }),
       http.post("/api/cards", async ({ request }) => {
         cardRequests += 1;
-        created = (await request.json()) as Partial<CreateCardInput>;
+        created = cardInputWireSchema.parse(await request.json());
 
         return HttpResponse.json(testCards[0], { status: 201 });
       }),
@@ -530,7 +534,7 @@ describe("rendered app journeys", () => {
         ),
       ),
       http.post("/api/cards", async ({ request }) => {
-        created = (await request.json()) as Partial<CreateCardInput>;
+        created = cardInputWireSchema.parse(await request.json());
 
         return HttpResponse.json(testCards[0], { status: 201 });
       }),
@@ -619,7 +623,7 @@ describe("rendered app journeys", () => {
     let created: Partial<CollectionInput> = {};
     mockServer.use(
       http.post("/api/collections", async ({ request }) => {
-        created = (await request.json()) as Partial<CollectionInput>;
+        created = collectionInputWireSchema.parse(await request.json());
 
         return HttpResponse.json({ ...testCollections[0]!, ...created }, { status: 201 });
       }),
@@ -644,7 +648,7 @@ describe("rendered app journeys", () => {
     let created: Partial<CollectionInput> = {};
     mockServer.use(
       http.post("/api/collections", async ({ request }) => {
-        created = (await request.json()) as Partial<CollectionInput>;
+        created = collectionInputWireSchema.parse(await request.json());
 
         return HttpResponse.json({ ...testCollections[0]!, ...created }, { status: 201 });
       }),
@@ -672,7 +676,7 @@ describe("rendered app journeys", () => {
     let updated: Partial<CollectionInput> = {};
     mockServer.use(
       http.patch(`/api/collections/${testCollections[0]!.id}`, async ({ request }) => {
-        updated = (await request.json()) as Partial<CollectionInput>;
+        updated = collectionInputWireSchema.parse(await request.json());
 
         return HttpResponse.json({ ...testCollections[0]!, ...updated });
       }),
@@ -704,7 +708,7 @@ describe("rendered app journeys", () => {
     mockServer.use(
       http.get("/api/collections", () => HttpResponse.json([testCollections[0], foreign])),
       http.patch(`/api/collections/${foreign.id}`, async ({ request }) => {
-        updated = (await request.json()) as Partial<CollectionInput>;
+        updated = collectionInputWireSchema.parse(await request.json());
 
         return HttpResponse.json({ ...foreign, ...updated });
       }),
@@ -752,7 +756,7 @@ describe("rendered app journeys", () => {
     let renamed = "";
     mockServer.use(
       http.patch(`/api/collections/${testCollections[1]!.id}`, async ({ request }) => {
-        renamed = ((await request.json()) as { name: string }).name;
+        renamed = (nameWireSchema.parse(await request.json())).name;
 
         return HttpResponse.json({ ...testCollections[1]!, name: renamed });
       }),
@@ -868,7 +872,7 @@ describe("rendered app journeys", () => {
     let recordedGrade = "";
     mockServer.use(
       http.post("/api/reviews", async ({ request }) => {
-        const input = (await request.json()) as { grade: string };
+        const input = reviewWireSchema.parse(await request.json());
         recordedGrade = input.grade;
 
         return HttpResponse.json({
@@ -936,7 +940,7 @@ describe("rendered app journeys", () => {
       ),
       http.post("/api/reviews", async ({ request }) => {
         streak = 3;
-        const input = (await request.json()) as { cardId: string; grade: string };
+        const input = reviewWireSchema.parse(await request.json());
 
         return HttpResponse.json({
           review: { ...input, id: crypto.randomUUID(), pointsAwarded: 10 },
@@ -963,7 +967,7 @@ describe("rendered app journeys", () => {
     mockServer.use(
       http.get("/api/cards", () => HttpResponse.json([testCards[0], secondCard])),
       http.post("/api/reviews", async ({ request }) => {
-        const input = (await request.json()) as { cardId: string; grade: string };
+        const input = reviewWireSchema.parse(await request.json());
 
         return HttpResponse.json({
           review: { ...input, id: crypto.randomUUID(), pointsAwarded: 10 },
@@ -1017,7 +1021,7 @@ describe("rendered app journeys", () => {
     mockServer.use(
       http.get("/api/cards", () => HttpResponse.json(multipleChoiceCards)),
       http.post("/api/reviews", async ({ request }) => {
-        const input = (await request.json()) as { grade: string };
+        const input = reviewWireSchema.parse(await request.json());
         recordedGrade = input.grade;
 
         return HttpResponse.json({
@@ -1052,7 +1056,7 @@ describe("rendered app journeys", () => {
     mockServer.use(
       http.get("/api/cards", () => HttpResponse.json(multipleChoiceCards)),
       http.post("/api/reviews", async ({ request }) => {
-        const input = (await request.json()) as { grade: string };
+        const input = reviewWireSchema.parse(await request.json());
         recordedGrade = input.grade;
 
         return HttpResponse.json({
@@ -1089,7 +1093,7 @@ describe("rendered app journeys", () => {
       http.get("/api/cards", () => HttpResponse.json(multipleChoiceCards)),
       http.post("/api/reviews", async ({ request }) => {
         reviews += 1;
-        const input = (await request.json()) as { grade: string };
+        const input = reviewWireSchema.parse(await request.json());
         recordedGrade = input.grade;
 
         return HttpResponse.json({
@@ -1187,7 +1191,7 @@ describe("rendered app journeys", () => {
     mockServer.use(
       http.get("/api/cards", () => HttpResponse.json(matchingCards)),
       http.post("/api/reviews", async ({ request }) => {
-        const input = (await request.json()) as { cardId: string; grade: string };
+        const input = reviewWireSchema.parse(await request.json());
         recordedGrades[input.cardId] = input.grade;
 
         return HttpResponse.json({
@@ -1226,7 +1230,7 @@ describe("rendered app journeys", () => {
     mockServer.use(
       http.get("/api/cards", () => HttpResponse.json(matchingCards)),
       http.post("/api/reviews", async ({ request }) => {
-        const input = (await request.json()) as { cardId: string; grade: string };
+        const input = reviewWireSchema.parse(await request.json());
         recordedGrades[input.cardId] = input.grade;
 
         return HttpResponse.json({
@@ -1270,7 +1274,7 @@ describe("rendered app journeys", () => {
     mockServer.use(
       http.get("/api/cards", () => HttpResponse.json(matchingCards)),
       http.post("/api/reviews", async ({ request }) => {
-        const input = (await request.json()) as { cardId: string; grade: string };
+        const input = reviewWireSchema.parse(await request.json());
         recordedGrades[input.cardId] = input.grade;
 
         return HttpResponse.json({
@@ -1397,7 +1401,7 @@ describe("rendered app journeys", () => {
     mockServer.use(
       http.get("/api/cards", () => HttpResponse.json(swipeCards)),
       http.post("/api/reviews", async ({ request }) => {
-        const input = (await request.json()) as { grade: string };
+        const input = reviewWireSchema.parse(await request.json());
         recordedGrade = input.grade;
 
         return HttpResponse.json({
@@ -1433,7 +1437,7 @@ describe("rendered app journeys", () => {
     mockServer.use(
       http.get("/api/cards", () => HttpResponse.json(swipeCards)),
       http.post("/api/reviews", async ({ request }) => {
-        const input = (await request.json()) as { grade: string };
+        const input = reviewWireSchema.parse(await request.json());
         recordedGrade = input.grade;
 
         return HttpResponse.json({
@@ -1581,7 +1585,7 @@ describe("rendered app journeys", () => {
       http.get("/api/cards", () => HttpResponse.json([...multipleChoiceCards, soloCard])),
       http.post("/api/reviews", async ({ request }) => {
         reviews += 1;
-        const input = (await request.json()) as { grade: string };
+        const input = reviewWireSchema.parse(await request.json());
 
         return HttpResponse.json({
           review: { id: crypto.randomUUID(), pointsAwarded: 10, boxBefore: 0, boxAfter: 1 },
@@ -1629,7 +1633,7 @@ describe("rendered app journeys", () => {
     mockServer.use(
       http.get("/api/cards", () => HttpResponse.json(tinyCollectionCards)),
       http.post("/api/reviews", async ({ request }) => {
-        const input = (await request.json()) as { grade: string };
+        const input = reviewWireSchema.parse(await request.json());
 
         return HttpResponse.json({
           review: { id: crypto.randomUUID(), pointsAwarded: 10, boxBefore: 0, boxAfter: 1 },
@@ -1830,7 +1834,7 @@ describe("rendered app journeys", () => {
       http.get("/api/audio/:audioId", () => new HttpResponse(new Uint8Array([1]))),
       http.post("/api/reviews", async ({ request }) => {
         reviews += 1;
-        const input = (await request.json()) as { cardId: string; grade: string };
+        const input = reviewWireSchema.parse(await request.json());
 
         return HttpResponse.json({
           review: { ...input, id: crypto.randomUUID(), pointsAwarded: 10 },
@@ -2316,7 +2320,7 @@ describe("rendered app journeys", () => {
     }> = [];
     mockServer.use(
       http.post("/api/tutor-replies", async ({ request }) => {
-        requests.push((await request.json()) as (typeof requests)[number]);
+        requests.push(tutorWireSchema.parse(await request.json()));
 
         return completedTutorReply(`Antwort ${requests.length}`);
       }),
@@ -2546,6 +2550,7 @@ describe("rendered app journeys", () => {
 
     const reply = await within(dialog).findByText("Ein Beispiel");
     const replyArticle = reply.closest("article");
+    if (!replyArticle) {throw new Error("Expected a Tutor reply article");}
 
     expect(warning).toBeVisible();
     expect(
@@ -2555,7 +2560,7 @@ describe("rendered app journeys", () => {
     expect(within(dialog).getByRole("button", { name: "Einfach erklären" })).toBeEnabled();
     expect(replyArticle).toHaveAccessibleName("Tutopher");
     expect(replyArticle?.querySelector("svg")).toBeVisible();
-    expect(within(replyArticle as HTMLElement).queryByText("Tutopher")).not.toBeInTheDocument();
+    expect(within(replyArticle).queryByText("Tutopher")).not.toBeInTheDocument();
   });
 
   it("discards a partial failed Tutor answer and retains the question for retry", async () => {

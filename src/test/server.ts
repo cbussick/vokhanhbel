@@ -1,5 +1,6 @@
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
+import { pronunciationWireSchema, reviewWireSchema } from "./wireSchemas";
 
 const now = new Date().toISOString();
 const vietnameseCollection = {
@@ -92,17 +93,12 @@ export const mockServer = setupServer(
     }),
   ),
   http.post("/api/pronunciations", async ({ request }) => {
-    const { text } = (await request.json()) as { text: string };
+    const { text } = pronunciationWireSchema.parse(await request.json());
 
     return HttpResponse.json({ ...testGeneratedAudio, synthesizedText: text }, { status: 201 });
   }),
   http.post("/api/reviews", async ({ request }) => {
-    const input = (await request.json()) as {
-      id: string;
-      cardId: string;
-      grade: string;
-      reviewedAt: string;
-    };
+    const input = reviewWireSchema.parse(await request.json());
 
     return HttpResponse.json({
       review: { ...input, pointsAwarded: 10, boxBefore: 0, boxAfter: 1, recordedAt: now },
